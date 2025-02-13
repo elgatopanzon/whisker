@@ -1,0 +1,11 @@
+[requires]
+libcheck/0.15.2
+
+raylib/5.5
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[options]
+libcheck/*:with_subunit=False
