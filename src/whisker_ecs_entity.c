@@ -8,6 +8,7 @@
 #include "whisker_memory.h"
 #include "whisker_array.h"
 #include "whisker_dict.h"
+#include "whisker_string.h"
 
 #include "whisker_ecs.h"
 
@@ -36,7 +37,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
 
-	if (wdict_create(&e->entity_keys, char*, 0) != E_WHISKER_DICT_OK)
+	if (wdict_create(&e->entity_names, char*, 0) != E_WHISKER_DICT_OK)
 	{
 		warr_free(e->entities);
 		warr_free(e->dead_entities);
@@ -51,9 +52,18 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 
 void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 {
+	// free entity name wstrs
+	for (int i = 0; i < warr_length(entities->entities); ++i)
+	{
+		if (entities->entities[i].name != NULL)
+		{
+			wstr_free(entities->entities[i].name);
+		}
+	}
+
 	warr_free(entities->entities);
 	warr_free(entities->dead_entities);
-	wdict_free(entities->entity_keys);
+	wdict_free(entities->entity_names);
 
 	free(entities);
 }
@@ -121,12 +131,49 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 
 E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
 {
+	E_WHISKER_DICT err = wdict_set(&entities->entity_names, name, &entity_id);
+	if (err != E_WHISKER_DICT_OK)
+	{
+		return E_WHISKER_ECS_ENTITY_DICT;
+	}
 
+	// copy the name into the entities name
+	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+	if (wstr(name, &e->name) != E_WHISKER_STR_OK)
+	{
+		return E_WHISKER_ECS_ENTITY_MEM;
+	}
+
+	return E_WHISKER_ECS_ENTITY_OK;
 }
 
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
+E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id *entity_id)
 {
+	whisker_ecs_entity *e = whisker_ecs_e_named(entities, name);
+	if (e != NULL)
+	{
+		*entity_id = e->id;
+		return E_WHISKER_ECS_ENTITY_OK;
+	}
 
+	// create new entity with name
+	whisker_ecs_entity_id e_id;
+	E_WHISKER_ECS_ENTITY create_err = whisker_ecs_e_create(entities, &e_id);
+	if (create_err != E_WHISKER_ECS_ENTITY_OK)
+	{
+		return create_err;
+	}
+
+	// set the name
+	create_err = whisker_ecs_e_set_name(entities, name, e_id);
+	if (create_err != E_WHISKER_ECS_ENTITY_OK)
+	{
+		return create_err;
+	}
+
+	*entity_id = e_id;
+
+	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
@@ -134,6 +181,14 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	// increment version
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 	e->id.version++;
+
+	// clear name pointer
+	wdict_remove(&entities->entity_names, e->name);
+	if (e->name != NULL)
+	{
+		wstr_free(e->name);
+		e->name = NULL;
+	}
 
 	// push to dead entities stack
 	if (warr_push(&entities->dead_entities, &e->id.index) != E_WHISKER_ARR_OK)
@@ -167,6 +222,18 @@ whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_en
 	}
 
 	return &entities->entities[entity_id.index];
+}
+
+whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name)
+{
+	// lookup entity by name and return a match, or NULL
+	whisker_ecs_entity_id *entity_id = wdict_get(entities->entity_names, entity_name);
+	if (entity_id == NULL)
+	{
+		return NULL;
+	}
+
+	return whisker_ecs_e(entities, *entity_id);
 }
 
 bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)

@@ -22,7 +22,7 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 	// verify empty arrays
 	ck_assert_int_eq(0, warr_length(entities->entities));
 	ck_assert_int_eq(0, warr_length(entities->dead_entities));
-	ck_assert_int_eq(0, warr_length(entities->entity_keys));
+	ck_assert_int_eq(0, warr_length(entities->entity_names));
 
 	// free
 	whisker_ecs_e_free_entities(entities);
@@ -81,6 +81,46 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 }
 END_TEST
 
+START_TEST(test_whisker_ecs_create_and_set_entity_name)
+{
+	whisker_ecs_entities *entities;
+	whisker_ecs_e_create_entities(&entities);
+
+	// create some named entities
+	wecs_e_id e1; whisker_ecs_e_create_named(entities, "e1", &e1);
+	wecs_e_id e2; whisker_ecs_e_create_named(entities, "e2", &e2);
+	wecs_e_id e3; whisker_ecs_e_create_named(entities, "e3", &e3);
+
+	// get entity struct by name
+	wecs_entity *e1_fetched = wecs_e_named(entities, "e1");
+	wecs_entity *e2_fetched = wecs_e_named(entities, "e2");
+	wecs_entity *e3_fetched = wecs_e_named(entities, "e3");
+
+	// validate returned indexes
+	ck_assert_uint_eq(0, e1_fetched->id.index);
+	ck_assert_uint_eq(1, e2_fetched->id.index);
+	ck_assert_uint_eq(2, e3_fetched->id.index);
+
+	// validate returned names
+	ck_assert_str_eq("e1", e1_fetched->name);
+	ck_assert_str_eq("e2", e2_fetched->name);
+	ck_assert_str_eq("e3", e3_fetched->name);
+
+	// create an entity with the same name, to get the existing entity
+	wecs_e_id e4; whisker_ecs_e_create_named(entities, "e3", &e4);
+	ck_assert_uint_eq(2, e4.index);
+
+	// destroy an entity, validate the key no longer works
+	wecs_entity *e4_fetched = wecs_e_named(entities, "e3");
+	whisker_ecs_e_destroy(entities, e4);
+	ck_assert(e4_fetched->name == NULL);
+	ck_assert(wecs_e_named(entities, "e3") == NULL);
+
+	// free
+	whisker_ecs_e_free_entities(entities);
+}
+END_TEST
+
 Suite* whisker_ecs_entity_suite(void)
 {
 	Suite *s;
@@ -94,6 +134,7 @@ Suite* whisker_ecs_entity_suite(void)
 
 	tcase_add_test(tc_core, test_whisker_ecs_entity_create_entities_struct);
 	tcase_add_test(tc_core, test_whisker_ecs_entity_create_destroy_and_recycle);
+	tcase_add_test(tc_core, test_whisker_ecs_create_and_set_entity_name);
 
 	suite_add_tcase(s, tc_core);
 
