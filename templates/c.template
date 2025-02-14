@@ -1,0 +1,10 @@
+/**
+ * @author      : {{NAME}} ({{EMAIL}})
+ * @file        : {{FILE}}
+ * @created     : {{TIMESTAMP}}
+ */
+
+#include "whisker_std.h"
+
+#include "{{FILE}}.h"
+
