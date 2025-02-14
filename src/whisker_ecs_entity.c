@@ -29,7 +29,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
 
-	if (warr_create(uint32_t, 0, &e->dead_entities) != E_WHISKER_ARR_OK)
+	if (warr_create(whisker_ecs_entity_index, 0, &e->dead_entities) != E_WHISKER_ARR_OK)
 	{
 		warr_free(e->entities);
 		free(e);
