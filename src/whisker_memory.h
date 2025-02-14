@@ -25,6 +25,9 @@ extern const char* E_WHISKER_MEM_STR[];
 #define wmem_try_malloc whisker_mem_try_malloc
 #define wmem_try_calloc whisker_mem_try_calloc
 #define wmem_try_realloc whisker_mem_try_realloc
+#define wmem_try_malloc_t(t, p) whisker_mem_try_malloc(sizeof(t), (void**) p)
+#define wmem_try_calloc_t(c, t, p) whisker_mem_try_calloc(c, sizeof(t), (void**) p)
+#define wmem_try_realloc_t(p, t, pn) whisker_mem_try_realloc(p, sizeof(t), (void**) pn);
 #define wmemb_try_malloc whisker_mem_block_try_malloc
 #define wmemb_try_realloc_data whisker_mem_block_try_realloc_data
 #define wmemb_free whisker_mem_block_free
