@@ -143,19 +143,17 @@ E_WHISKER_DICT whisker_dict_get_index(void* dict, char* key, size_t** index)
 }
 
 // get a value from the dict with the provided key
-E_WHISKER_DICT whisker_dict_get_f(void* dict, char* key, void** value)
+void* whisker_dict_get_f(void* dict, char* key)
 {
 	size_t* index;
 	E_WHISKER_DICT err = whisker_dict_get_index(dict, key, &index);
 	if (err != E_WHISKER_DICT_OK)
 	{
-		return err;
+		return NULL;
 	}
 
 	whisker_dict_header_t* header = whisker_dict_header(dict);
-	*value = (char*)dict + (*index * header->arr_header.element_size);
-
-	return E_WHISKER_DICT_OK;
+	return (char*)dict + (*index * header->arr_header.element_size);
 }
 
 // copy dict value into destination

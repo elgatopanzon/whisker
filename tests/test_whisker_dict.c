@@ -30,18 +30,16 @@ START_TEST(test_whisker_dict_add_and_get)
 	whisker_dict_add(&dict, "cat", &val);
 
 	// get value with key
-	int* val_get;
-	whisker_dict_get(dict, "cat", &val_get);
+	int* val_get = whisker_dict_get(dict, "cat");
 
 	// verify gotten value is correct
 	ck_assert_int_eq(val, *val_get);
 
 	// get value with missing key
-	char* val_get_missing;
-	E_WHISKER_DICT err = whisker_dict_get(dict, "dog", &val_get_missing);
+	char* val_get_missing = whisker_dict_get(dict, "dog");
 
 	// verify correct error
-	ck_assert_int_eq(E_WHISKER_DICT_MISSING_KEY, err);
+	ck_assert(val_get_missing == NULL);
 
 	whisker_dict_free(dict);
 }
@@ -62,18 +60,16 @@ START_TEST(test_whisker_dict_add_and_get_string)
 	ck_assert_int_eq(E_WHISKER_DICT_KEY_EXISTS, add_existing_err);
 
 	// get value with key
-	char** val_get;
-	whisker_dict_get(dict, "string", &val_get);
+	char** val_get = whisker_dict_get(dict, "string");
 
 	// verify gotten value is correct
 	ck_assert_str_eq(val, *val_get);
 
 	// get value with missing key
-	char* val_get_missing;
-	E_WHISKER_DICT err = whisker_dict_get(dict, "dog", &val_get_missing);
+	char* val_get_missing = whisker_dict_get(dict, "dog");
 
 	// verify correct error
-	ck_assert_int_eq(E_WHISKER_DICT_MISSING_KEY, err);
+	ck_assert(val_get_missing == NULL);
 
 	whisker_dict_free(dict);
 }
@@ -245,18 +241,16 @@ START_TEST(test_whisker_dict_set_and_get)
 	whisker_dict_set(&dict, "cat", &val);
 
 	// get value with key
-	int* val_get;
-	whisker_dict_get(dict, "cat", &val_get);
+	int* val_get = whisker_dict_get(dict, "cat");
 
 	// verify gotten value is correct
 	ck_assert_int_eq(val, *val_get);
 
 	// get value with missing key
-	char* val_get_missing;
-	E_WHISKER_DICT err = whisker_dict_get(dict, "dog", &val_get_missing);
+	char* val_get_missing = whisker_dict_get(dict, "dog");
 
 	// verify correct error
-	ck_assert_int_eq(E_WHISKER_DICT_MISSING_KEY, err);
+	ck_assert(val_get_missing == NULL);
 
 	whisker_dict_free(dict);
 }
@@ -272,8 +266,7 @@ START_TEST(test_whisker_dict_set_and_remove)
 	whisker_dict_set(&dict, "cat", &val);
 
 	// get value with key
-	int* val_get;
-	whisker_dict_get(dict, "cat", &val_get);
+	int* val_get = whisker_dict_get(dict, "cat");
 
 	// verify gotten value is correct
 	ck_assert_int_eq(val, *val_get);
@@ -414,8 +407,7 @@ START_TEST(test_whisker_dict_set_non_char_key)
 	whisker_dict_set(&dict, key, &val);
 
 	// get value with key
-	int* val_get;
-	whisker_dict_get(dict, key, &val_get);
+	int* val_get = whisker_dict_get(dict, key);
 
 	// verify gotten value is correct
 	ck_assert_int_eq(val, *val_get);

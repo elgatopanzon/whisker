@@ -50,7 +50,7 @@ typedef struct whisker_dict_header_s
 
 // macros
 #define whisker_dict_create(d, t, s) whisker_dict_create_f((void**)d, sizeof(t), s)
-#define whisker_dict_get(d, k, v) whisker_dict_get_f((void**)d, k, (void**)v)
+#define whisker_dict_get(d, k) whisker_dict_get_f((void**)d, k)
 #define whisker_dict_add(d, k, v) whisker_dict_add_f((void**)d, k, (void*)v)
 #define whisker_dict_set(d, k, v) whisker_dict_set_f((void**)d, k, (void*)v)
 #define whisker_dict_clear(d) whisker_dict_clear_f((void**)d)
@@ -79,7 +79,7 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 E_WHISKER_DICT whisker_dict_add_f(void** dict, char* key, void* value);
 E_WHISKER_DICT whisker_dict_set_f(void** dict, char* key, void* value);
 E_WHISKER_DICT whisker_dict_get_index(void* dict, char* key, size_t** index);
-E_WHISKER_DICT whisker_dict_get_f(void* dict, char* key, void** value);
+void* whisker_dict_get_f(void* dict, char* key);
 E_WHISKER_DICT whisker_dict_copy(void* dict, char* key, void* dest);
 E_WHISKER_DICT whisker_dict_remove_f(void** dict, char* key);
 E_WHISKER_DICT whisker_dict_clear_f(void** dict);
