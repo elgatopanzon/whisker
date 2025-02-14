@@ -128,8 +128,7 @@ START_TEST(test_whisker_arr_try_pop)
 
 	// pop last value (triggers resize and pointer update)
 	int* arr_resized = arr;
-	int popped;
-	whisker_arr_pop(&arr_resized, &popped);
+	whisker_arr_pop_c(&arr_resized, int, popped);
 
 	// verify popped valus is set
 	ck_assert_int_eq(popped, 456);
