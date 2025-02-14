@@ -25,3 +25,23 @@ add_executable(test_whisker_dict test_whisker_dict.c)
 target_link_libraries(test_whisker_dict PRIVATE
 	Check::check whisker_objs)
 add_test(NAME test_whisker_dict COMMAND test_whisker_dict)
+
+add_executable(test_whisker_ecs test_whisker_ecs.c)
+target_link_libraries(test_whisker_ecs PRIVATE
+	Check::check whisker_objs)
+add_test(NAME test_whisker_ecs COMMAND test_whisker_ecs)
+
+add_executable(test_whisker_ecs_entity test_whisker_ecs_entity.c)
+target_link_libraries(test_whisker_ecs_entity PRIVATE
+	Check::check whisker_objs)
+add_test(NAME test_whisker_ecs_entity COMMAND test_whisker_ecs_entity)
+
+add_executable(test_whisker_ecs_component test_whisker_ecs_component.c)
+target_link_libraries(test_whisker_ecs_component PRIVATE
+	Check::check whisker_objs)
+add_test(NAME test_whisker_ecs_component COMMAND test_whisker_ecs_component)
+
+add_executable(test_whisker_ecs_system test_whisker_ecs_system.c)
+target_link_libraries(test_whisker_ecs_system PRIVATE
+	Check::check whisker_objs)
+add_test(NAME test_whisker_ecs_system COMMAND test_whisker_ecs_system)
