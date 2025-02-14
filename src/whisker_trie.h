@@ -36,6 +36,15 @@ typedef struct whisker_trie_node_s
 // macros
 #define whisker_trie_search_value(r, k, v) whisker_trie_search_value_f(r, k, (void**)v)
 
+// short macros
+#define wtrie_create_node whisker_trie_create_node
+#define wtrie_create_child_node whisker_trie_create_child_node
+#define wtrie_set_child_node whisker_trie_set_child_node
+#define wtrie_search_node whisker_trie_search_node
+#define wtrie_search_value whisker_trie_search_value
+#define wtrie_set_value whisker_trie_set_value
+#define wtrie_free_node whisker_trie_free_node
+
 // trie management functions
 E_WHISKER_TRIE whisker_trie_create_node(Trie** node);
 E_WHISKER_TRIE whisker_trie_create_child_node(Trie* node, char byte, Trie** child);

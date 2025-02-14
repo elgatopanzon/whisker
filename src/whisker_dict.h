@@ -56,6 +56,24 @@ typedef struct whisker_dict_header_s
 #define whisker_dict_clear(d) whisker_dict_clear_f((void**)d)
 #define whisker_dict_remove(d, k) whisker_dict_remove_f((void**)d, k)
 
+// short macros
+#define wdict_create whisker_dict_create
+#define wdict_add whisker_dict_add
+#define wdict_set whisker_dict_set
+#define wdict_get_index whisker_dict_get_index
+#define wdict_get whisker_dict_get
+#define wdict_copy whisker_dict_copy
+#define wdict_remove whisker_dict_remove
+#define wdict_clear whisker_dict_clear
+#define wdict_free whisker_dict_free
+#define wdict_resize whisker_dict_resize
+#define wdict_header whisker_dict_header
+#define wdict_contains_key whisker_dict_contains_key
+#define wdict_contains_value whisker_dict_contains_value
+#define wdict_keys whisker_dict_keys
+#define wdict_values whisker_dict_values
+#define wdict_count whisker_dict_count
+
 // dictionary management functions
 E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t capacity);
 E_WHISKER_DICT whisker_dict_add_f(void** dict, char* key, void* value);

@@ -21,6 +21,15 @@ typedef enum E_WHISKER_STR
 } E_WHISKER_STR;
 extern const char* E_WHISKER_STR_STR[];
 
+// short macros
+#define wstr whisker_str
+#define wstr_join whisker_str_join
+#define wstr_copy whisker_str_copy
+#define wstr_free whisker_str_free
+#define wstr_header whisker_str_header
+#define wstr_length whisker_str_length
+#define wstr_contains whisker_str_contains
+
 // operation functions
 E_WHISKER_STR whisker_str(char* str, char** w_str);
 E_WHISKER_STR whisker_str_join(char* delimiter, char** w_str, ...);

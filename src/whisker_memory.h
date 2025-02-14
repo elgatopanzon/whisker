@@ -21,6 +21,16 @@ typedef enum E_WHISKER_MEM
 } E_WHISKER_MEM;
 extern const char* E_WHISKER_MEM_STR[];
 
+// short macros
+#define wmem_try_malloc whisker_mem_try_malloc
+#define wmem_try_calloc whisker_mem_try_calloc
+#define wmem_try_realloc whisker_mem_try_realloc
+#define wmemb_try_malloc whisker_mem_block_try_malloc
+#define wmemb_try_realloc_data whisker_mem_block_try_realloc_data
+#define wmemb_free whisker_mem_block_free
+#define wmemb_header whisker_mem_block_header_from_data_pointer
+#define wmemb_header_size whisker_mem_block_calc_header_size
+
 // general memory functions
 E_WHISKER_MEM whisker_mem_try_malloc(size_t size, void** ptr);
 E_WHISKER_MEM whisker_mem_try_calloc(size_t count, size_t size, void** ptr);
