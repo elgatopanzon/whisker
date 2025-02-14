@@ -33,7 +33,9 @@ typedef struct whisker_array_header_s
 #define whisker_arr_increment_size(p) whisker_arr_increment_size_f((void**) p)
 #define whisker_arr_push(p, v) whisker_arr_push_f((void**) p, (void*) v)
 #define whisker_arr_pop(p, v) whisker_arr_pop_f((void**) p, (void*) v)
+#define whisker_arr_pop_front(p, v) whisker_arr_pop_front_f((void**) p, (void*) v)
 #define whisker_arr_pop_c(p, t, v) t v; whisker_arr_pop_f((void**) p, (void*) &v)
+#define whisker_arr_pop_front_c(p, t, v) t v; whisker_arr_pop_front_f((void**) p, (void*) &v)
 #define whisker_arr_compact(p) whisker_arr_compact_f((void**) p)
 #define whisker_arr_insert(p, i, v) whisker_arr_insert_f((void**) p, i, (void*) v)
 
@@ -44,6 +46,8 @@ typedef struct whisker_array_header_s
 #define warr_push whisker_arr_push
 #define warr_pop whisker_arr_pop
 #define warr_pop_c whisker_arr_pop_c
+#define warr_pop_front whisker_arr_pop_front
+#define warr_pop_front_c whisker_arr_pop_front_c
 #define warr_compact whisker_arr_compact
 #define warr_insert whisker_arr_insert
 #define warr_header whisker_arr_header
@@ -56,6 +60,7 @@ E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements);
 E_WHISKER_ARR whisker_arr_increment_size_f(void** arr);
 E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value);
+E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_compact_f(void** arr);
 E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value);
 

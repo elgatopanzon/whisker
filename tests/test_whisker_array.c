@@ -147,6 +147,37 @@ START_TEST(test_whisker_arr_try_pop)
 }
 END_TEST
 
+START_TEST(test_whisker_arr_try_pop_front)
+{
+	// create an array of 2 ints
+	int* arr;
+	whisker_arr_create(int, 2, &arr);
+
+	// set elements
+	arr[0] = 123;
+	arr[1] = 456;
+
+	// pop front value (triggers resize and pointer update)
+	int* arr_resized = arr;
+	whisker_arr_pop_front_c(&arr_resized, int, popped);
+
+	// verify popped valus is set
+	ck_assert_int_eq(popped, 123);
+
+	// verify pointer didn't change (pop keeps capacity)
+	ck_assert(arr == arr_resized);
+
+	// verify accessing the array and the set values
+	ck_assert_int_eq(arr_resized[0], 456);
+
+	// verify changed size
+	ck_assert_int_eq(whisker_arr_length(arr_resized), 1);
+
+	// free the array
+	whisker_arr_free(arr_resized);
+}
+END_TEST
+
 START_TEST(test_whisker_arr_try_push_pop_push_same_capacity)
 {
 	// create an array of 2 ints
@@ -296,6 +327,7 @@ Suite* whisker_array_suite(void)
 	tcase_add_test(tc_core, test_whisker_arr_try_resize);
 	tcase_add_test(tc_core, test_whisker_arr_try_push);
 	tcase_add_test(tc_core, test_whisker_arr_try_pop);
+	tcase_add_test(tc_core, test_whisker_arr_try_pop_front);
 	tcase_add_test(tc_core, test_whisker_arr_try_push_pop_push_same_capacity);
 	tcase_add_test(tc_core, test_whisker_arr_try_insert);
 	tcase_add_test(tc_core, test_whisker_arr_strings);

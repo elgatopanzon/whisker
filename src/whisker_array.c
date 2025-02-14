@@ -123,6 +123,20 @@ E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value)
 	return E_WHISKER_ARR_OK;
 }
 
+// retreive the first element, then shrink the array length keeping same capacity
+E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value)
+{
+	whisker_array_header_t* header = whisker_arr_header(*arr);
+
+	// copy first value
+	memcpy(value, ((char*)*arr), header->element_size);
+
+	// pop end value into first index
+	whisker_arr_pop(arr, ((char*)*arr));
+
+	return E_WHISKER_ARR_OK;
+}
+
 // insert value at index and shift values forward
 E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value)
 {
