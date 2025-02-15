@@ -131,8 +131,35 @@ E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value)
 	// copy first value
 	memcpy(value, ((char*)*arr), header->element_size);
 
-	// pop end value into first index
-	whisker_arr_pop(arr, ((char*)*arr));
+	// swap first and last index values
+	whisker_arr_swap(arr, 0, header->length - 1);
+
+	// resize array by -1
+	header->length--;
+
+	return E_WHISKER_ARR_OK;
+}
+
+// swap elements in 2 index positions
+E_WHISKER_ARR whisker_arr_swap(void** arr, size_t index_a, size_t index_b)
+{
+	whisker_array_header* header = whisker_arr_header(*arr);
+	if (index_a + 1 > header->length || index_b + 1 > header->length)
+	{
+		return E_WHISKER_ARR_OUT_OF_BOUNDS;
+	}
+
+	// copy a into temp
+	void* temp = calloc(1, header->element_size);
+	memcpy(temp, ((char*)*arr) + (index_a * header->element_size), header->element_size);
+
+	// copy over a
+	memcpy(((char*)*arr) + (index_a * header->element_size), ((char*)*arr) + (index_b * header->element_size), header->element_size);
+
+	// copy temp into b
+	memcpy(((char*)*arr) + (index_b * header->element_size), temp, header->element_size);
+
+	free(temp);
 
 	return E_WHISKER_ARR_OK;
 }

@@ -16,6 +16,7 @@ typedef enum E_WHISKER_ARR
 	E_WHISKER_ARR_OK = 0,
 	E_WHISKER_ARR_UNKNOWN = 1,
 	E_WHISKER_ARR_MEM = 2,
+	E_WHISKER_ARR_OUT_OF_BOUNDS = 3,
 } E_WHISKER_ARR;
 extern const char* E_WHISKER_ARR_STR[];
 
@@ -61,6 +62,7 @@ E_WHISKER_ARR whisker_arr_increment_size_f(void** arr);
 E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value);
+E_WHISKER_ARR whisker_arr_swap(void** arr, size_t index_from, size_t index_to);
 E_WHISKER_ARR whisker_arr_compact_f(void** arr);
 E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value);
 
