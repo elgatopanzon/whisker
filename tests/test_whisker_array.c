@@ -310,6 +310,22 @@ START_TEST(test_whisker_arr_strings)
 }
 END_TEST
 
+START_TEST(test_whisker_arr_grow_get)
+{
+	// create an array of 10 ints
+	int* arr;
+	whisker_arr_create(int, 10, &arr);
+
+	// use grow get to get the 20th index
+	int grown = *(int*)whisker_arr_grow_get(&arr, 20);
+	ck_assert_int_eq(0, grown);
+	ck_assert_int_eq(21, whisker_arr_length(arr));
+
+	// free the array
+	whisker_arr_free(arr);
+}
+END_TEST
+
 Suite* whisker_array_suite(void)
 {
 	Suite *s;
@@ -331,6 +347,7 @@ Suite* whisker_array_suite(void)
 	tcase_add_test(tc_core, test_whisker_arr_try_push_pop_push_same_capacity);
 	tcase_add_test(tc_core, test_whisker_arr_try_insert);
 	tcase_add_test(tc_core, test_whisker_arr_strings);
+	tcase_add_test(tc_core, test_whisker_arr_grow_get);
 
 	suite_add_tcase(s, tc_core);
 

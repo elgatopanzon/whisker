@@ -39,6 +39,7 @@ typedef struct whisker_array_header
 #define whisker_arr_pop_front_c(p, t, v) t v; whisker_arr_pop_front_f((void**) p, (void*) &v)
 #define whisker_arr_compact(p) whisker_arr_compact_f((void**) p)
 #define whisker_arr_insert(p, i, v) whisker_arr_insert_f((void**) p, i, (void*) v)
+#define whisker_arr_grow_get(p, i) whisker_arr_grow_get_f((void**) p, i)
 
 // short macros
 #define warr_create whisker_arr_create
@@ -69,6 +70,7 @@ E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value);
 // utility functions to work with the array
 whisker_array_header* whisker_arr_header(void* arr);
 size_t whisker_arr_length(void* arr);
+void* whisker_arr_grow_get_f(void** arr, size_t index);
 
 void whisker_arr_free(void* arr);
 

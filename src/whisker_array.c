@@ -204,3 +204,20 @@ size_t whisker_arr_length(void* arr)
 {
 	return whisker_arr_header(arr)->length;
 }
+
+// get value at the given index, growing and returning pointer
+void* whisker_arr_grow_get_f(void** arr, size_t index)
+{
+	whisker_array_header* header = whisker_arr_header(*arr);
+
+	if (index + 1 > header->length)
+	{
+		E_WHISKER_ARR err = whisker_arr_resize(arr, index + 1);
+		if (err != E_WHISKER_ARR_OK)
+		{
+			return NULL;
+		}
+	}
+
+	return &(*arr)[index];
+}
