@@ -51,7 +51,7 @@ E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new)
 // a memory block contains a header and a data pointer with a stored size
 
 // allocate the underlying data for a memory block
-E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block_t** block)
+E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block** block)
 {
 	// create the full block data
 	void* block_data;
@@ -62,7 +62,7 @@ E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size,
 	}
 
 	// malloc the block
-	E_WHISKER_MEM errBlock = whisker_mem_try_malloc(sizeof(whisker_memory_block_t), (void**)block);
+	E_WHISKER_MEM errBlock = whisker_mem_try_malloc(sizeof(whisker_memory_block), (void**)block);
 	if (errBlock != E_WHISKER_MEM_OK)
 	{
 		free(block_data);
@@ -79,7 +79,7 @@ E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size,
 }
 
 // realloc the data pointer for a memory block
-E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block_t* block, size_t size)
+E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block* block, size_t size)
 {
 	size_t header_size = block->header_size;
 	size_t original_data_size = block->data_size;
@@ -122,7 +122,7 @@ E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block_t* block, 
 }
 
 // free the underlying pointer and block data for a memory block
-void whisker_mem_block_free(whisker_memory_block_t* block)
+void whisker_mem_block_free(whisker_memory_block* block)
 {
 	free(block->header);
 	free(block);

@@ -24,14 +24,14 @@ extern const char* E_WHISKER_TRIE_STR[];
 #define WHISKER_TRIE_NODE_CAPACITY 256
 
 // struct to hold data for a trie node
-typedef struct whisker_trie_node_s
+typedef struct whisker_trie
 {
 	// pointer to child nodes array
-	struct whisker_trie_node_s* nodes[WHISKER_TRIE_NODE_CAPACITY];
+	struct whisker_trie* nodes[WHISKER_TRIE_NODE_CAPACITY];
 
 	// pointer to target data
 	void* value;
-} Trie;
+} whisker_trie;
 
 // macros
 #define whisker_trie_search_value(r, k, v) whisker_trie_search_value_f(r, k, (void**)v)
@@ -46,13 +46,13 @@ typedef struct whisker_trie_node_s
 #define wtrie_free_node whisker_trie_free_node
 
 // trie management functions
-E_WHISKER_TRIE whisker_trie_create_node(Trie** node);
-E_WHISKER_TRIE whisker_trie_create_child_node(Trie* node, char byte, Trie** child);
-void whisker_trie_set_child_node(Trie* node, char byte, Trie* child);
-E_WHISKER_TRIE whisker_trie_search_node(Trie* root, char* key, Trie** match);
-E_WHISKER_TRIE whisker_trie_search_node_(Trie* root, char* key, int key_position, bool create_missing_nodes, Trie** match);
-E_WHISKER_TRIE whisker_trie_search_value_f(Trie* root, char* key, void** match);
-E_WHISKER_TRIE whisker_trie_set_value(Trie** root, char* key, void* value);
-E_WHISKER_TRIE whisker_trie_free_node(Trie* node, bool free_values);
+E_WHISKER_TRIE whisker_trie_create_node(whisker_trie** node);
+E_WHISKER_TRIE whisker_trie_create_child_node(whisker_trie* node, char byte, whisker_trie** child);
+void whisker_trie_set_child_node(whisker_trie* node, char byte, whisker_trie* child);
+E_WHISKER_TRIE whisker_trie_search_node(whisker_trie* root, char* key, whisker_trie** match);
+E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, char* key, int key_position, bool create_missing_nodes, whisker_trie** match);
+E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, char* key, void** match);
+E_WHISKER_TRIE whisker_trie_set_value(whisker_trie** root, char* key, void* value);
+E_WHISKER_TRIE whisker_trie_free_node(whisker_trie* node, bool free_values);
 
 #endif /* end of include guard WHISKER_TRIE_H */

@@ -20,12 +20,12 @@ typedef enum E_WHISKER_ARR
 extern const char* E_WHISKER_ARR_STR[];
 
 // header struct holds info about the array
-typedef struct whisker_array_header_s
+typedef struct whisker_array_header
 {
 	size_t size;
 	size_t element_size;
 	size_t length;
-} whisker_array_header_t;
+} whisker_array_header;
 
 // macros
 #define whisker_arr_create(t, l, p) whisker_arr_create_f(sizeof(t), l, (void**) p)
@@ -65,7 +65,7 @@ E_WHISKER_ARR whisker_arr_compact_f(void** arr);
 E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value);
 
 // utility functions to work with the array
-whisker_array_header_t* whisker_arr_header(void* arr);
+whisker_array_header* whisker_arr_header(void* arr);
 size_t whisker_arr_length(void* arr);
 
 void whisker_arr_free(void* arr);

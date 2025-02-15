@@ -41,17 +41,17 @@ E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new);
 
 // memory blocks
 // a block is a managed header and data pointer
-typedef struct whisker_memory_block_s
+typedef struct whisker_memory_block
 {
 	void* header;
 	size_t header_size;
 	void* data;
 	size_t data_size;
-} whisker_memory_block_t;
+} whisker_memory_block;
 
-E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block_t** block);
-E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block_t* block, size_t size);
-void whisker_mem_block_free(whisker_memory_block_t* block);
+E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block** block);
+E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block* block, size_t size);
+void whisker_mem_block_free(whisker_memory_block* block);
 void* whisker_mem_block_header_from_data_pointer(void* data, size_t header_size);
 size_t whisker_mem_block_calc_header_size(size_t header_type_size, size_t data_type_size);
 

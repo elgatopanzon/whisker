@@ -36,17 +36,17 @@ extern const char* E_WHISKER_DICT_STR[];
 // - slow addition (dynamic realloc required depending on current size)
 
 // the struct header
-typedef struct whisker_dict_header_s
+typedef struct whisker_dict_header
 {
 	// the Trie pointer containing all the data
-	Trie* trie;
+	whisker_trie* trie;
 
 	// cache array of the keys
 	char** keys;
 
 	// this makes the struct array compatible
-	whisker_array_header_t arr_header;
-} whisker_dict_header_t;
+	whisker_array_header arr_header;
+} whisker_dict_header;
 
 // macros
 #define whisker_dict_create(d, t, s) whisker_dict_create_f((void**)d, sizeof(t), s)
@@ -89,7 +89,7 @@ E_WHISKER_DICT whisker_dict_free(void* dict);
 E_WHISKER_DICT whisker_dict_resize_(void** dict, size_t capacity);
 
 // dictionary utility functions
-whisker_dict_header_t* whisker_dict_header(void* dict);
+whisker_dict_header* whisker_dict_get_header(void* dict);
 bool whisker_dict_contains_key(void* dict, char* key);
 bool whisker_dict_contains_value(void* dict, void* value);
 char** whisker_dict_keys(void* dict);

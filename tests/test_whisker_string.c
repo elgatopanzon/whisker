@@ -17,7 +17,7 @@ START_TEST(test_whisker_string_creation_and_header)
 	char* str = "convert to whisker string";
 	size_t str_len = strlen(str);
 	whisker_str(str, &wstring);
-	whisker_array_header_t* header = whisker_str_header(wstring);
+	whisker_array_header* header = whisker_str_header(wstring);
 
 	// verify length matches
 	// NOTE: underlying array header is string length + 1

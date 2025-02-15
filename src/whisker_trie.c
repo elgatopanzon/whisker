@@ -20,9 +20,9 @@ const char* E_WHISKER_TRIE_STR[] = {
 // creating a root node is the same as creating a child node
 // 1. create and allocate struct instance
 // 2. create and allocate array of children to map to offset IDs
-E_WHISKER_TRIE whisker_trie_create_node(Trie** node)
+E_WHISKER_TRIE whisker_trie_create_node(whisker_trie** node)
 {
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(Trie), (void**)node);
+	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_trie), (void**)node);
 	if (err != E_WHISKER_MEM_OK)
 	{
 		return E_WHISKER_TRIE_MEM;
@@ -33,7 +33,7 @@ E_WHISKER_TRIE whisker_trie_create_node(Trie** node)
 
 
 // this allows to create the node instance for a node's specific child index
-E_WHISKER_TRIE whisker_trie_create_child_node(Trie* node, char byte, Trie** child)
+E_WHISKER_TRIE whisker_trie_create_child_node(whisker_trie* node, char byte, whisker_trie** child)
 {
 	E_WHISKER_TRIE err = whisker_trie_create_node(child);
 	if (err != E_WHISKER_TRIE_OK)
@@ -48,14 +48,14 @@ E_WHISKER_TRIE whisker_trie_create_child_node(Trie* node, char byte, Trie** chil
 }
 
 // set the child node instance with key
-void whisker_trie_set_child_node(Trie* node, char byte, Trie* child)
+void whisker_trie_set_child_node(whisker_trie* node, char byte, whisker_trie* child)
 {
 	node->nodes[byte] = child;
 }
 
 // internal function to recursively traverse the tree looking for a matching
 // node for a given key, accepting position
-E_WHISKER_TRIE whisker_trie_search_node_(Trie* root, char* key, int key_position, bool create_missing_nodes, Trie** match)
+E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, char* key, int key_position, bool create_missing_nodes, whisker_trie** match)
 {
 	int key_len = strlen(key);
 
@@ -75,7 +75,7 @@ E_WHISKER_TRIE whisker_trie_search_node_(Trie* root, char* key, int key_position
 		// if create_missing_nodes is true, we create this node and move on!
 		if (root->nodes[key_index] == NULL && create_missing_nodes)
 		{
-			Trie* missing_node;
+			whisker_trie* missing_node;
 			E_WHISKER_TRIE create_err = whisker_trie_create_node(&missing_node);
 			if (create_err != E_WHISKER_TRIE_OK)
 			{
@@ -105,15 +105,15 @@ E_WHISKER_TRIE whisker_trie_search_node_(Trie* root, char* key, int key_position
 // traverse the tree, but still be able to update the array pointer if required
 // it will stop searching when encountering an invalid node, or when finding the
 // end node
-E_WHISKER_TRIE whisker_trie_search_node(Trie* root, char* key, Trie** match)
+E_WHISKER_TRIE whisker_trie_search_node(whisker_trie* root, char* key, whisker_trie** match)
 {
 	return whisker_trie_search_node_(root, key, 0, false, match);
 }
 
 // uses search_node to traverse the tree and returns the node's value instead
-E_WHISKER_TRIE whisker_trie_search_value_f(Trie* root, char* key, void** match)
+E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, char* key, void** match)
 {
-	Trie* matching_node;
+	whisker_trie* matching_node;
 	E_WHISKER_TRIE search_err = whisker_trie_search_node(root, key, &matching_node);
 
 	// if the node isn't a match, we certainly dont have a value
@@ -144,9 +144,9 @@ E_WHISKER_TRIE whisker_trie_search_value_f(Trie* root, char* key, void** match)
 //    pointer to the current node, then advance into it
 // 3. when the end of the key is reached, assign the node's pointer to provided
 // value pointer
-E_WHISKER_TRIE whisker_trie_set_value(Trie** root, char* key, void* value)
+E_WHISKER_TRIE whisker_trie_set_value(whisker_trie** root, char* key, void* value)
 {
-	Trie* matching_node;
+	whisker_trie* matching_node;
 	E_WHISKER_TRIE search_err = whisker_trie_search_node_(*root, key, 0, true, &matching_node);
 
 	// if the node isn't a match, we cannot set the value
@@ -161,10 +161,10 @@ E_WHISKER_TRIE whisker_trie_set_value(Trie** root, char* key, void* value)
 }
 
 // free a trie node and all of it's linked children
-E_WHISKER_TRIE whisker_trie_free_node(Trie* node, bool free_values)
+E_WHISKER_TRIE whisker_trie_free_node(whisker_trie* node, bool free_values)
 {
 	// recursive free of child nodes
-	Trie** nodes = node->nodes;
+	whisker_trie** nodes = node->nodes;
 	for (int i = 0; i < WHISKER_TRIE_NODE_CAPACITY; ++i)
 	{
 		if (nodes[i] != NULL)

@@ -95,11 +95,11 @@ typedef enum PLAYER_STATE
 #define COMPONENT_CREATION_TIME 6
 #define COMPONENT_RADIUS_SIZE 7
 #define COMPONENT_COLLISION 8
-typedef struct component_collision_t 
+typedef struct component_collision
 {
 	size_t entity_a;
 	size_t entity_b;
-} component_collision_t;
+} component_collision;
 
 #define COMPONENT_SCORE 9 
 #define COMPONENT_LIFE 10 
@@ -107,7 +107,7 @@ typedef struct component_collision_t
 #define COMPONENT_HIT_TIME 12 
 #define COMPONENT_HIT_COLLISION 13 
 #define COMPONENT_FPS 14 
-typedef struct component_fps_s
+typedef struct component_fps
 {
 	int samples[DRAW_FPS_AVG_SAMPLES];
 	double time;
@@ -115,9 +115,9 @@ typedef struct component_fps_s
 	int max_index;
 	int max;
 	int min;
-} component_fps_t;
+} component_fps;
 #define COMPONENT_FRAMETIME 15 
-typedef struct component_frametime_s
+typedef struct component_frametime
 {
 	float samples[DRAW_FRAMETIME_AVG_SAMPLES];
 	double time;
@@ -125,7 +125,7 @@ typedef struct component_frametime_s
 	int max_index;
 	float max;
 	float min;
-} component_frametime_t;
+} component_frametime;
 
 #define COMPONENT_TAG_PLAYER COMPONENT_MAX-1 
 #define COMPONENT_TAG_ASTEROID COMPONENT_MAX-2 
@@ -310,11 +310,11 @@ void create_player_entity()
 	SET_COMPONENT(COMPONENT_LIFE, int, e, (void*)&(int){PLAYER_START_LIFE});
 	SET_COMPONENT(COMPONENT_PLAYER_STATE, PLAYER_STATE, e, (void*)&(PLAYER_STATE){PLAYER_STATE_DEFAULT});
 	SET_COMPONENT(COMPONENT_HIT_TIME, double, e, (void*)&(double){0});
-	SET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision_t, e, (void*)&(component_collision_t){});
+	SET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision, e, (void*)&(component_collision){});
 
 	// TODO: store this on a central game/world entity instead of the player
-	SET_COMPONENT(COMPONENT_FPS, component_fps_t, e, (void*)&(component_fps_t){0});
-	SET_COMPONENT(COMPONENT_FRAMETIME, component_frametime_t, e, (void*)&(component_frametime_t){0});
+	SET_COMPONENT(COMPONENT_FPS, component_fps, e, (void*)&(component_fps){0});
+	SET_COMPONENT(COMPONENT_FRAMETIME, component_frametime, e, (void*)&(component_frametime){0});
 	add_component_entity(COMPONENT_TAG_PLAYER, e);    
 	add_component_entity(COMPONENT_TAG_SCREEN_WRAP, e);    
 }
@@ -637,8 +637,8 @@ void system_collision(float delta_time)
 
 				size_t collision_entity = create_entity();
 
-				component_collision_t col = {e, ce};
-				SET_COMPONENT(COMPONENT_COLLISION, component_collision_t, collision_entity, &col);
+				component_collision col = {e, ce};
+				SET_COMPONENT(COMPONENT_COLLISION, component_collision, collision_entity, &col);
     		}
 		}
 	}
@@ -728,7 +728,7 @@ void system_projectile_collide_destroy(float delta_time)
 	{
 		size_t e = component_entities[i];
 
-		component_collision_t collision = *GET_COMPONENT(COMPONENT_COLLISION, component_collision_t, e);		
+		component_collision collision = *GET_COMPONENT(COMPONENT_COLLISION, component_collision, e);		
 
 
 		// find projectiles colliding with asteroids
@@ -756,7 +756,7 @@ void system_player_hit_asteroid(float delta_time)
 	{
 		size_t e = component_entities[i];
 
-		component_collision_t* collision = GET_COMPONENT(COMPONENT_COLLISION, component_collision_t, e);		
+		component_collision* collision = GET_COMPONENT(COMPONENT_COLLISION, component_collision, e);		
 
 
 		// find asteroids that collided with the player
@@ -776,8 +776,8 @@ void system_player_hit_asteroid(float delta_time)
 
 				*player_state = PLAYER_STATE_HIT;
 				SET_COMPONENT(COMPONENT_HIT_TIME, double, collision->entity_b, (void*)&(double){GetTime()});
-				component_collision_t col = {collision->entity_a, collision->entity_b};
-				SET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision_t, collision->entity_b, &col);
+				component_collision col = {collision->entity_a, collision->entity_b};
+				SET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision, collision->entity_b, &col);
 
 				// TODO: refactor this into a separate system
 				int* player_life = GET_COMPONENT(COMPONENT_LIFE, int, collision->entity_b);
@@ -808,7 +808,7 @@ void system_asteroid_hit_asteroid(float delta_time)
 	{
 		size_t e = component_entities[i];
 
-		component_collision_t* collision = GET_COMPONENT(COMPONENT_COLLISION, component_collision_t, e);		
+		component_collision* collision = GET_COMPONENT(COMPONENT_COLLISION, component_collision, e);		
 
 
 		// find asteroids that collided with the player
@@ -892,7 +892,7 @@ void system_player_hit_nudge(float delta_time)
 		if (*player_state == PLAYER_STATE_HIT) {
 			printf("system:player_hit_nudge:nudging player from the hit\n");
 
-			component_collision_t* collision = GET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision_t, e);		
+			component_collision* collision = GET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision, e);		
 			Vector2 position = *GET_COMPONENT(COMPONENT_POSITION, Vector2, e);		
 			Vector2 hit_by_position = *GET_COMPONENT(COMPONENT_POSITION, Vector2, collision->entity_a);		
 
@@ -1101,7 +1101,7 @@ void system_draw_fps(float delta_time)
 	{
 		size_t e = component_entities[i];
 
-		component_fps_t* fps = GET_COMPONENT(COMPONENT_FPS, component_fps_t, e);
+		component_fps* fps = GET_COMPONENT(COMPONENT_FPS, component_fps, e);
 		int current_fps = GetFPS();
 
 		// update fps samples
@@ -1158,7 +1158,7 @@ void system_draw_frame_time(float delta_time)
 	{
 		size_t e = component_entities[i];
 
-		component_frametime_t* frametime = GET_COMPONENT(COMPONENT_FRAMETIME, component_frametime_t, e);
+		component_frametime* frametime = GET_COMPONENT(COMPONENT_FRAMETIME, component_frametime, e);
 		float current_frametime = delta_time * 1000;
 
 		// update frametime samples

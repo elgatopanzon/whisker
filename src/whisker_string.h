@@ -37,7 +37,7 @@ E_WHISKER_STR whisker_str_copy(char* w_str_a, char** w_str_b);
 void whisker_str_free(char* w_str);
 
 // utility functions
-whisker_array_header_t* whisker_str_header(char* w_str);
+whisker_array_header* whisker_str_header(char* w_str);
 size_t whisker_str_length(char* w_str);
 int whisker_str_contains(char* w_haystack, char* needle);
 

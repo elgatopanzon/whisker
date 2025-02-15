@@ -20,15 +20,15 @@ const char* E_WHISKER_ARR_STR[] = {
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 {
 	// alloc whisker_mem block for the array + header struct
-	whisker_memory_block_t* block;
-	E_WHISKER_MEM err = whisker_mem_block_try_malloc(type_size * length, sizeof(whisker_array_header_t), &block);
+	whisker_memory_block* block;
+	E_WHISKER_MEM err = whisker_mem_block_try_malloc(type_size * length, sizeof(whisker_array_header), &block);
 	if (err != E_WHISKER_MEM_OK)
 	{
 		return E_WHISKER_ARR_MEM;
 	}
 
 	// set header values
-	whisker_array_header_t* header = block->header;
+	whisker_array_header* header = block->header;
 	header->element_size = type_size;
 	header->length = length;
 	header->size = type_size * length;
@@ -44,10 +44,10 @@ E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements)
 {
 	// build block from array pointer
-	whisker_array_header_t* header = whisker_arr_header(*arr);
-	whisker_memory_block_t block = {
+	whisker_array_header* header = whisker_arr_header(*arr);
+	whisker_memory_block block = {
 		.header = header,
-		.header_size = sizeof(whisker_array_header_t),
+		.header_size = sizeof(whisker_array_header),
 		.data_size = header->size,
 	};
 
@@ -71,7 +71,7 @@ E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements)
 // shortcut used by push/insert functions
 E_WHISKER_ARR whisker_arr_increment_size_f(void** arr)
 {
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 	E_WHISKER_ARR err = whisker_arr_try_resize_if_required_(arr, header->length + 1);
 	if (err != E_WHISKER_ARR_OK)
 	{
@@ -90,7 +90,7 @@ E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value)
 		return err;
 	}
 
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 
 	// copy value into end
 	memcpy(((char*)*arr) + ((header->length - 1) * header->element_size), value, header->element_size);
@@ -101,7 +101,7 @@ E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value)
 // resize array to it's actual length
 E_WHISKER_ARR whisker_arr_compact_f(void** arr)
 {
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 	E_WHISKER_ARR err = whisker_arr_resize_f(arr, header->length);
 	if (err != E_WHISKER_ARR_OK)
 	{
@@ -114,7 +114,7 @@ E_WHISKER_ARR whisker_arr_compact_f(void** arr)
 // retreive the last element, then shrink the array length keeping same capacity
 E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value)
 {
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 
 	memcpy(value, ((char*)*arr) + (header->length - 1) * header->element_size, header->element_size);
 
@@ -126,7 +126,7 @@ E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value)
 // retreive the first element, then shrink the array length keeping same capacity
 E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value)
 {
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 
 	// copy first value
 	memcpy(value, ((char*)*arr), header->element_size);
@@ -147,7 +147,7 @@ E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value)
 		return E_WHISKER_ARR_MEM;
 	}
 
-	whisker_array_header_t* header = whisker_arr_header(*arr);
+	whisker_array_header* header = whisker_arr_header(*arr);
 
 	// move all elements from index forward by 1 element
 	// note: this will overwrite the end value
@@ -166,9 +166,9 @@ void whisker_arr_free(void* arr)
 }
 
 // obtain the header from the array pointer
-whisker_array_header_t* whisker_arr_header(void* arr)
+whisker_array_header* whisker_arr_header(void* arr)
 {
-	return whisker_mem_block_header_from_data_pointer(arr, sizeof(whisker_array_header_t));
+	return whisker_mem_block_header_from_data_pointer(arr, sizeof(whisker_array_header));
 }
 
 // get array length from underlying header

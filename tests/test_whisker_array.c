@@ -28,7 +28,7 @@ START_TEST(test_whisker_arr_header)
 	whisker_arr_create(int, 10, &arr);
 
 	// get the array header
-	whisker_array_header_t* header = whisker_arr_header(arr);
+	whisker_array_header* header = whisker_arr_header(arr);
 
 	// verify header values
 	ck_assert_int_eq(header->element_size, sizeof(int));

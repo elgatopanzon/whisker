@@ -20,7 +20,7 @@ START_TEST(test_whisker_mem_try_malloc_block)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block_t* block;
+	whisker_memory_block* block;
 	whisker_mem_block_try_malloc(data_size, header_size, &block);
 
 	whisker_mem_block_free(block);
@@ -35,7 +35,7 @@ START_TEST(test_whisker_mem_try_realloc_block_data)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block_t* block;
+	whisker_memory_block* block;
 	whisker_mem_block_try_malloc(data_size, header_size, &block);
 
 	// realloc the block and double it's size
@@ -60,7 +60,7 @@ START_TEST(test_whisker_mem_block_header_from_data_pointer)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block_t* block;
+	whisker_memory_block* block;
 	whisker_mem_block_try_malloc(data_size, header_size, &block);
 
 	// check the obtained header matches the one from the block
@@ -104,7 +104,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block_t* block;
+	whisker_memory_block* block;
 	whisker_mem_block_try_malloc(data_size, header_size, &block);
 
 	// verify data bytes are 0

@@ -89,7 +89,7 @@ E_WHISKER_STR whisker_str_copy(char* w_str_a, char** w_str_b)
 }
 
 // obtain the header from the string pointer
-whisker_array_header_t* whisker_str_header(char* w_str)
+whisker_array_header* whisker_str_header(char* w_str)
 {
 	return whisker_arr_header(w_str);
 }
@@ -97,7 +97,7 @@ whisker_array_header_t* whisker_str_header(char* w_str)
 // obtain string length from w string
 size_t whisker_str_length(char* w_str)
 {
-	whisker_array_header_t* header = whisker_str_header(w_str);
+	whisker_array_header* header = whisker_str_header(w_str);
 	return header->length - 1; // -1 to cut off the \0 byte
 }
 
