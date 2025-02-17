@@ -15,7 +15,7 @@
 **************************/
 
 // create a whisker_block_array instance
-E_WHISKER_BLOCK_ARR whisker_block_arr_create(size_t type_size, size_t block_size, whisker_block_array **block_arr)
+E_WHISKER_BLOCK_ARR whisker_block_arr_create_f(size_t type_size, size_t block_size, whisker_block_array **block_arr)
 {
 	whisker_block_array *arr;
 	E_WHISKER_MEM err = wmem_try_calloc(1, sizeof(whisker_block_array), (void**)&arr);
@@ -93,7 +93,7 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_block(whisker_block_array *block_ar
 *  array functions  *
 *********************/
 // get pointer to value with given index translated to block + offset
-void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index)
+inline void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index)
 {
 	size_t block_id = whisker_block_arr_get_block_id(block_arr->block_size, index);
 	size_t block_offset = whisker_block_arr_get_block_offset(block_arr->block_size, index);
@@ -109,7 +109,7 @@ void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index)
 }
 
 // set value at given index translated to block + offset
-E_WHISKER_BLOCK_ARR whisker_block_arr_set(whisker_block_array *block_arr, size_t index, void *value)
+inline E_WHISKER_BLOCK_ARR whisker_block_arr_set(whisker_block_array *block_arr, size_t index, void *value)
 {
 	size_t block_id = whisker_block_arr_get_block_id(block_arr->block_size, index);
 	size_t block_offset = whisker_block_arr_get_block_offset(block_arr->block_size, index);

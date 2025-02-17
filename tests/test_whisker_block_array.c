@@ -17,7 +17,7 @@ START_TEST(test_whisker_block_arr_create)
 {
 	// create a block array
 	whisker_block_array *b_arr;
-	whisker_block_arr_create(sizeof(int), 16, &b_arr);
+	whisker_block_arr_create(int, 16, &b_arr);
 
 	// free
 	whisker_block_arr_free(b_arr);
@@ -28,7 +28,7 @@ START_TEST(test_whisker_block_arr_get_and_set)
 {
 	// create a block array of ints
 	whisker_block_array *b_arr;
-	whisker_block_arr_create(sizeof(int), 16, &b_arr);
+	whisker_block_arr_create(int, 16, &b_arr);
 
 	// get a random value (should create a block automatically)
 	int *int_val = whisker_block_arr_get(b_arr, 123);
