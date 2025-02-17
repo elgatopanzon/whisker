@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <check.h>
+#include "check.h"
 
 #include "whisker_array.h"
 #include "whisker_ecs.h"

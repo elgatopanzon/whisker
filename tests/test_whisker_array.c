@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <check.h>
+#include "check.h"
 #include "whisker_array.h"
 
 START_TEST(test_whisker_arr_create_and_free)

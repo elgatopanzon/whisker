@@ -10,8 +10,8 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <raylib.h>
-#include <raymath.h>
+#include "raylib.h"
+#include "raymath.h"
 
 const int screen_width = 800;
 const int screen_height = 800;

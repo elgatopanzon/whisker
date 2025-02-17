@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <check.h>
+#include "check.h"
 
 START_TEST(test_whisker_string_creation_and_header)
 {

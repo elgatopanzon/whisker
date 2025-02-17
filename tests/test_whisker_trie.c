@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <check.h>
+#include "check.h"
 
 void whisker_trie_test_create_cat_tree(whisker_trie** trie_root)
 {
