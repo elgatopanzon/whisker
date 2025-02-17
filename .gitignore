@@ -64,3 +64,6 @@ bin/
 
 # wasm build
 build.em
+
+#ignore vim sessions
+*.vim
