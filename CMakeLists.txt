@@ -98,7 +98,13 @@ endif()
 add_subdirectory(src)
 
 # ensure libcheck and enable ctest
-find_package(check REQUIRED)
+FetchContent_Declare(
+  check
+  GIT_REPOSITORY https://github.com/libcheck/check.git
+  GIT_TAG        0.15.2
+)
+FetchContent_MakeAvailable(check)
+# find_package(check REQUIRED)
 enable_testing()
 
 #############
