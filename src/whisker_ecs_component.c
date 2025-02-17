@@ -113,7 +113,51 @@ E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *co
 /************************************
 *  component management functions  *
 ************************************/
-E_WHISKER_ECS_COMP whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id)
+{
+	// get component array
+	void* component_array;
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, component_size, (void**)&component_array);
+	if (err != E_WHISKER_ECS_COMP_OK)
+	{
+		return NULL;
+	}
+
+	// grow component array if needed
+	whisker_ecs_c_grow_component_array_(&component_array, entity_id.index + 1);
+	components->components[component_id.index] = component_array;
+
+	// return component pointer
+	return component_array + (entity_id.index * component_size);
+}
+
+E_WHISKER_ECS_COMP whisker_ecs_c_grow_component_array_(void **component_array, size_t capacity)
+{
+	if (warr_length(*component_array) >= capacity)
+	{
+		return E_WHISKER_ECS_COMP_OK;
+	}
+
+	if (warr_resize(component_array, capacity) != E_WHISKER_ARR_OK)
+	{
+		return E_WHISKER_ECS_COMP_ARR;
+	}
+
+	return E_WHISKER_ECS_COMP_OK;
+}
+
+E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
+{
+	void* component_ptr = whisker_ecs_c_get_component(components, component_id, component_size, entity_id);
+	if (component_ptr == NULL)
+	{
+		return E_WHISKER_ECS_COMP_UNKNOWN;
+	}
+
+	memcpy(component_ptr, component, component_size);
+
+	return E_WHISKER_ECS_COMP_OK;
+}
 
 /***********************
 *  utility functions  *

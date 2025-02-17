@@ -27,7 +27,9 @@ E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *com
 E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 
 // component management
-E_WHISKER_ECS_COMP whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id);
+E_WHISKER_ECS_COMP whisker_ecs_c_grow_component_array_(void **component_array, size_t capacity);
+E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component);
 
 // utility functions
 
