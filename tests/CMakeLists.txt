@@ -11,6 +11,11 @@ target_link_libraries(test_whisker_array PRIVATE
 	Check::check whisker)
 add_test(NAME test_whisker_array COMMAND test_whisker_array)
 
+add_executable(test_whisker_block_array test_whisker_block_array.c)
+target_link_libraries(test_whisker_block_array PRIVATE
+	Check::check whisker)
+add_test(NAME test_whisker_block_array COMMAND test_whisker_block_array)
+
 add_executable(test_whisker_string test_whisker_string.c)
 target_link_libraries(test_whisker_string PRIVATE
 	Check::check whisker)
