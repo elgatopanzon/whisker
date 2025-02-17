@@ -18,7 +18,7 @@ target_include_directories(whisker
 #     "${CMAKE_SOURCE_DIR}/src")
 
 # link raylib library with whisker
-target_link_libraries(whisker PUBLIC raylib)
+target_link_libraries(whisker PRIVATE raylib)
  
 # add executable for asteroids-example
 file(GLOB ASTEROIDS_EXAMPLE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/asteroids*.c")
@@ -28,3 +28,4 @@ add_executable(asteroids-example
  
 # link whisker library to target executable
 target_link_libraries(asteroids-example PRIVATE whisker)
+target_link_libraries(asteroids-example PRIVATE raylib)
