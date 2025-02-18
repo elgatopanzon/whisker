@@ -59,6 +59,8 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 		{
 			wstr_free(entities->entities[i].name);
 		}
+
+		warr_free(entities->entities[i].archetype);
 	}
 
 	warr_free(entities->entities);
@@ -111,8 +113,6 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 {
 	size_t entity_count = whisker_ecs_e_count(entities);
 
-	// TODO: pop a dead entity if one exists
-	
 	// TODO: check for max entities reached if there's a limit set later
 	
 	if (warr_increment_size(&entities->entities) != E_WHISKER_ARR_OK)
@@ -122,7 +122,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 
 	entities->entities[entity_count].id.index = entity_count;
 
-	// TODO: init archetypes array
+	warr_create(whisker_ecs_entity_id, 0, &entities->entities[entity_count].archetype);
 
 	*entity_id = entities->entities[entity_count].id;
 
@@ -201,7 +201,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 {
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 
-	// TODO: reset archetype array length to 0
+	warr_resize(&e->archetype, 0);
 
 	if (whisker_ecs_e_recycle(entities, entity_id) != E_WHISKER_ECS_ENTITY_OK)
 		return E_WHISKER_ECS_ENTITY_ARR;

@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_ecs_entity.h"
+#include "whisker_ecs_entity.h"
 #include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_SYSTEM_H
@@ -13,14 +14,14 @@
 
 typedef struct whisker_ecs_system
 {
-	whisker_ecs_entity *entity;
-	void (*system_ptr)(float);
+	whisker_ecs_entity_id entity_id;
+	void (*system_ptr)(whisker_ecs_entity_id, double, struct whisker_ecs_system *);
 	int8_t thread_id;
 	double last_update;
 
 	// denotes which components it reads/writes
-	uint64_t read_archetype[8];
-	uint64_t write_archetype[8];
+	whisker_ecs_entity_id* read_archetype;
+	whisker_ecs_entity_id* write_archetype;
 
 	// component arrays and temp component pointer cache
 	void *component_arrays[8];
