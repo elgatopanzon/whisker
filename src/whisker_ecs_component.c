@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_dict.h"
+#include "whisker_block_array.h"
 
 #include "whisker_ecs.h"
 
@@ -34,7 +35,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 	for (int i = 0; i < warr_length(components->components); i++) {
 		if (components->components[i] != NULL)
 		{
-			warr_free(components->components[i]);
+			wbarr_free(components->components[i]);
 		}
 	}
 	warr_free(components->components);
@@ -53,10 +54,13 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *
 	whisker_ecs_c_grow_components_(components, component_id.index + 1);
 
 	// create array
-	if (whisker_arr_create_f(component_size, 0, &components->components[component_id.index]) != E_WHISKER_ARR_OK)
+	whisker_block_array *barr;
+	if (whisker_block_arr_create_f(component_size, 16, &barr) != E_WHISKER_BLOCK_ARR_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;
 	}
+
+	components->components[component_id.index] = barr;
 
 	return E_WHISKER_ECS_COMP_OK;
 }
@@ -124,25 +128,26 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 	}
 
 	// grow component array if needed
-	whisker_ecs_c_grow_component_array_(&component_array, entity_id.index + 1);
-	components->components[component_id.index] = component_array;
+	/* whisker_ecs_c_grow_component_array_(&component_array, entity_id.index + 1); */
+	/* components->components[component_id.index] = component_array; */
 
 	// return component pointer
-	return component_array + (entity_id.index * component_size);
+	return wbarr_get(component_array, entity_id.index);
+	/* return component_array + (entity_id.index * component_size); */
 }
 
 E_WHISKER_ECS_COMP whisker_ecs_c_grow_component_array_(void **component_array, size_t capacity)
 {
-	if (warr_length(*component_array) >= capacity)
-	{
-		return E_WHISKER_ECS_COMP_OK;
-	}
-
-	if (warr_resize(component_array, capacity) != E_WHISKER_ARR_OK)
-	{
-		return E_WHISKER_ECS_COMP_ARR;
-	}
-
+	/* if (warr_length(*component_array) >= capacity) */
+	/* { */
+	/* 	return E_WHISKER_ECS_COMP_OK; */
+	/* } */
+    /*  */
+	/* if (warr_resize(component_array, capacity) != E_WHISKER_ARR_OK) */
+	/* { */
+	/* 	return E_WHISKER_ECS_COMP_ARR; */
+	/* } */
+    /*  */
 	return E_WHISKER_ECS_COMP_OK;
 }
 
