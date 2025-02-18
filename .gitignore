@@ -65,5 +65,8 @@ bin/
 # wasm build
 build.em
 
+# callgrind/valgrind
+callgrind*
+
 #ignore vim sessions
 *.vim
