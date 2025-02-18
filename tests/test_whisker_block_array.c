@@ -55,6 +55,45 @@ START_TEST(test_whisker_block_arr_get_and_set)
 }
 END_TEST
 
+START_TEST(test_whisker_block_arr_nested)
+{
+	// create a block array of block arrays
+	whisker_block_array *b_arr;
+	whisker_block_arr_create(whisker_block_array, 16, &b_arr);
+
+	// get a random value (should create a block automatically)
+	whisker_block_array *nested_block_array = whisker_block_arr_get(b_arr, 56);
+	// init the block array
+	whisker_block_arr_create(int, 16, &nested_block_array);
+
+	int *int_val = whisker_block_arr_get(nested_block_array, 123);
+
+	ck_assert_int_eq(0, *int_val);
+
+	// set the value
+	*int_val = 123;
+
+	// verify the value matches when obtained directly
+	ck_assert_int_eq(123, *(int*)whisker_block_arr_get(nested_block_array, 123));
+
+	// set value of a different block
+	whisker_block_arr_set(nested_block_array, 12, int_val);
+
+	// get and verify the newly set value
+	ck_assert_int_eq(123, *(int*)whisker_block_arr_get(nested_block_array, 12));
+
+	// verify the block count
+	ck_assert_int_eq(2, nested_block_array->block_count);
+
+	// verify the outer block count
+	ck_assert_int_eq(1, b_arr->block_count);
+
+	// free
+	whisker_block_arr_free(b_arr);
+	whisker_block_arr_free(nested_block_array);
+}
+END_TEST
+
 Suite* whisker_block_arr_suite(void)
 {
 	Suite *s;
@@ -68,6 +107,7 @@ Suite* whisker_block_arr_suite(void)
 
 	tcase_add_test(tc_core, test_whisker_block_arr_create);
 	tcase_add_test(tc_core, test_whisker_block_arr_get_and_set);
+	tcase_add_test(tc_core, test_whisker_block_arr_nested);
 
 	suite_add_tcase(s, tc_core);
 

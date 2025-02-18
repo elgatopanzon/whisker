@@ -46,17 +46,26 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_f(size_t type_size, size_t block_si
 // free a whisker_block_array instance
 void whisker_block_arr_free(whisker_block_array *block_arr)
 {
-	for (int i = 0; i < warr_length(block_arr->blocks); ++i)
-	{
-		if (block_arr->blocks[i] != NULL)
-		{
-			warr_free(block_arr->blocks[i]);
-		}
-	}
-
-	warr_free(block_arr->blocks);
+	whisker_block_arr_free_blocks(block_arr);
 
 	free(block_arr);
+}
+
+void whisker_block_arr_free_blocks(whisker_block_array *block_arr)
+{
+	if (block_arr->blocks != NULL)
+	{
+		for (int i = 0; i < warr_length(block_arr->blocks); ++i)
+		{
+			if (block_arr->blocks[i] != NULL)
+			{
+				warr_free(block_arr->blocks[i]);
+			}
+		}
+
+		warr_free(block_arr->blocks);
+		block_arr->blocks = NULL;
+	}
 }
 
 // create and allocate an array block
