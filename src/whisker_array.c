@@ -186,6 +186,15 @@ E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value)
 	return E_WHISKER_ARR_OK;
 }
 
+// reset length to 0 keeping allocated size and values
+E_WHISKER_ARR whisker_arr_reset(void* arr)
+{
+	whisker_arr_header(arr)->length = 0;
+
+	return E_WHISKER_ARR_OK;
+}
+
+
 // free the array by obtaining the header
 void whisker_arr_free(void* arr)
 {

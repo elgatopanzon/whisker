@@ -25,7 +25,7 @@ START_TEST(test_whisker_arr_header)
 {
 	// create an array of 10 ints
 	int* arr;
-	whisker_arr_create(int, 10, &arr);
+	whisker_arr_create(*arr, 10, &arr);
 
 	// get the array header
 	whisker_array_header* header = whisker_arr_header(arr);
@@ -43,7 +43,7 @@ START_TEST(test_whisker_arr_length)
 {
 	// create an array of 10 ints
 	int* arr;
-	whisker_arr_create(int, 10, &arr);
+	whisker_arr_create(*arr, 10, &arr);
 
 	// get the array length
 	size_t length = whisker_arr_length(arr);
