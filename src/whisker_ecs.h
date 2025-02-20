@@ -17,15 +17,16 @@
 
 typedef struct whisker_ecs
 {
-	whisker_ecs_entities* entities;
-	whisker_ecs_components* components;
+	whisker_ecs_entities *entities;
+	whisker_ecs_components *components;
+	whisker_ecs_systems *systems;
 } whisker_ecs;
 
 E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs);
 void whisker_ecs_free(whisker_ecs *ecs);
 
 // system functions
-E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(whisker_ecs_entity_id, double, struct whisker_ecs_system *), char *component_archetype_names);
+E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *component_archetype_names);
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 
 // component functions

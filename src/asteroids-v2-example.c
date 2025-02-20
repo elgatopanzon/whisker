@@ -114,11 +114,11 @@ void asteroids_system_player_death_on_life_depleted(float delta_time);
 
 void asteroids_system_draw_asteroid(float delta_time);
 void asteroids_system_draw_projectile(float delta_time);
-void asteroids_system_draw_player(whisker_ecs_entity_id entity, double delta_time, struct whisker_ecs_system *system);
+void asteroids_system_draw_player(whisker_ecs_system_update system);
 void asteroids_system_draw_hud(float delta_time);
 void asteroids_system_draw_game_over(float delta_time);
 void asteroids_system_draw_fps(float delta_time);
-void asteroids_system_draw_frame_time(whisker_ecs_entity_id e, double delta_time, struct whisker_ecs_system *system);
+void asteroids_system_draw_frame_time(whisker_ecs_system_update system);
 
 typedef struct asteroids_component_collision
 {
@@ -216,7 +216,7 @@ void asteroids_game_init()
 	/* // draw */
 	/* register_system(system_draw_asteroid); */
 	/* register_system(system_draw_projectile); */
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "COMPONENT_PLAYER_STATE,COMPONENT_POSITION,COMPONENT_ROTATION,COMPONENT_HIT_TIME");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "render_draw_player", "COMPONENT_PLAYER_STATE,COMPONENT_POSITION,COMPONENT_ROTATION,COMPONENT_HIT_TIME");
 	/* register_system(system_draw_hud); */
 	/* register_system(system_draw_game_over); */
     /*  */
@@ -229,7 +229,7 @@ void asteroids_game_init()
 	/* } */
 	if (DRAW_FRAMETIME)
 	{
-		whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "COMPONENT_FRAMETIME");
+		whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "debug_draw_frametime", "COMPONENT_FRAMETIME");
 	}
 }
 
@@ -371,15 +371,15 @@ void asteroids_add_projectile(Vector2 position, float rotation)
 	printf("add_projectile:rot %f at %fx%f\n", rotation, position.x, position.y);
 }
 
-void asteroids_system_draw_player(whisker_ecs_entity_id e, double delta_time, struct whisker_ecs_system *system)
+void asteroids_system_draw_player(whisker_ecs_system_update system)
 {
-	ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_get(asteroids_ecs, COMPONENT_PLAYER_STATE, ASTEROIDS_PLAYER_STATE, e);
+	ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_get(asteroids_ecs, COMPONENT_PLAYER_STATE, ASTEROIDS_PLAYER_STATE, system.entity->id);
 
-	Vector2 position = *whisker_ecs_get(asteroids_ecs, COMPONENT_POSITION, Vector2, e);		
+	Vector2 position = *whisker_ecs_get(asteroids_ecs, COMPONENT_POSITION, Vector2, system.entity->id);		
 
 	if (*player_state == ASTEROIDS_PLAYER_STATE_DEAD)
 	{
-		double hit_time = *whisker_ecs_get(asteroids_ecs, COMPONENT_HIT_TIME, double, e);		
+		double hit_time = *whisker_ecs_get(asteroids_ecs, COMPONENT_HIT_TIME, double, system.entity->id);		
 		float explosion_radius = (GetTime() - (hit_time + PLAYER_HIT_COOLDOWN)) * 1750;
 		const Color explosion_color = Fade(RED, 0.25f);
 
@@ -394,7 +394,7 @@ void asteroids_system_draw_player(whisker_ecs_entity_id e, double delta_time, st
 		return;
 	}
 
-	float rotation = *whisker_ecs_get(asteroids_ecs, COMPONENT_ROTATION, float, e);		
+	float rotation = *whisker_ecs_get(asteroids_ecs, COMPONENT_ROTATION, float, system.entity->id);		
 
 	const Rectangle source = {0, 0, 32, 32};
 	Rectangle dest = {position.x, position.y, 48, 48};
@@ -404,10 +404,10 @@ void asteroids_system_draw_player(whisker_ecs_entity_id e, double delta_time, st
 	DrawTexturePro(asteroids_player_ship, source, dest, origin, rotation + 180, color);
 }
 
-void asteroids_system_draw_frame_time(whisker_ecs_entity_id e, double delta_time, struct whisker_ecs_system *system)
+void asteroids_system_draw_frame_time(whisker_ecs_system_update system)
 {
-	asteroids_component_frametime* frametime = whisker_ecs_get(asteroids_ecs, COMPONENT_FRAMETIME, asteroids_component_frametime, e);
-	float current_frametime = delta_time * 1000;
+	asteroids_component_frametime* frametime = whisker_ecs_get(asteroids_ecs, COMPONENT_FRAMETIME, asteroids_component_frametime, system.entity->id);
+	float current_frametime = system.system->delta_time * 1000;
 
 	// update frametime samples
 	/* if (GetTime() - 0.1 > frametime->time || frametime->time == 0) */
@@ -429,6 +429,12 @@ void asteroids_system_draw_frame_time(whisker_ecs_entity_id e, double delta_time
     }
     float average_frametime = (sum / frametime->max_index);
 
+    if (frametime->index % DRAW_FRAMETIME_AVG_SAMPLES == 0)
+    {
+    	frametime->max = 0;
+    	frametime->min = 0;
+    }
+
     if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
     {
     	frametime->max = current_frametime;
@@ -440,10 +446,10 @@ void asteroids_system_draw_frame_time(whisker_ecs_entity_id e, double delta_time
 
 	const int frametime_string_count = 4;
 	char* frametime_strings[frametime_string_count] = {};
-	frametime_strings[0] = TextFormat("ms/f cur: %.4f", current_frametime);
-	frametime_strings[1] = TextFormat("ms/f avg: %.4f", average_frametime);
-	frametime_strings[2] = TextFormat("ms/f min: %.4f", frametime->min);
-	frametime_strings[3] = TextFormat("ms/f max: %.4f", frametime->max);
+	frametime_strings[0] = TextFormat("ms/f cur  : %.4f", current_frametime);
+	frametime_strings[1] = TextFormat("ms/f avg  : %.4f", average_frametime);
+	frametime_strings[2] = TextFormat("ms/f min  : %.4f", frametime->min);
+	frametime_strings[3] = TextFormat("ms/f spike: %.4f", frametime->max);
 
 	const int font_size = 48;
 	const int line_padding = 8;

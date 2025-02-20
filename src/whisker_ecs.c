@@ -35,8 +35,19 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 		return E_WHISKER_ECS_ARR;
 	}
 
+	whisker_ecs_systems *s;
+	if (whisker_ecs_s_create_systems(&s) != E_WHISKER_ECS_COMP_OK)
+	{
+		free(new);
+		whisker_ecs_e_free_entities(e);
+		whisker_ecs_c_free_components(c);
+
+		return E_WHISKER_ECS_ARR;
+	}
+
 	new->entities = e;
 	new->components = c;
+	new->systems = s;
 
 	*ecs = new;
 
@@ -45,14 +56,10 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 
 void whisker_ecs_free(whisker_ecs *ecs)
 {
-	// free system components
-	whisker_block_array *system_components = whisker_ecs_get_components(ecs, "whisker_ecs_system", sizeof(whisker_ecs_system));
-
-	whisker_ecs_s_free_components(system_components);
-
 	// free ecs state
 	whisker_ecs_e_free_entities(ecs->entities);
 	whisker_ecs_c_free_components(ecs->components);
+	whisker_ecs_s_free_systems(ecs->systems);
 
 	free(ecs);
 }
@@ -61,12 +68,12 @@ void whisker_ecs_free(whisker_ecs *ecs)
 /**********************
 *  system functions  *
 **********************/
-E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(whisker_ecs_entity_id, double, struct whisker_ecs_system *), char *component_archetype_names)
+E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *component_archetype_names)
 {
 	whisker_ecs_entity_id e;
-	whisker_ecs_e_create(ecs->entities, &e);
+	whisker_ecs_e_create_named(ecs->entities, system_name, &e);
 
-	whisker_ecs_c_set_component(ecs->components, whisker_ecs_component_id(ecs, "whisker_ecs_system"), sizeof(whisker_ecs_system), e, &(whisker_ecs_system) {
+	whisker_ecs_s_register_system(ecs->systems, (whisker_ecs_system) {
 		.entity_id = e,
 		.system_ptr = system_ptr,
 		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs, component_archetype_names),
@@ -77,32 +84,23 @@ E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(w
 
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
-	whisker_block_array *system_components = whisker_ecs_get_components(ecs, "whisker_ecs_system", sizeof(whisker_ecs_system));
+	/* for (int ei = 0; ei < whisker_ecs_e_count(ecs->entities); ++ei) */
+	/* { */
+	/* 	whisker_ecs_entity entity = ecs->entities->entities[ei]; */
+    /*  */
+	/* 	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_execute_systems_for_entity(ecs->systems, ecs->entities, ecs->components, &entity, delta_time); */
+    /*  */
+	/* 	if (execute_err != E_WHISKER_ECS_SYS_OK) */
+	/* 	{ */
+	/* 		return E_WHISKER_ECS_UPDATE_SYSTEM; */
+	/* 	} */
+	/* } */
 
-	for (int ei = 0; ei < whisker_ecs_e_count(ecs->entities); ++ei)
+	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_update_systems(ecs->systems, ecs->entities, ecs->components, delta_time);
+
+	if (execute_err != E_WHISKER_ECS_SYS_OK)
 	{
-		whisker_ecs_entity entity = ecs->entities->entities[ei];
-
-		for (int i = 0; i < warr_length(system_components->blocks); ++i)
-		{
-			if (system_components->blocks[i] != NULL)
-			{
-				for (int ii = 0; ii < system_components->block_size; ++ii)
-				{
-					if (((whisker_ecs_system*)system_components->blocks[i])[ii].system_ptr != NULL)
-					{
-						whisker_ecs_entity_id *system_archetype = ((whisker_ecs_system*)system_components->blocks[i])[ii].write_archetype;
-						whisker_ecs_entity_id *entity_archetype = ecs->entities->entities[ei].archetype;
-
-
-						if (whisker_ecs_a_match(system_archetype, entity_archetype))
-						{
-							((whisker_ecs_system*)system_components->blocks[i])[ii].system_ptr(entity.id, delta_time, &((whisker_ecs_system*)system_components->blocks[i])[ii]);
-						}
-					}
-				}
-			}
-		}
+		return E_WHISKER_ECS_UPDATE_SYSTEM;
 	}
 
 	return E_WHISKER_ECS_OK;

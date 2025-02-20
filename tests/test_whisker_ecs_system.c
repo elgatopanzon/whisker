@@ -16,14 +16,14 @@
 
 START_TEST(test_whisker_ecs_system_create_systems_struct)
 {
-	/* whisker_ecs_systems *s; */
-	/* whisker_ecs_s_create_systems(&s); */
-    /*  */
-	/* // verify empty arrays */
-	/* ck_assert_int_eq(0, warr_length(s->systems)); */
-    /*  */
-	/* // free */
-	/* whisker_ecs_s_free_systems(s); */
+	whisker_ecs_systems *s;
+	whisker_ecs_s_create_systems(&s);
+
+	// verify empty arrays
+	ck_assert_int_eq(0, warr_length(s->systems));
+
+	// free
+	whisker_ecs_s_free_systems(s);
 }
 END_TEST
 
