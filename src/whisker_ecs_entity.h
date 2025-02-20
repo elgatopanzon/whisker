@@ -11,11 +11,12 @@
 #define WHISKER_ECS_ENTITY_H
 
 typedef uint32_t whisker_ecs_entity_index;
+typedef uint64_t whisker_ecs_entity_id_raw;
 
 typedef struct whisker_ecs_entity_id
 {
     union {
-        uint64_t id;
+        whisker_ecs_entity_id_raw id;
         struct {
             whisker_ecs_entity_index index;
             whisker_ecs_entity_index version;
@@ -63,11 +64,13 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 
 // utility functions
 whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id);
 whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name);
 bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 size_t whisker_ecs_e_count(whisker_ecs_entities *entities);
 size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities);
 size_t whisker_ecs_e_dead_count(whisker_ecs_entities *entities);
+whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
 
 // short macros and types
 typedef whisker_ecs_entity_id wecs_e_id;

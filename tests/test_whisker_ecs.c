@@ -22,7 +22,6 @@ START_TEST(test_whisker_ecs_create)
 	// verify the lengths of some of the struct's arrays
 	ck_assert_int_eq(0, warr_length(ecs->entities->entities));
 	ck_assert_int_eq(0, warr_length(ecs->components->components));
-	ck_assert_int_eq(0, warr_length(ecs->systems->systems));
 	
 	whisker_ecs_free(ecs);
 }

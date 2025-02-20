@@ -5,13 +5,16 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_block_array.h"
 #include "whisker_ecs_entity.h"
-#include "whisker_ecs_entity.h"
+#include "whisker_ecs_archetype.h"
+#include "whisker_ecs_component.h"
 #include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_SYSTEM_H
 #define WHISKER_ECS_SYSTEM_H
 
+// component acting as a system container
 typedef struct whisker_ecs_system
 {
 	whisker_ecs_entity_id entity_id;
@@ -28,13 +31,8 @@ typedef struct whisker_ecs_system
 	void *components[8];
 } whisker_ecs_system;
 
-typedef struct whisker_ecs_systems
-{
-	whisker_ecs_system *systems;	
-} whisker_ecs_systems;
-
-E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems);
-void whisker_ecs_s_free_systems(whisker_ecs_systems *systems);
+// system operation functions
+void whisker_ecs_s_free_components(whisker_block_array *system_components);
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 

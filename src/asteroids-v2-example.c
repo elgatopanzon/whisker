@@ -229,7 +229,7 @@ void asteroids_game_init()
 	/* } */
 	if (DRAW_FRAMETIME)
 	{
-		whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "COMPONENT_FRAMETIME,");
+		whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "COMPONENT_FRAMETIME");
 	}
 }
 

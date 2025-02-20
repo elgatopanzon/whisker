@@ -7,6 +7,7 @@
 #include "whisker_std.h"
 #include "whisker_block_array.h"
 #include "whisker_ecs_entity.h"
+#include "whisker_ecs_archetype.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"
 #include "whisker_ecs_err.h"
@@ -18,7 +19,6 @@ typedef struct whisker_ecs
 {
 	whisker_ecs_entities* entities;
 	whisker_ecs_components* components;
-	whisker_ecs_systems* systems;
 } whisker_ecs;
 
 E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs);
@@ -35,11 +35,10 @@ whisker_block_array* whisker_ecs_get_component(whisker_ecs *ecs, char* component
 E_WHISKER_ECS whisker_ecs_set_component(whisker_ecs *ecs, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id, void* value);
 E_WHISKER_ECS whisker_ecs_remove_component(whisker_ecs *ecs, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id);
 
-// archetype functions
+// archetype shortcut functions
 whisker_ecs_entity_id* whisker_ecs_archetype_from_named_entities(whisker_ecs *ecs, char* entity_names);
-int whisker_ecs_get_archetype_index(whisker_ecs_entity_id *archetype, whisker_ecs_entity_id archetype_id);
-E_WHISKER_ECS whisker_ecs_archetype_set(whisker_ecs_entity *entity, whisker_ecs_entity_id archetype_id);
-E_WHISKER_ECS whisker_ecs_archetype_remove(whisker_ecs_entity *entity, whisker_ecs_entity_id archetype_id);
+E_WHISKER_ECS whisker_ecs_archetype_set(whisker_ecs *ecs, whisker_ecs_entity_id entity_id, whisker_ecs_entity_id archetype_id);
+E_WHISKER_ECS whisker_ecs_archetype_remove(whisker_ecs *ecs, whisker_ecs_entity_id entity_id, whisker_ecs_entity_id archetype_id);
 E_WHISKER_ECS whisker_ecs_set_component_archetype(whisker_ecs *ecs, char* component_name, whisker_ecs_entity_id entity_id);
 E_WHISKER_ECS whisker_ecs_remove_component_archetype(whisker_ecs *ecs, char* component_name, whisker_ecs_entity_id entity_id);
 bool whisker_ecs_has_component_archetype(whisker_ecs *ecs, char* component_name, whisker_ecs_entity_id entity_id);

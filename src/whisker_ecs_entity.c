@@ -224,6 +224,11 @@ whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_en
 	return &entities->entities[entity_id.index];
 }
 
+inline whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id)
+{
+	return (whisker_ecs_entity_id){.id = id};
+}
+
 whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name)
 {
 	// lookup entity by name and return a match, or NULL
@@ -254,4 +259,49 @@ size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities)
 size_t whisker_ecs_e_dead_count(whisker_ecs_entities *entities)
 {
 	return warr_length(entities->dead_entities);
+}
+
+whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
+{
+	// entity list derived from string entity names
+	whisker_ecs_entity_id *entities_new;
+	warr_create(whisker_ecs_entity_id, 0, &entities_new);
+
+	char* entity_names; wstr(entity_names_str, &entity_names);
+	size_t names_length = wstr_length(entity_names);
+
+	size_t search_index = 0;
+	for (size_t i = 0; i < names_length + 1; ++i)
+	{
+		// if we reached the end of the string, or a separator
+		// mutate to null terminator value
+		bool mutated = false;
+		if (entity_names[i] == ',') {
+    		entity_names[i] = '\0';
+    		mutated = true;
+		}
+
+		if (entity_names[i] == 0x0)
+		{
+			// create/get entity ID for name
+			whisker_ecs_entity_id e;
+			whisker_ecs_e_create_named(entities, entity_names + search_index, &e);
+
+			printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
+
+			// add the entity id to the final list, and reset name array
+			warr_push(&entities_new, &e);
+
+			search_index = i + 1;
+			if (mutated)
+			{
+    			entity_names[i] = ',';
+			}
+			continue;
+		}
+	}
+
+	wstr_free(entity_names);
+
+	return entities_new;
 }
