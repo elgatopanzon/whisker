@@ -67,6 +67,7 @@ build.em
 
 # callgrind/valgrind
 callgrind*
+vgcore*
 
 #ignore vim sessions
 *.vim
