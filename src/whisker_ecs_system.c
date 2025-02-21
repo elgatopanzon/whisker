@@ -112,6 +112,11 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 
 		for (size_t ei = 0; ei < entity_count; ++ei)
 		{
+			if (!entities->entities[ei].alive)
+			{
+				continue;
+			}
+
 			whisker_ecs_entity_id *entity_archetype = entities->entities[ei].archetype;
 			whisker_ecs_entity_id entity_id = entities->entities[ei].id;
 

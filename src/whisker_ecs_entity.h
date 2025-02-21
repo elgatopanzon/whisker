@@ -38,6 +38,7 @@ typedef struct whisker_ecs_entity
 {
     whisker_ecs_entity_id id;
     whisker_ecs_entity_id *archetype;
+    bool alive;
     char* name;
 } whisker_ecs_entity;
 

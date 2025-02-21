@@ -129,6 +129,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 	}
 
 	entities->entities[entity_count].id.index = entity_count;
+	entities->entities[entity_count].alive = true;
 
 	warr_create(whisker_ecs_entity_id, 0, &entities->entities[entity_count].archetype);
 
@@ -218,6 +219,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 
 	warr_resize(&e->archetype, 0);
+	e->alive = false;
 
 	if (whisker_ecs_e_recycle(entities, entity_id) != E_WHISKER_ECS_ENTITY_OK)
 		return E_WHISKER_ECS_ENTITY_ARR;
