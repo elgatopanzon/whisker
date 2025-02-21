@@ -46,29 +46,23 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_free(whisker_ecs_entity_id *archetype)
 /************************
 *  utility functions   *
 ************************/
-inline int whisker_ecs_a_has_id(whisker_ecs_entity_id *archetype, whisker_ecs_entity_id archetype_id)
-{
-	for (int i = 0; i < warr_length(archetype); ++i)
-	{
-		if (archetype[i].id == archetype_id.id)
-		{
-			return i;
-		}
-	}
-
-	return -1;
+inline int whisker_ecs_a_has_id(whisker_ecs_entity_id *archetype, whisker_ecs_entity_id archetype_id) {
+    for (int i = 0, len = warr_length(archetype); i < len; ++i) {
+        if (archetype[i].id == archetype_id.id) {
+            return i;
+        }
+    }
+    return -1;
 }
 
-bool whisker_ecs_a_match(whisker_ecs_entity_id *archetype_a, whisker_ecs_entity_id *archetype_b)
-{
-	size_t a_length = warr_length(archetype_a);
-	size_t matches = 0;
-	for (size_t i = 0; i < a_length; ++i)
-	{
-		matches += (whisker_ecs_a_has_id(archetype_b, archetype_a[i]) > -1);
-	}
-
-	return (matches == a_length);
+bool whisker_ecs_a_match(whisker_ecs_entity_id *archetype_a, whisker_ecs_entity_id *archetype_b) {
+    size_t a_length = warr_length(archetype_a);
+    for (size_t i = 0; i < a_length; ++i) {
+        if (whisker_ecs_a_has_id(archetype_b, archetype_a[i]) == -1) {
+            return false;
+        }
+    }
+    return true;
 }
 
 whisker_ecs_entity_id* whisker_ecs_a_from_named_entities(whisker_ecs_entities *entities, char* entity_names)

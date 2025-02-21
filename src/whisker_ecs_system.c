@@ -94,12 +94,14 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 {
 	// iterate over all systems, processing each entity and it's archetype for
 	// matches, excluding updates for those which don't match
-	for (size_t si = 0; si < warr_length(systems->systems); ++si)
+	size_t entity_count = whisker_ecs_e_count(entities);
+	size_t systems_count = warr_length(systems->systems);
+
+	for (size_t si = 0; si < systems_count; ++si)
 	{
 		whisker_ecs_system *system = &systems->systems[si];
 		system->delta_time = delta_time;
 
-		size_t entity_count = whisker_ecs_e_count(entities);
 		for (size_t ei = 0; ei < entity_count; ++ei)
 		{
 			whisker_ecs_entity_id *entity_archetype = entities->entities[ei].archetype;
@@ -163,36 +165,24 @@ void *whisker_ecs_s_get_component(whisker_ecs_system *system, whisker_ecs_compon
 	return wbarr_get(archetype_components->components[index], entity_id.index);
 }
 
-int whisker_ecs_s_get_component_name_index(char* component_names, char* component_name)
-{
-	size_t search_index = 0;
-	int name_index = 0;
-	size_t names_length = strlen(component_names);
-	size_t name_length = strlen(component_name);
+int whisker_ecs_s_get_component_name_index(char* component_names, char* component_name) {
+    size_t search_index = 0;
+    int name_index = 0;
+    size_t name_length = strlen(component_name);
 
-	for (size_t i = 0; i < names_length + 1; ++i)
-	{
-		// if we're left with no space to search for the target, then it's not
-		// going to be a match
-		if (search_index + name_length > names_length + 1)
-		{
-			break;
-		}
+    while (component_names[search_index]) {
+        if (memcmp(component_names + search_index, component_name, name_length) == 0 &&
+            (component_names[search_index + name_length] == ',' || component_names[search_index + name_length] == '\0')) {
+            return name_index;
+        }
+        while (component_names[search_index] && component_names[search_index] != ',') {
+            search_index++;
+        }
+        if (component_names[search_index] == ',') {
+            search_index++;
+        }
+        name_index++;
+    }
 
-		// if we reached the end of the string, or a separator
-		if (component_names[i] == ',' || component_names[i] == 0x0)
-		{
-			// search for match between start and current end position
-    		if (memcmp(component_names + search_index, component_name, name_length) == 0)
-    		{
-				return name_index;
-    		}
-
-			search_index = i + 1;
-			name_index++;
-			continue;
-		}
-	}
-
-	return -1;
+    return -1;
 }
