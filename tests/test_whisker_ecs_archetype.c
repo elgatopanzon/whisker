@@ -82,9 +82,9 @@ START_TEST(test_whisker_ecs_archetype_named_entities_to_archetype)
 
 	// create some new named entities
 	whisker_ecs_entity_id e3;
-	whisker_ecs_e_create_named(en, "test3", &e3);
+	whisker_ecs_e_create_named_(en, "test3", &e3);
 	whisker_ecs_entity_id e4;
-	whisker_ecs_e_create_named(en, "test4", &e4);
+	whisker_ecs_e_create_named_(en, "test4", &e4);
 
 	// create new archetype from the named entities
 	whisker_ecs_entity_id *a3 = whisker_ecs_a_from_named_entities(en, "test3,test4,test1");

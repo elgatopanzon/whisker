@@ -68,15 +68,25 @@ void whisker_ecs_free(whisker_ecs *ecs)
 /**********************
 *  system functions  *
 **********************/
-E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *component_archetype_names)
+E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *read_component_archetype_names, char *write_component_archetype_names)
 {
+	// create an entity for this system with it's name
 	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_named(ecs->entities, system_name, &e);
+	whisker_ecs_e_create_named_(ecs->entities, system_name, &e);
 
-	whisker_ecs_s_register_system(ecs->systems, (whisker_ecs_system) {
+	// attach the id to the system's entity archetype
+	// allows a system to read/write to an alias component with it's own name
+	whisker_ecs_archetype_set(ecs, e, e);
+
+	// register the system with the system scheduler
+	whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
 		.entity_id = e,
 		.system_ptr = system_ptr,
-		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs, component_archetype_names),
+		.read_archetype = whisker_ecs_archetype_from_named_entities(ecs, read_component_archetype_names),
+		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs, write_component_archetype_names),
+		.read_component_names = read_component_archetype_names,
+		.write_component_names = write_component_archetype_names,
+		.components = ecs->components,
 	});
 
 	return E_WHISKER_ECS_OK;
@@ -84,19 +94,7 @@ E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(s
 
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
-	/* for (int ei = 0; ei < whisker_ecs_e_count(ecs->entities); ++ei) */
-	/* { */
-	/* 	whisker_ecs_entity entity = ecs->entities->entities[ei]; */
-    /*  */
-	/* 	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_execute_systems_for_entity(ecs->systems, ecs->entities, ecs->components, &entity, delta_time); */
-    /*  */
-	/* 	if (execute_err != E_WHISKER_ECS_SYS_OK) */
-	/* 	{ */
-	/* 		return E_WHISKER_ECS_UPDATE_SYSTEM; */
-	/* 	} */
-	/* } */
-
-	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_update_systems(ecs->systems, ecs->entities, ecs->components, delta_time);
+	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
 
 	if (execute_err != E_WHISKER_ECS_SYS_OK)
 	{
@@ -107,13 +105,43 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 }
 
 
+/*******************************
+*  entity shortcut functions  *
+*******************************/
+whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs *ecs)
+{
+	whisker_ecs_entity_id e;
+	whisker_ecs_e_create_(ecs->entities, &e);
+
+	return e;
+}
+
+whisker_ecs_entity_id whisker_ecs_create_named_entity(whisker_ecs *ecs, char* name)
+{
+	whisker_ecs_entity_id e;
+	whisker_ecs_e_create_named_(ecs->entities, name, &e);
+
+	return e;
+}
+
+bool whisker_ecs_destroy_entity(whisker_ecs *ecs, whisker_ecs_entity_id entity_id)
+{
+	return (whisker_ecs_e_destroy(ecs->entities, entity_id) == E_WHISKER_ECS_ENTITY_OK);
+}
+
+bool whisker_ecs_is_alive(whisker_ecs *ecs, whisker_ecs_entity_id entity_id)
+{
+	return whisker_ecs_e_is_alive(ecs->entities, entity_id);
+}
+
+
 /*************************
 *  component functions  *
 *************************/
 whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs *ecs, char* component_name)
 {
 	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_named(ecs->entities, component_name, &e);
+	whisker_ecs_e_create_named_(ecs->entities, component_name, &e);
 
 	return e;
 }
@@ -206,5 +234,5 @@ bool whisker_ecs_has_component_archetype(whisker_ecs *ecs, char* component_name,
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(ecs, component_name);
 	whisker_ecs_entity_id *archetype = whisker_ecs_e(ecs->entities, entity_id)->archetype;
 
-	return whisker_ecs_a_has_id(archetype, component_id);
+	return (whisker_ecs_a_has_id(archetype, component_id) != -1);
 }

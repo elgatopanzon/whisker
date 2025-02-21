@@ -1181,6 +1181,12 @@ void system_draw_frame_time(float delta_time)
     	}
     	float average_frametime = (sum / frametime->max_index);
 
+    	if (frametime->index % DRAW_FRAMETIME_AVG_SAMPLES == 0)
+    	{
+    		frametime->max = 0;
+    		frametime->min = 0;
+    	}
+
     	if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
     	{
     		frametime->max = current_frametime;

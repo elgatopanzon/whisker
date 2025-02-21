@@ -74,7 +74,15 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 *  entity management  *
 ***********************/
 
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create(whisker_ecs_entities *entities, whisker_ecs_entity_id *entity_id)
+whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
+{
+	whisker_ecs_entity_id e;
+	whisker_ecs_e_create_(entities, &e);
+
+	return e;
+}
+
+E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisker_ecs_entity_id *entity_id)
 {
 	whisker_ecs_entity_id new_id;
 
@@ -147,7 +155,15 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char
 	return E_WHISKER_ECS_ENTITY_OK;
 }
 
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id *entity_id)
+whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities, char *name)
+{
+	whisker_ecs_entity_id e;
+	whisker_ecs_e_create_named_(entities, name, &e);
+
+	return e;
+}
+
+E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id *entity_id)
 {
 	whisker_ecs_entity *e = whisker_ecs_e_named(entities, name);
 	if (e != NULL)
@@ -158,7 +174,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named(whisker_ecs_entities *entities, 
 
 	// create new entity with name
 	whisker_ecs_entity_id e_id;
-	E_WHISKER_ECS_ENTITY create_err = whisker_ecs_e_create(entities, &e_id);
+	E_WHISKER_ECS_ENTITY create_err = whisker_ecs_e_create_(entities, &e_id);
 	if (create_err != E_WHISKER_ECS_ENTITY_OK)
 	{
 		return create_err;
@@ -183,9 +199,9 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	e->id.version++;
 
 	// clear name pointer
-	wdict_remove(&entities->entity_names, e->name);
 	if (e->name != NULL)
 	{
+		wdict_remove(&entities->entity_names, e->name);
 		wstr_free(e->name);
 		e->name = NULL;
 	}
@@ -270,6 +286,12 @@ whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *e
 	char* entity_names; wstr(entity_names_str, &entity_names);
 	size_t names_length = wstr_length(entity_names);
 
+	if (names_length == 0)
+	{
+		wstr_free(entity_names);
+		return entities_new;
+	}
+
 	size_t search_index = 0;
 	for (size_t i = 0; i < names_length + 1; ++i)
 	{
@@ -285,7 +307,7 @@ whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *e
 		{
 			// create/get entity ID for name
 			whisker_ecs_entity_id e;
-			whisker_ecs_e_create_named(entities, entity_names + search_index, &e);
+			whisker_ecs_e_create_named_(entities, entity_names + search_index, &e);
 
 			printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 

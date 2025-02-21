@@ -36,9 +36,9 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	whisker_ecs_e_create_entities(&entities);
 
 	// create some entities
-	wecs_e_id e1; whisker_ecs_e_create(entities, &e1);
-	wecs_e_id e2; whisker_ecs_e_create(entities, &e2);
-	wecs_e_id e3; whisker_ecs_e_create(entities, &e3);
+	wecs_e_id e1; whisker_ecs_e_create_(entities, &e1);
+	wecs_e_id e2; whisker_ecs_e_create_(entities, &e2);
+	wecs_e_id e3; whisker_ecs_e_create_(entities, &e3);
 
 	// validate entity count
 	ck_assert_uint_eq(3, warr_length(entities->entities));
@@ -72,7 +72,7 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	ck_assert_uint_eq(1, whisker_ecs_e(entities, e3)->id.version);
 
 	// create a new entity (it should recycle 0 with version 1 first)
-	wecs_e_id e4; whisker_ecs_e_create(entities, &e4);
+	wecs_e_id e4; whisker_ecs_e_create_(entities, &e4);
 	ck_assert_uint_eq(0, e4.index);
 	ck_assert_uint_eq(1, e4.version);
 
@@ -87,9 +87,9 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	whisker_ecs_e_create_entities(&entities);
 
 	// create some named entities
-	wecs_e_id e1; whisker_ecs_e_create_named(entities, "e1", &e1);
-	wecs_e_id e2; whisker_ecs_e_create_named(entities, "e2", &e2);
-	wecs_e_id e3; whisker_ecs_e_create_named(entities, "e3", &e3);
+	wecs_e_id e1; whisker_ecs_e_create_named_(entities, "e1", &e1);
+	wecs_e_id e2; whisker_ecs_e_create_named_(entities, "e2", &e2);
+	wecs_e_id e3; whisker_ecs_e_create_named_(entities, "e3", &e3);
 
 	// get entity struct by name
 	wecs_entity *e1_fetched = wecs_e_named(entities, "e1");
@@ -107,7 +107,7 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	ck_assert_str_eq("e3", e3_fetched->name);
 
 	// create an entity with the same name, to get the existing entity
-	wecs_e_id e4; whisker_ecs_e_create_named(entities, "e3", &e4);
+	wecs_e_id e4; whisker_ecs_e_create_named_(entities, "e3", &e4);
 	ck_assert_uint_eq(2, e4.index);
 
 	// destroy an entity, validate the key no longer works
@@ -150,9 +150,9 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 
 	// create some new named entities
 	whisker_ecs_entity_id e3;
-	whisker_ecs_e_create_named(en, "test3", &e3);
+	whisker_ecs_e_create_named_(en, "test3", &e3);
 	whisker_ecs_entity_id e4;
-	whisker_ecs_e_create_named(en, "test4", &e4);
+	whisker_ecs_e_create_named_(en, "test4", &e4);
 
 	// create new archetype from the named entities
 	whisker_ecs_entity_id *a3 = whisker_ecs_e_from_named_entities(en, "test3,test4,test1");

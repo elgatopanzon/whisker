@@ -55,6 +55,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *
 
 	// create array
 	whisker_block_array *barr;
+	printf("creating component block array %zu size %zu\n", component_id.id, component_size);
 	if (whisker_block_arr_create_f(component_size, 16, &barr) != E_WHISKER_BLOCK_ARR_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;

@@ -37,11 +37,32 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 	free(systems);
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_system system)
+E_WHISKER_ECS_SYS whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
 {
+	whisker_ecs_s_set_archetype_components(systems, components, &system);
+
 	if (warr_push(&systems->systems, &system))
 	{
 		return E_WHISKER_ECS_SYS_ARR;
+	}
+
+	return E_WHISKER_ECS_SYS_OK;
+}
+
+E_WHISKER_ECS_SYS whisker_ecs_s_set_archetype_components(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system *system)
+{
+	// if archetype read/write components array is null, create a new one with just
+	// pointers to this system's read/write components
+	// note: this will require runtime system archetype changes to reset it
+	if (system->read_components == NULL)
+	{
+		whisker_ecs_c_create_components(&system->read_components);
+		whisker_ecs_c_grow_components_(system->read_components, warr_length(system->read_archetype));
+	}
+	if (system->write_components == NULL)
+	{
+		whisker_ecs_c_create_components(&system->write_components);
+		whisker_ecs_c_grow_components_(system->write_components, warr_length(system->write_archetype));
 	}
 
 	return E_WHISKER_ECS_SYS_OK;
@@ -57,32 +78,36 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	{
 		warr_free(system->write_archetype);
 	}
-	/* if (system->component_arrays != NULL) */
-	/* { */
-	/* 	warr_free(system->component_arrays); */
-	/* } */
-	/* if (system->components != NULL) */
-	/* { */
-	/* 	warr_free(system->components); */
-	/* } */
+	if (system->read_components != NULL)
+	{
+		warr_free(system->read_components->components);
+		free(system->read_components);
+	}
+	if (system->write_components != NULL)
+	{
+		warr_free(system->write_components->components);
+		free(system->write_components);
+	}
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_components *components, double delta_time)
+E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
 	// iterate over all systems, processing each entity and it's archetype for
 	// matches, excluding updates for those which don't match
-	for (int si = 0; si < warr_length(systems->systems); ++si)
+	for (size_t si = 0; si < warr_length(systems->systems); ++si)
 	{
 		whisker_ecs_system *system = &systems->systems[si];
 		system->delta_time = delta_time;
 
-		for (int ei = 0; ei < whisker_ecs_e_count(entities); ++ei)
+		size_t entity_count = whisker_ecs_e_count(entities);
+		for (size_t ei = 0; ei < entity_count; ++ei)
 		{
-			whisker_ecs_entity *entity = &entities->entities[ei];
+			whisker_ecs_entity_id *entity_archetype = entities->entities[ei].archetype;
+			whisker_ecs_entity_id entity_id = entities->entities[ei].id;
 
-			if (whisker_ecs_a_match(system->write_archetype, entity->archetype))
+			if (whisker_ecs_a_match(system->read_archetype, entity_archetype) && whisker_ecs_a_match(system->write_archetype, entity_archetype))
 			{
-				whisker_ecs_s_update_system(system, entities, components, entity);				
+				whisker_ecs_s_update_system(system, entities, system->write_components, entity_id);				
 			}
 		}
 	}
@@ -90,14 +115,84 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_entities *entities, whisker_ecs_components *components, whisker_ecs_entity *entity)
+E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_entities *entities, whisker_ecs_components *components, whisker_ecs_entity_id entity_id)
 {
 	system->system_ptr((whisker_ecs_system_update) {
-		entities = entities,
-		components = components,
-		system = system,
-		entity = entity,
+		.entities = entities,
+		.components = components,
+		.system = system,
+		.entity_id = entity_id,
 		});
 
 	return E_WHISKER_ECS_SYS_OK;
+}
+
+void *whisker_ecs_s_get_read_component_by_index(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id)
+{
+	return whisker_ecs_s_get_component(system, system->read_components, system->read_archetype, index, size, entity_id);
+}
+void *whisker_ecs_s_get_write_component_by_index(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id)
+{
+	return whisker_ecs_s_get_component(system, system->write_components, system->write_archetype, index, size, entity_id);
+}
+
+void *whisker_ecs_s_get_read_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id)
+{
+	return whisker_ecs_s_get_read_component_by_index(system, whisker_ecs_s_get_component_name_index(system->read_component_names, component_name), size, entity_id);
+}
+
+void *whisker_ecs_s_get_write_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id)
+{
+	return whisker_ecs_s_get_write_component_by_index(system, whisker_ecs_s_get_component_name_index(system->write_component_names, component_name), size, entity_id);
+}
+
+void *whisker_ecs_s_get_component(whisker_ecs_system *system, whisker_ecs_components *archetype_components, whisker_ecs_entity_id *archetype, size_t index, size_t size, whisker_ecs_entity_id entity_id)
+{
+
+	// verify if the components array exists in the cache
+	// if it's NULL, set the pointer to the real component array
+	if (archetype_components->components[index] == NULL)
+	{
+		whisker_ecs_entity_id archetype_id = archetype[index];
+
+		whisker_block_array *component_array;
+		whisker_ecs_c_get_component_array(system->components, archetype_id, size, (void**)&component_array);
+		archetype_components->components[index] = component_array;
+	}
+
+	return wbarr_get(archetype_components->components[index], entity_id.index);
+}
+
+int whisker_ecs_s_get_component_name_index(char* component_names, char* component_name)
+{
+	size_t search_index = 0;
+	int name_index = 0;
+	size_t names_length = strlen(component_names);
+	size_t name_length = strlen(component_name);
+
+	for (size_t i = 0; i < names_length + 1; ++i)
+	{
+		// if we're left with no space to search for the target, then it's not
+		// going to be a match
+		if (search_index + name_length > names_length + 1)
+		{
+			break;
+		}
+
+		// if we reached the end of the string, or a separator
+		if (component_names[i] == ',' || component_names[i] == 0x0)
+		{
+			// search for match between start and current end position
+    		if (memcmp(component_names + search_index, component_name, name_length) == 0)
+    		{
+				return name_index;
+    		}
+
+			search_index = i + 1;
+			name_index++;
+			continue;
+		}
+	}
+
+	return -1;
 }
