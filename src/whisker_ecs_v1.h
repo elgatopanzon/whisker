@@ -15,9 +15,15 @@
 /*********
 *  ECS  *
 *********/
+#ifndef ENTITY_MAX
 #define ENTITY_MAX 128
+#endif /* ifndef ENTITY_MAX */
+#ifndef COMPONENT_MAX
 #define COMPONENT_MAX 32
+#endif /* ifndef ENTITY_MAX */
+#ifndef SYSTEM_MAX
 #define SYSTEM_MAX 32
+#endif /* ifndef ENTITY_MAX */
 extern size_t entity[ENTITY_MAX];
 extern size_t entity_recycled[ENTITY_MAX];
 extern size_t component_entity[COMPONENT_MAX][ENTITY_MAX];

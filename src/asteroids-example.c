@@ -23,6 +23,9 @@ const Vector2 screen_center = {(float) screen_width / 2, (float) screen_height /
 #define DRAW_FRAMETIME true
 #define DRAW_FRAMETIME_AVG_SAMPLES 5000
 
+#define ENTITY_MAX 1024
+#define COMPONENT_MAX 32
+#define SYSTEM_MAX 32
 #define ECS_VERSION "whisker_ecs_v1.h"
 #include ECS_VERSION
 
