@@ -12,8 +12,8 @@
 void whisker_debug_print_value_layout(void *obj, size_t len, const char *name)
 {
 	unsigned char *bytes = (unsigned char *) obj;
-	printf("%s representation: 0x", name);
+	debug_printf("%s representation: 0x", name);
 	while (len--)
-		printf("%02x", *bytes++);
-	printf("\n");
+		debug_printf("%02x", *bytes++);
+	debug_printf("\n");
 }

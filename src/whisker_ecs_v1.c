@@ -6,6 +6,7 @@
 
 #include "whisker_array.h"
 #include "whisker_dict.h"
+#include "whisker_debug.h"
 #include "whisker_ecs_v1.h"
 
 size_t entity[ENTITY_MAX] = {};
@@ -22,7 +23,7 @@ typedef struct components
 
 void init_ecs()
 {
-	printf("ecs:init\n");
+	debug_printf("ecs:init\n");
 
 	for (size_t i = 0; i < ENTITY_MAX; ++i)
 	{
@@ -43,7 +44,7 @@ void init_ecs()
 
 void deinit_ecs()
 {
-	printf("ecs:deinit\n");
+	debug_printf("ecs:deinit\n");
 
 	for (size_t i = 0; i < COMPONENT_MAX; ++i)
 	{
@@ -71,7 +72,7 @@ void add_entity(size_t e)
 	{
 		if (entity[i] == -1)
 		{
-			/* printf("ecs:add_entity:e = %zu @ %zu\n", e, i); */
+			/* debug_printf("ecs:add_entity:e = %zu @ %zu\n", e, i); */
 
 			entity[i] = e;
 			break;
@@ -85,7 +86,7 @@ void recycle_entity(size_t e)
 	{
 		if (entity_recycled[i] == -1)
 		{
-			/* printf("ecs:recycle_entity:e = %zu @ %zu\n", e, i); */
+			/* debug_printf("ecs:recycle_entity:e = %zu @ %zu\n", e, i); */
 
 			entity_recycled[i] = e;
 			break;
@@ -99,7 +100,7 @@ void remove_entity(size_t e)
 	{
 		if (entity[i] == e)
 		{
-			/* printf("ecs:remove_entity:e = %d @ %d\n", e, i); */
+			/* debug_printf("ecs:remove_entity:e = %d @ %d\n", e, i); */
 
 			for (size_t i = 0; i < COMPONENT_MAX; ++i)
 			{
@@ -138,18 +139,18 @@ size_t create_entity()
 		size_t largest_entity = 0;
 		for (size_t i = 0; i < ENTITY_MAX; ++i)
 		{
-			/* printf("%d %d %d\n", i, entity[i], largest_entity); */
+			/* debug_printf("%d %d %d\n", i, entity[i], largest_entity); */
 			if (entity[i] != -1 && entity[i] > largest_entity) {
 				largest_entity = entity[i];
 			}
 		}
-		/* printf("ecs:create_entity:largest_entity+1 = %d\n", largest_entity + 1); */
+		/* debug_printf("ecs:create_entity:largest_entity+1 = %d\n", largest_entity + 1); */
 		add_entity(largest_entity + 1);
 		return largest_entity + 1;
 	}
 	else
 	{
-		/* printf("ecs:create_entity:recycled_entity = %d\n", recycled_entity); */
+		/* debug_printf("ecs:create_entity:recycled_entity = %d\n", recycled_entity); */
 		add_entity(recycled_entity);
 	}
 
@@ -167,8 +168,8 @@ bool add_component_entity(size_t component_id, size_t entity_id)
         return false;
     }
 
-    /* printf("ecs:add_component_entity:component_id = %zu\n", component_id); */
-    /* printf("ecs:add_component_entity:entity_id = %zu\n", entity_id); */
+    /* debug_printf("ecs:add_component_entity:component_id = %zu\n", component_id); */
+    /* debug_printf("ecs:add_component_entity:entity_id = %zu\n", entity_id); */
 
     component_entity[component_id][entity_id] = 1;
     return true;
@@ -180,8 +181,8 @@ bool remove_component_entity(size_t component_id, size_t entity_id)
         return false;
     }
 
-    /* printf("ecs:remove_component_entity:component_id = %zu\n", component_id); */
-    /* printf("ecs:remove_component_entity:entity_id = %zu\n", entity_id); */
+    /* debug_printf("ecs:remove_component_entity:component_id = %zu\n", component_id); */
+    /* debug_printf("ecs:remove_component_entity:entity_id = %zu\n", entity_id); */
 
     component_entity[component_id][entity_id] = 0;
     return true;

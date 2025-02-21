@@ -13,6 +13,8 @@
 #include "raylib.h"
 #include "raymath.h"
 
+#include "whisker_debug.h"
+
 const int screen_width = 800;
 const int screen_height = 800;
 const Vector2 screen_center = {(float) screen_width / 2, (float) screen_height / 2};
@@ -365,7 +367,7 @@ void add_asteroid(Vector2 position, Vector2 velocity, float rotation, float rota
 	add_component_entity(COMPONENT_TAG_ASTEROID, e);    
 	add_component_entity(COMPONENT_TAG_DESTROY_OFFSCREEN, e);    
 
-	printf("add_asteroid:size %d at %fx%f\n", size, position.x, position.y);
+	debug_printf("add_asteroid:size %d at %fx%f\n", size, position.x, position.y);
 }
 
 void add_projectile(Vector2 position, float rotation)
@@ -388,7 +390,7 @@ void add_projectile(Vector2 position, float rotation)
 	add_component_entity(COMPONENT_TAG_MOVE_DIRECTION, e);    
 	add_component_entity(COMPONENT_TAG_DESTROY_OFFSCREEN, e);    
 
-	printf("add_projectile:rot %f at %fx%f\n", rotation, position.x, position.y);
+	debug_printf("add_projectile:rot %f at %fx%f\n", rotation, position.x, position.y);
 }
 
 /********************
@@ -441,7 +443,7 @@ void system_destroy_offscreen(float delta_time)
 				position.y > (screen_height + ASTEROID_OFF_SCREEN_PAD)
 				)
 		{
-			printf("system:destroy_offscreen:e = %d @ %d\n", e, i);
+			debug_printf("system:destroy_offscreen:e = %d @ %d\n", e, i);
 			add_component_entity(COMPONENT_TAG_DESTROY, e);    
 		}
 	}
@@ -579,7 +581,7 @@ void system_screen_wrap(float delta_time)
 				position->y > screen_height
 				)
 		{
-			printf("system:screen_wrap:e = %d @ %d\n", e, i);
+			debug_printf("system:screen_wrap:e = %d @ %d\n", e, i);
 
 			if (position->x < 0)
 			{
@@ -630,7 +632,7 @@ void system_collision(float delta_time)
     		float distance = Vector2Distance(position, colliding_position);
     		if (distance <= (radius_size + colliding_radius_size))
     		{
-				/* printf("system:collision:%zu->%zu (on)\n", e, ce); */
+				/* debug_printf("system:collision:%zu->%zu (on)\n", e, ce); */
 
 				/* DrawCircle(position.x, position.y, radius_size, Fade(GREEN, 0.6f)); */
 				/* DrawCircle(colliding_position.x, colliding_position.y, colliding_radius_size, Fade(BLUE, 0.6f)); */
@@ -682,11 +684,11 @@ void system_asteroid_respawn_on_hit(float delta_time)
 				break;
 		}
 
-		printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, *size);
+		debug_printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, *size);
 
 		for (int ii = 0; ii < spawn_count; ++ii)
 		{
-			printf("system:asteroid_respawn_on_destroy:spawning (from %zu) from size %d\n", e, spawn_count, *size);
+			debug_printf("system:asteroid_respawn_on_destroy:spawning (from %zu) from size %d\n", e, spawn_count, *size);
 
 			add_asteroid(*position, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
 		}
@@ -715,7 +717,7 @@ void system_asteroid_score(float delta_time)
 			int *score = GET_COMPONENT(COMPONENT_SCORE, int, se);
 			*score += add_score;
 
-			printf("system:asteroid_score:+%d points for %zu (%d total)\n", add_score, se, *score);
+			debug_printf("system:asteroid_score:+%d points for %zu (%d total)\n", add_score, se, *score);
 		}
 	}
 }
@@ -737,7 +739,7 @@ void system_projectile_collide_destroy(float delta_time)
 				(has_component_entity(COMPONENT_TAG_PROJECTILE, collision.entity_a) && has_component_entity(COMPONENT_TAG_ASTEROID, collision.entity_b))
 				)
 		{
-			printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision.entity_a, collision.entity_b);
+			debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision.entity_a, collision.entity_b);
 
 			// destroy existing asteroid and projectile
 			add_component_entity(COMPONENT_TAG_DESTROY, collision.entity_a);    
@@ -790,7 +792,7 @@ void system_player_hit_asteroid(float delta_time)
 				float* rotation_velocity = GET_COMPONENT(COMPONENT_ROTATION_VELOCITY, float, collision->entity_a);		
 				*rotation_velocity += (GetRandomValue(-270, 270));
 
-				printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
+				debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
 
 				*player_life -= damage;
 				if (*player_life <= 0) {
@@ -837,7 +839,7 @@ void system_asteroid_hit_asteroid(float delta_time)
 
 				*asteroidb_rotation_velocity = (GetRandomValue(-180, 180));
 
-				/* printf("system:asteroid_hit_asteroid:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b); */
+				/* debug_printf("system:asteroid_hit_asteroid:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b); */
 			}
 	}
 }
@@ -854,7 +856,7 @@ void system_player_hit_cooldown(float delta_time)
 		double* hit_time = GET_COMPONENT(COMPONENT_HIT_TIME, double, e);
 
 		if (*player_state == PLAYER_STATE_COOLDOWN && *hit_time + PLAYER_HIT_COOLDOWN < GetTime()) {
-			printf("system:player_hit_cooldown:returning to default state\n");
+			debug_printf("system:player_hit_cooldown:returning to default state\n");
 			*player_state = PLAYER_STATE_DEFAULT;
 		}
 	}
@@ -872,7 +874,7 @@ void system_player_death_on_life_depleted(float delta_time)
 		int* player_life = GET_COMPONENT(COMPONENT_LIFE, int, e);
 
 		if (*player_state == PLAYER_STATE_DEFAULT && *player_life <= 0) {
-			printf("system:player_death_on_life_depleted\n");
+			debug_printf("system:player_death_on_life_depleted\n");
 			REMOVE_COMPONENT(COMPONENT_VELOCITY, Vector2, e);
 			*player_state = PLAYER_STATE_DEAD;
 		}
@@ -890,7 +892,7 @@ void system_player_hit_nudge(float delta_time)
 		PLAYER_STATE* player_state = GET_COMPONENT(COMPONENT_PLAYER_STATE, PLAYER_STATE, e);
 
 		if (*player_state == PLAYER_STATE_HIT) {
-			printf("system:player_hit_nudge:nudging player from the hit\n");
+			debug_printf("system:player_hit_nudge:nudging player from the hit\n");
 
 			component_collision* collision = GET_COMPONENT(COMPONENT_HIT_COLLISION, component_collision, e);		
 			Vector2 position = *GET_COMPONENT(COMPONENT_POSITION, Vector2, e);		
@@ -902,10 +904,10 @@ void system_player_hit_nudge(float delta_time)
 			float* rotation_velocity = GET_COMPONENT(COMPONENT_ROTATION_VELOCITY, float, e);		
 			*rotation_velocity += (GetRandomValue(-270, 270));
 
-			printf("system:player_hit_nudge:velocity before %fx%f\n", velocity->x, velocity->y);
+			debug_printf("system:player_hit_nudge:velocity before %fx%f\n", velocity->x, velocity->y);
 			*velocity = Vector2Scale(nudge_direction, PLAYER_HIT_NUDGE_FORCE);
 
-			printf("system:player_hit_nudge:velocity after %fx%f\n", velocity->x, velocity->y);
+			debug_printf("system:player_hit_nudge:velocity after %fx%f\n", velocity->x, velocity->y);
 		}
 	}
 }
@@ -920,7 +922,7 @@ void system_player_hit_to_recover(float delta_time)
 
 		PLAYER_STATE* player_state = GET_COMPONENT(COMPONENT_PLAYER_STATE, PLAYER_STATE, e);
 		if (*player_state == PLAYER_STATE_HIT) {
-			printf("system:player_hit_to_recover\n");
+			debug_printf("system:player_hit_to_recover\n");
 			*player_state = PLAYER_STATE_COOLDOWN;
 		}
 	}

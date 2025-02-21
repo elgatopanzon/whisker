@@ -8,6 +8,7 @@
 #include "whisker_memory.h"
 #include "whisker_array.h"
 #include "whisker_dict.h"
+#include "whisker_debug.h"
 #include "whisker_string.h"
 
 #include "whisker_ecs.h"
@@ -312,7 +313,7 @@ whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *e
 			whisker_ecs_entity_id e;
 			whisker_ecs_e_create_named_(entities, entity_names + search_index, &e);
 
-			printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
+			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 
 			// add the entity id to the final list, and reset name array
 			warr_push(&entities_new, &e);
