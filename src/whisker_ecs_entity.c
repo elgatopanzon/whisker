@@ -93,6 +93,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisk
 		err_create = whisker_ecs_e_pop_recycled_(entities, &recycled_index);
 
 		new_id = entities->entities[recycled_index].id;
+		entities->entities[recycled_index].alive = true;
 	}
 	else
 	{
