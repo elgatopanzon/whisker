@@ -47,8 +47,9 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_free(whisker_ecs_entity_id *archetype)
 *  utility functions   *
 ************************/
 inline int whisker_ecs_a_has_id(whisker_ecs_entity_id *archetype, whisker_ecs_entity_id archetype_id) {
-    for (int i = 0, len = warr_length(archetype); i < len; ++i) {
-        if (archetype[i].id == archetype_id.id) {
+    size_t len = warr_length(archetype);
+    for (size_t i = 0; i < len; ++i) {
+        if (memcmp(&archetype[i], &archetype_id, sizeof(whisker_ecs_entity_id)) == 0) {
             return i;
         }
     }
