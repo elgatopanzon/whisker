@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_array.h"
+#include "whisker_dict.h"
 
 #include "whisker_ecs_system.h"
 
@@ -40,6 +41,9 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 E_WHISKER_ECS_SYS whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
 {
 	whisker_ecs_s_set_archetype_components(systems, components, &system);
+
+	// init component name trie
+	wdict_create(&system.component_name_index, int, 0);
 
 	if (warr_push(&systems->systems, &system))
 	{
@@ -87,6 +91,10 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	{
 		warr_free(system->write_components->components);
 		free(system->write_components);
+	}
+	if (system->component_name_index != NULL)
+	{
+		wdict_free(system->component_name_index);
 	}
 }
 
@@ -140,12 +148,12 @@ void *whisker_ecs_s_get_write_component_by_index(whisker_ecs_system *system, siz
 
 void *whisker_ecs_s_get_read_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id)
 {
-	return whisker_ecs_s_get_read_component_by_index(system, whisker_ecs_s_get_component_name_index(system->read_component_names, component_name), size, entity_id);
+	return whisker_ecs_s_get_read_component_by_index(system, whisker_ecs_s_get_component_name_index(system, system->read_component_names, component_name), size, entity_id);
 }
 
 void *whisker_ecs_s_get_write_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id)
 {
-	return whisker_ecs_s_get_write_component_by_index(system, whisker_ecs_s_get_component_name_index(system->write_component_names, component_name), size, entity_id);
+	return whisker_ecs_s_get_write_component_by_index(system, whisker_ecs_s_get_component_name_index(system, system->write_component_names, component_name), size, entity_id);
 }
 
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, whisker_ecs_components *archetype_components, whisker_ecs_entity_id *archetype, size_t index, size_t size, whisker_ecs_entity_id entity_id)
@@ -165,24 +173,38 @@ void *whisker_ecs_s_get_component(whisker_ecs_system *system, whisker_ecs_compon
 	return wbarr_get(archetype_components->components[index], entity_id.index);
 }
 
-int whisker_ecs_s_get_component_name_index(char* component_names, char* component_name) {
-    size_t search_index = 0;
-    int name_index = 0;
-    size_t name_length = strlen(component_name);
+int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {
+	int *component_name_index = wdict_get(system->component_name_index, component_name);
 
-    while (component_names[search_index]) {
-        if (memcmp(component_names + search_index, component_name, name_length) == 0 &&
-            (component_names[search_index + name_length] == ',' || component_names[search_index + name_length] == '\0')) {
-            return name_index;
-        }
-        while (component_names[search_index] && component_names[search_index] != ',') {
-            search_index++;
-        }
-        if (component_names[search_index] == ',') {
-            search_index++;
-        }
-        name_index++;
-    }
+	if (component_name_index == NULL)
+	{
+    	size_t search_index = 0;
+    	int name_index = 0;
+    	size_t name_length = strlen(component_name);
+
+    	while (component_names[search_index]) {
+        	if (memcmp(component_names + search_index, component_name, name_length) == 0 &&
+            	(component_names[search_index + name_length] == ',' || component_names[search_index + name_length] == '\0')) {
+
+				// malloc value for the index and set the trie value
+				// this should trigger the trie search next time
+            	wdict_set(&system->component_name_index, component_name, &name_index);
+
+            	return name_index;
+        	}
+        	while (component_names[search_index] && component_names[search_index] != ',') {
+            	search_index++;
+        	}
+        	if (component_names[search_index] == ',') {
+            	search_index++;
+        	}
+        	name_index++;
+    	}
+	}
+	else
+	{
+		return *component_name_index;
+	}
 
     return -1;
 }

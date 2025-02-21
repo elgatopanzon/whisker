@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_block_array.h"
+#include "whisker_dict.h"
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_archetype.h"
 #include "whisker_ecs_component.h"
@@ -39,6 +40,7 @@ struct whisker_ecs_system
 
 	whisker_ecs_components *read_components;
 	whisker_ecs_components *write_components;
+	int *component_name_index;
 
 	whisker_ecs_components *components;
 
@@ -68,7 +70,7 @@ void *whisker_ecs_s_get_write_component_by_index(whisker_ecs_system *system, siz
 void *whisker_ecs_s_get_read_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id);
 void *whisker_ecs_s_get_write_component(whisker_ecs_system *system, char* component_name, size_t size, whisker_ecs_entity_id entity_id);
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, whisker_ecs_components *archetype_components, whisker_ecs_entity_id *archetype, size_t index, size_t size, whisker_ecs_entity_id entity_id);
-int whisker_ecs_s_get_component_name_index(char* component_names, char* component_name);
+int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name);
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 

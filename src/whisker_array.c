@@ -202,14 +202,14 @@ void whisker_arr_free(void* arr)
 }
 
 // obtain the header from the array pointer
-whisker_array_header* whisker_arr_header(void* arr)
+inline whisker_array_header* whisker_arr_header(void* arr)
 {
 	return whisker_mem_block_header_from_data_pointer(arr, sizeof(whisker_array_header));
 }
 
 // get array length from underlying header
 // shortcut to use in loops
-size_t whisker_arr_length(void* arr)
+inline size_t whisker_arr_length(void* arr)
 {
 	return whisker_arr_header(arr)->length;
 }

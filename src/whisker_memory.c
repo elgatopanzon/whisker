@@ -132,9 +132,9 @@ void whisker_mem_block_free(whisker_memory_block* block)
 // header size
 // NOTE: pretty unsafe function when passed an incorrect data pointer and/or
 // header size as it could effectively point anywhere
-void* whisker_mem_block_header_from_data_pointer(void* data, size_t header_size)
+inline void* whisker_mem_block_header_from_data_pointer(void* data, size_t header_size)
 {
-	return (char*)data - header_size;
+	return data - header_size;
 }
 
 
