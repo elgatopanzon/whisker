@@ -6,8 +6,10 @@
 
 #include "whisker_std.h"
 
+#include "whisker_debug.h"
 #include "whisker_array.h"
 #include "whisker_block_array.h"
+#include "whisker_string.h"
 #include "whisker_ecs.h"
 
 E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
@@ -68,8 +70,10 @@ void whisker_ecs_free(whisker_ecs *ecs)
 /**********************
 *  system functions  *
 **********************/
-E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *read_component_archetype_names, char *write_component_archetype_names)
+whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *read_component_archetype_names, char *write_component_archetype_names)
 {
+	debug_printf("ecs:registering system: %s\n", system_name);
+
 	// create an entity for this system with it's name
 	whisker_ecs_entity_id e;
 	whisker_ecs_e_create_named_(ecs->entities, system_name, &e);
@@ -79,17 +83,22 @@ E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(s
 	whisker_ecs_archetype_set(ecs, e, e);
 
 	// register the system with the system scheduler
-	whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
+	char* read_components;
+	char* write_components;
+	wstr(read_component_archetype_names, &read_components);
+	wstr(write_component_archetype_names, &write_components);
+	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
 		.entity_id = e,
 		.system_ptr = system_ptr,
 		.read_archetype = whisker_ecs_archetype_from_named_entities(ecs, read_component_archetype_names),
 		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs, write_component_archetype_names),
-		.read_component_names = read_component_archetype_names,
-		.write_component_names = write_component_archetype_names,
+		.read_component_names = read_components,
+		.write_component_names = write_components,
 		.components = ecs->components,
+		.entities = ecs->entities,
 	});
 
-	return E_WHISKER_ECS_OK;
+	return system;
 }
 
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)

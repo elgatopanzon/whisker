@@ -26,7 +26,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs);
 void whisker_ecs_free(whisker_ecs *ecs);
 
 // system functions
-E_WHISKER_ECS whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *read_component_archetype_names, char *write_component_archetype_names);
+whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_update), char *system_name, char *read_component_archetype_names, char *write_component_archetype_names);
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 
 // entity shortcut functions
@@ -103,15 +103,15 @@ typedef whisker_ecs wecs;
 
 // component macros
 
-#define whisker_ecs_sys_get_read(t) (t*)whisker_ecs_s_get_read_component(system.system, #t, sizeof(t), system.entity_id)
-#define whisker_ecs_sys_get_write(t) (t*)whisker_ecs_s_get_write_component(system.system, #t, sizeof(t), system.entity_id)
-#define whisker_ecs_sys_get_read_alias(n, t) (t*)whisker_ecs_s_get_read_component(system.system, #n, sizeof(t), system.entity_id)
-#define whisker_ecs_sys_get_write_alias(n, t) (t*)whisker_ecs_s_get_write_component(system.system, #n, sizeof(t), system.entity_id)
+#define whisker_ecs_sys_get_read(t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), system.entity_id, false)
+#define whisker_ecs_sys_get_write(t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), system.entity_id, true)
+#define whisker_ecs_sys_get_read_alias(n, t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), system.entity_id, false)
+#define whisker_ecs_sys_get_write_alias(n, t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), system.entity_id, true)
 
-#define whisker_ecs_sys_get_read_e(t, e) (t*)whisker_ecs_s_get_read_component(system.system, #t, sizeof(t), e)
-#define whisker_ecs_sys_get_write_e(t, e) (t*)whisker_ecs_s_get_write_component(system.system, #t, sizeof(t), e)
-#define whisker_ecs_sys_get_read_alias_e(n, t, e) (t*)whisker_ecs_s_get_read_component(system.system, #n, sizeof(t), e)
-#define whisker_ecs_sys_get_write_alias_e(n, t, e) (t*)whisker_ecs_s_get_write_component(system.system, #n, sizeof(t), e)
+#define whisker_ecs_sys_get_read_e(t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), e, false)
+#define whisker_ecs_sys_get_write_e(t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), e, true)
+#define whisker_ecs_sys_get_read_alias_e(n, t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), e, false)
+#define whisker_ecs_sys_get_write_alias_e(n, t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), e, true)
 
 // short macros: entity
 // #define wecs_create_e whisker_ecs_entity_create
@@ -120,6 +120,51 @@ typedef whisker_ecs wecs;
 // #define wecs_destroy whisker_ecs_entity_destroy
 // #define wecs_alive_e whisker_ecs_entity_alive_e
 // #define wecs_destroy_e whisker_ecs_entity_destroy_e
+
+// the following macro allows defining a system function and a corresponding
+// system init function accepting a whisker_ecs instance
+// note 1: the init function takes advantage of getting each component by index
+// in order to set this index on the system's archetype up-front via
+// WECS_READS() and WECS_WRITES() macros
+// note 2: those macros actually declare and initialise the components variables
+// for the current entity, and also the component array as a block array pointer
+// note 3: it would be nice to somehow automatically set the index value but
+// that would extremely complicate the macro and it's maintenance
+#define WECS_SYSTEM(system_name, sys, ...) \
+	void system_ ## system_name ## _fn(whisker_ecs_system_update system); \
+	void system_ ## system_name ## _init(whisker_ecs *ecs) \
+	{ \
+		whisker_ecs_system_update system = { \
+			.entity_id = 0,	\
+		}; \
+		system.system = whisker_ecs_register_system( \
+    		ecs, \
+    		system_ ## system_name ## _fn, \
+            #system_name, \
+    		"", \
+    		"" \
+		); \
+		__VA_ARGS__ \
+	} \
+	inline void system_ ## system_name ## _fn(whisker_ecs_system_update system) \
+		{ \
+			__VA_ARGS__ \
+			double delta_time = system.system->delta_time; \
+			sys \
+		}
+
+#define WECS_SYSTEM_END }
+
+// macros to be used as part of a system definition, since it relies on the
+// "system" instance from a system function
+// note: there should be no reason to use these macro manually within a function
+#define WECS_READS(type, name, idx) \
+	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, false); \
+	whisker_block_array *name##_components = system.system->read_components->components[idx];
+#define WECS_WRITES(type, name, idx) \
+	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, true); \
+	whisker_block_array *name##_components = system.system->read_components->components[idx];
+
 
 #endif /* WHISKER_ECS_H */
 
