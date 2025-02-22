@@ -9,10 +9,10 @@
 #ifndef WHISKER_DEBUG_H
 #define WHISKER_DEBUG_H
 
-#ifdef DEBUG
-#define DEBUG_TEST 1
-#else
+#ifdef NDEBUG
 #define DEBUG_TEST 0
+#else
+#define DEBUG_TEST 1
 #endif
 
 #define debug_printf(fmt, ...) \
