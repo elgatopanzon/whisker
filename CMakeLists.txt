@@ -95,18 +95,18 @@ endif()
 include(FetchContent)
 
 # raylib
-set(FETCHCONTENT_QUIET FALSE)
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
-set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
-
+set(RAYLIB_VERSION 5.5)
 FetchContent_Declare(
-    raylib
-    GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
-    GIT_TAG "master"
-    GIT_PROGRESS TRUE
+	raylib
+	DOWNLOAD_EXTRACT_TIMESTAMP OFF
+	URL https://github.com/raysan5/raylib/archive/refs/tags/${RAYLIB_VERSION}.tar.gz
 )
-
-FetchContent_MakeAvailable(raylib)
+FetchContent_GetProperties(raylib)
+if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
+	set(FETCHCONTENT_QUIET NO)
+	FetchContent_MakeAvailable(raylib)
+	set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
+endif()
 
 # include the src directory to import cmake config
 add_subdirectory(src)
