@@ -158,12 +158,29 @@ typedef whisker_ecs wecs;
 // macros to be used as part of a system definition, since it relies on the
 // "system" instance from a system function
 // note: there should be no reason to use these macro manually within a function
-#define WECS_READS(type, name, idx) \
-	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, false); \
-	whisker_block_array *name##_components = system.system->read_components->components[idx];
-#define WECS_WRITES(type, name, idx) \
-	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, true); \
-	whisker_block_array *name##_components = system.system->read_components->components[idx];
+#define WECS_READS(type, name, idx) WECS_DECLARE(type, name, idx, false)
+#define WECS_WRITES(type, name, idx) WECS_DECLARE(type, name, idx, true)
+
+// note: system's delta_time is 0 during the init function
+#define WECS_DECLARE(type, name, idx, mode) \
+	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, mode);
+
+
+#define WECS_READS_ALL(type, name, idx) WECS_DECLARE_STORE(type, name, idx, read)
+#define WECS_WRITES_ALL(type, name, idx) WECS_DECLARE_STORE(type, name, idx, write)
+#define WECS_DECLARE_STORE(type, name, idx, mode) \
+	whisker_block_array *name##_##mode##_store = system.system->mode##_components->components[idx];
+
+#define WECS_GET_READ(type, name, entity) wbarr_get_t(name##_read_store, entity.index, type)
+#define WECS_GET_WRITE(type, name, entity) wbarr_get_t(name##_write_store, entity.index, type)
+
+// these macros allow specifying which tags the system is interested
+// note: it relies on the system instance having a delta_time of 0 which is has
+// during the system init function, not the game update call
+#define WECS_HAS(name, idx) \
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, false); };
+#define WECS_WRITES_TAG(name, idx) \
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true); };
 
 
 #endif /* WHISKER_ECS_H */

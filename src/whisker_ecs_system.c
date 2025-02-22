@@ -167,11 +167,17 @@ void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, c
 	// note: needs to also resize and set the archetype
 	if (index > -1)
 	{
-		// grow components to index size if required
-		E_WHISKER_ECS_COMP grow_err = whisker_ecs_c_grow_components_(components, index + 1);
-		if (grow_err != E_WHISKER_ECS_COMP_OK)
+		// only care about the components if the size is set
+		// note: this allows 0 size components to act as tags, purely an
+		// archetype
+		if (size > 0)
 		{
-			return NULL;
+			// grow components to index size if required
+			E_WHISKER_ECS_COMP grow_err = whisker_ecs_c_grow_components_(components, index + 1);
+			if (grow_err != E_WHISKER_ECS_COMP_OK)
+			{
+				return NULL;
+			}
 		}
 
 		// grow and set archetype index manually
@@ -198,6 +204,12 @@ void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, c
 		}
 
 		index = name_index;
+	}
+
+	// return NULL for a 0 size component
+	if (size == 0)
+	{
+		return NULL;
 	}
 
 	return whisker_ecs_s_get_component(system, index, size, entity_id, read_or_write);

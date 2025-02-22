@@ -179,6 +179,624 @@ void asteroids_deinit_ecs()
 	whisker_ecs_free(asteroids_ecs);
 }
 
+
+WECS_SYSTEM(asteroids_velocity_2d,
+{
+	pos_2d->x += vel_2d->x * delta_time;
+	pos_2d->y += vel_2d->y * delta_time;
+},
+	WECS_READS(Vector2, vel_2d, 0)
+	WECS_WRITES(Vector2, pos_2d, 0)
+)
+
+WECS_SYSTEM(asteroids_asteroid_spawn,
+{
+	double time = GetTime();
+
+	bool can_spawn = (time > *asteroids_asteroid_spawn + ASTEROID_SPAWN_RATE);
+
+	if (can_spawn)
+	{
+		asteroids_spawn_asteroid();
+		*asteroids_asteroid_spawn = time;
+	}
+}, 
+WECS_READS(double, asteroids_asteroid_spawn, 0)
+)
+
+WECS_SYSTEM(asteroids_rotation_velocity,
+{
+	*rot += *rot_v * system.system->delta_time;
+},
+	WECS_READS(float, rot_v, 0)
+	WECS_WRITES(float, rot, 0)
+)
+
+WECS_SYSTEM(asteroids_movement_direction,
+{
+	float radians = DEG2RAD * (*rot + 90.0f);
+	pos_2d->x += PROJECTILE_VELOCITY * cos(radians) * system.system->delta_time;
+	pos_2d->y += PROJECTILE_VELOCITY * sin(radians) * system.system->delta_time;
+},
+	WECS_HAS(t_move_dir, 0)
+	WECS_READS(float, rot, 1)
+	WECS_WRITES(Vector2, pos_2d, 0)
+)
+
+WECS_SYSTEM(asteroids_player_controller,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD && IsKeyPressed(KEY_R)) {
+		asteroids_game_state = ASTEROIDS_GAME_STATE_END;
+		return;
+	}
+	if (*p_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
+		return;
+	}
+
+	// player rotation
+	int rotation_input = (int)IsKeyDown(KEY_D) - (int)IsKeyDown(KEY_A);
+	/* *rotation += (rotation_input * PLAYER_ROTATION_VELOCITY * delta_time); */
+	*rot_v = PLAYER_ROTATION_VELOCITY * rotation_input;
+
+	// player thrust
+	Vector2 facing_direction = Vector2Rotate((Vector2){0, 1}, *rot * DEG2RAD);
+
+	int thrust_input = (int)IsKeyDown(KEY_W) - (int)IsKeyDown(KEY_S);
+	if (thrust_input > 0) {
+		*vel_2d = Vector2Add(*vel_2d, Vector2Scale(facing_direction, PLAYER_ACCELERATION * delta_time));
+
+		float mag = Vector2Length(*vel_2d);
+		if (mag > PLAYER_VELOCITY) {
+			*vel_2d = Vector2Scale(*vel_2d, PLAYER_VELOCITY / mag);
+		}
+	}
+	else
+	{
+		*vel_2d = Vector2Add(*vel_2d, Vector2Scale(*vel_2d, -PLAYER_DECELLERATION * delta_time));
+	}
+
+	// projectiles
+	double now = GetTime();
+	bool can_fire = (now > *fire_time + PROJECTILE_FIRE_RATE);
+
+	if (IsKeyDown(KEY_SPACE) && can_fire) {
+		asteroids_add_projectile(Vector2Add(*pos_2d, Vector2Scale(facing_direction, 24)), *rot);
+		*fire_time = now;
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
+	WECS_READS(Vector2, pos_2d, 2)
+	WECS_WRITES(float, rot, 0)
+	WECS_WRITES(float, rot_v, 1)
+	WECS_WRITES(Vector2, vel_2d, 2)
+	WECS_WRITES(double, fire_time, 3)
+)
+
+WECS_SYSTEM(asteroids_screen_wrap,
+{
+	if (
+			pos_2d->x < 0 ||
+			pos_2d->y < 0 ||
+			pos_2d->x > asteroids_screen_width ||
+			pos_2d->y > asteroids_screen_height
+			)
+	{
+		debug_printf("system:screen_wrap:e = %d\n", system.entity_id.index);
+
+		if (pos_2d->x < 0)
+		{
+			pos_2d->x += asteroids_screen_width;
+		}
+		if (pos_2d->x > asteroids_screen_width)
+		{
+			pos_2d->x -= asteroids_screen_width;
+		}
+		if (pos_2d->y < 0)
+		{
+			pos_2d->y += asteroids_screen_height;
+		}
+		if (pos_2d->y > asteroids_screen_height)
+		{
+			pos_2d->y -= asteroids_screen_height;
+		}
+	}
+},
+	WECS_HAS(t_screen_wrap, 0)
+	WECS_WRITES(Vector2, pos_2d, 0)
+)
+
+WECS_SYSTEM(asteroids_draw_frame_time,
+{
+	float current_frametime = system.system->delta_time * 1000;
+
+	// update frametime samples
+	/* if (GetTime() - 0.1 > frametime->time || frametime->time == 0) */
+	/* { */
+		/* frametime->time = GetTime(); */
+    	frametime->samples[frametime->index] = current_frametime;
+    	frametime->index = (frametime->index + 1) % DRAW_FRAMETIME_AVG_SAMPLES;
+	/* } */
+
+    if (frametime->index > frametime->max_index)
+    {
+    	frametime->max_index = frametime->index;
+    }
+
+	// calculate average frametime
+    float sum = 0.0;
+    for (int i = 0; i < frametime->max_index + 1; i++) {
+        sum += frametime->samples[i];
+    }
+    float average_frametime = (sum / frametime->max_index);
+
+	if (GetTime() - 2.5 > frametime->time || frametime->time == 0)
+	{
+		frametime->time = GetTime();
+    	frametime->max = current_frametime;
+    	frametime->min = current_frametime;
+    }
+
+    if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
+    {
+    	frametime->max = current_frametime;
+    }
+    if ((current_frametime < frametime->min || frametime->min <= 0) && frametime->max_index >= 10)
+    {
+    	frametime->min = current_frametime;
+    }
+
+	const int frametime_string_count = 4;
+	char* frametime_strings[frametime_string_count] = {};
+	frametime_strings[0] = TextFormat("ms/f cur  : %.4f", current_frametime);
+	frametime_strings[1] = TextFormat("ms/f avg  : %.4f", average_frametime);
+	frametime_strings[2] = TextFormat("ms/f min  : %.4f", frametime->min);
+	frametime_strings[3] = TextFormat("ms/f spike: %.4f", frametime->max);
+
+	const int font_size = 48;
+	const int line_padding = 8;
+	const int top_padding = (font_size + line_padding) * 2;
+	for (int i = 0; i < frametime_string_count; ++i)
+	{
+		DrawText(frametime_strings[i], 16, (i + 1) * (line_padding + font_size) + top_padding, font_size, RED);
+	}
+},
+	WECS_WRITES(asteroids_component_frametime, frametime, 0)
+)
+
+
+WECS_SYSTEM(asteroids_player_death_on_life_depleted,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_DEFAULT && *life <= 0) {
+		debug_printf("system:player_death_on_life_depleted\n");
+		/* whisker_ecs_remove_component(asteroids_ecs, "vel_2d", sizeof(Vector2), system.entity_id); */
+		*p_state = ASTEROIDS_PLAYER_STATE_DEAD;
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(int, life, 1)
+	WECS_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 0)
+)
+
+WECS_SYSTEM(asteroids_player_hit_cooldown,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && *hit_time + PLAYER_HIT_COOLDOWN < GetTime()) {
+		debug_printf("system:player_hit_cooldown:returning to default state\n");
+		*p_state = ASTEROIDS_PLAYER_STATE_DEFAULT;
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(double, hit_time, 1)
+	WECS_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 0)
+)
+
+WECS_SYSTEM(asteroids_collision,
+{
+	size_t entity_count = whisker_ecs_e_count(system.entities);
+	whisker_ecs_entity_id id = system.entity_id;
+
+	for (size_t ci = 0; ci < entity_count; ++ci)
+	{
+		whisker_ecs_entity_id ce = system.entities->entities[ci].id;
+
+		// skip entities not matching the same archetype as the system, or
+		// identitical entities as the one being processed
+		if (id.index == ce.index || !whisker_ecs_a_match(system.system->read_archetype, system.entities->entities[ci].archetype)) {
+			continue;
+		}
+
+		Vector2 colliding_position = *WECS_GET_READ(Vector2, pos_2d, ce);		
+		float colliding_radius_size = *WECS_GET_READ(float, radius, ce);		
+
+    	float distance = Vector2Distance(*pos_2d, colliding_position);
+    	if (distance <= (*radius + colliding_radius_size))
+    	{
+			/* debug_printf("system:collision:%zu->%zu (on)\n", e, ce); */
+
+			/* DrawCircle(position.x, position.y, radius_size, Fade(GREEN, 0.6f)); */
+			/* DrawCircle(colliding_position.x, colliding_position.y, colliding_radius_size, Fade(BLUE, 0.6f)); */
+
+			whisker_ecs_entity_id collision = whisker_ecs_create_entity(asteroids_ecs);
+
+			asteroids_component_collision col = {};
+			col.entity_a = id;
+			col.entity_b = ce;
+			whisker_ecs_set(asteroids_ecs, collision, asteroids_component_collision, collision, &col);
+    	}
+	}
+},
+	WECS_READS(Vector2, pos_2d, 0)
+	WECS_READS(float, radius, 1)
+	WECS_READS_ALL(Vector2, pos_2d, 0)
+	WECS_READS_ALL(float, radius, 1)
+)
+
+WECS_SYSTEM(asteroids_collision_cull,
+{
+	whisker_ecs_set_tag(asteroids_ecs, t_cull, system.entity_id);
+},
+	WECS_HAS(collision, 0)
+)
+
+WECS_SYSTEM(asteroids_destroy_offscreen,
+{
+	if (pos_2d->x < -(ASTEROID_OFF_SCREEN_PAD) ||
+		pos_2d->y < -(ASTEROID_OFF_SCREEN_PAD) ||
+		pos_2d->x > (asteroids_screen_width + ASTEROID_OFF_SCREEN_PAD) ||
+		pos_2d->y > (asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD)
+		)
+	{
+		debug_printf("system:destroy_offscreen:e = %d\n", system.entity_id.index);
+		whisker_ecs_set_tag(asteroids_ecs, t_cull, system.entity_id);
+	}
+},
+	WECS_HAS(t_screen_cull, 0)
+	WECS_READS(Vector2, pos_2d, 1)
+)
+
+WECS_SYSTEM(asteroids_projectile_collide_destroy,
+{
+	// find projectiles colliding with asteroids
+	if (
+			// asteroid -> asteroid
+			(whisker_ecs_has_tag(asteroids_ecs, t_bullet, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_b))
+			)
+	{
+		debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b);
+
+		// destroy existing asteroid and projectile
+		whisker_ecs_set_tag(asteroids_ecs, t_cull, collision->entity_a);    
+		whisker_ecs_set_tag(asteroids_ecs, t_cull, collision->entity_b);    
+
+		whisker_ecs_set_tag(asteroids_ecs, t_ast_hit, collision->entity_b);    
+	}
+},
+	WECS_READS(asteroids_component_collision, collision, 0)
+)
+
+WECS_SYSTEM(asteroids_asteroid_respawn_on_hit,
+{
+	int spawn_count = 0;
+
+	ASTEROIDS_ASTEROID_SIZE new_size = ASTEROIDS_ASTEROID_SIZE_LARGE;
+
+	switch (*ast_size) {
+		case ASTEROIDS_ASTEROID_SIZE_LARGE:
+			new_size = ASTEROIDS_ASTEROID_SIZE_MEDIUM;
+			spawn_count = 3;
+			break;
+		case ASTEROIDS_ASTEROID_SIZE_MEDIUM:
+			new_size = ASTEROIDS_ASTEROID_SIZE_SMALL;
+			spawn_count = 2;
+			break;
+	}
+
+	debug_printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, *ast_size);
+
+	for (int ii = 0; ii < spawn_count; ++ii)
+	{
+		debug_printf("system:asteroid_respawn_on_destroy:spawning (from %d) size %d\n", system.entity_id.index, *ast_size);
+
+		asteroids_add_asteroid(*pos_2d, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
+	}
+},
+	WECS_HAS(t_ast_hit, 0)
+	WECS_READS(ASTEROIDS_ASTEROID_SIZE, ast_size, 1)
+	WECS_READS(Vector2, pos_2d, 2)
+)
+
+WECS_SYSTEM(asteroids_asteroid_hit_asteroid,
+{
+	// find asteroids that collided with other asteroids
+	if (
+			// asteroid -> asteroid
+			(whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_b))
+			)
+	{
+
+		/* debug_printf("collision %d: %d hit asteroid %d\n", system.entity->id.index, collision->entity_a.index, collision->entity_b.index); */
+
+		// asteroid a
+		Vector2* asteroida_velocity = whisker_ecs_get(asteroids_ecs,vel_2d, Vector2, collision->entity_a);
+		float* asteroida_rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_a);		
+
+
+		Vector2 asteroida_position = *whisker_ecs_get(asteroids_ecs, pos_2d, Vector2, collision->entity_a);		
+		Vector2 asteroida_hit_by_position = *whisker_ecs_get(asteroids_ecs, pos_2d, Vector2, collision->entity_b);		
+
+		Vector2 asteroida_nudge_direction = Vector2Normalize(Vector2Subtract(asteroida_position, asteroida_hit_by_position));
+
+
+		// asteroid b
+		Vector2* asteroidb_velocity = whisker_ecs_get(asteroids_ecs, vel_2d, Vector2, collision->entity_b);
+		float* asteroidb_rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_b);		
+
+		/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
+
+		*asteroida_rotation_velocity = (GetRandomValue(-180, 180));
+		*asteroida_velocity = Vector2Scale(asteroida_nudge_direction, PLAYER_HIT_NUDGE_FORCE);
+		*asteroidb_rotation_velocity = (GetRandomValue(-180, 180));
+
+		/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
+	}
+},
+	WECS_READS(asteroids_component_collision, collision, 0)
+)
+
+WECS_SYSTEM(asteroids_asteroid_score,
+{
+	size_t entity_count = whisker_ecs_e_count(system.entities);
+	whisker_ecs_entity_id id = system.entity_id;
+
+	for (size_t si = 0; si < entity_count; ++si)
+	{
+		whisker_ecs_entity_id se = system.entities->entities[si].id;
+
+		if (whisker_ecs_has_tag(asteroids_ecs, score, se))
+		{
+			int add_score = (int)*ast_size * ASTEROID_SCORE;
+
+			int *score = whisker_ecs_get(asteroids_ecs, score, int, se);
+			*score += add_score;
+
+			debug_printf("system:asteroid_score:+%d points for %zu (%d total)\n", add_score, se, *score);
+		}
+	}
+},
+	WECS_HAS(t_ast_hit, 0)
+	WECS_READS(ASTEROIDS_ASTEROID_SIZE, ast_size, 1)
+)
+
+WECS_SYSTEM(asteroids_player_hit_asteroid,
+{
+		// find asteroids colliding with the player
+		if (
+				// asteroid -> asteroid
+				(whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_player, collision->entity_b))
+				)
+		{
+			ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_get(asteroids_ecs, p_state, ASTEROIDS_PLAYER_STATE, collision->entity_b);
+
+			// deal damage to the player, only in the default state
+			// TODO: maybe figure out a more ECS-like way to handle this,
+			// e.g. a component t_player_STATE_DEFAULT?
+			if (*player_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
+				return;
+			}
+
+			*player_state = ASTEROIDS_PLAYER_STATE_HIT;
+			whisker_ecs_set(asteroids_ecs, hit_time, double, collision->entity_b, (void*)&(double){GetTime()});
+			asteroids_component_collision col = {};
+			col.entity_a = collision->entity_a;
+			col.entity_b = collision->entity_b;
+			whisker_ecs_set(asteroids_ecs, hit_collision, asteroids_component_collision, collision->entity_b, &col);
+
+			// TODO: refactor this to use system access macros
+			int* player_life = whisker_ecs_get(asteroids_ecs, life, int, collision->entity_b);
+			ASTEROIDS_ASTEROID_SIZE* asteroid_size = whisker_ecs_get(asteroids_ecs, ast_size, ASTEROIDS_ASTEROID_SIZE, collision->entity_a);
+
+			int damage = *asteroid_size * ASTEROID_DAMAGE;
+
+			Vector2* asteroid_velocity = whisker_ecs_get(asteroids_ecs, vel_2d, Vector2, collision->entity_a);
+			*asteroid_velocity = Vector2Scale(*asteroid_velocity, ASTEROID_HIT_VELOCITY_REDUCTION);
+			float* rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_a);		
+			*rotation_velocity += (GetRandomValue(-270, 270));
+
+			debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
+
+			*player_life -= damage;
+			if (*player_life <= 0) {
+				*player_life = 0;
+			}
+		}
+},
+	WECS_READS(asteroids_component_collision, collision, 0)
+)
+
+WECS_SYSTEM(asteroids_player_hit_nudge,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
+		debug_printf("system:player_hit_nudge:nudging player from the hit\n");
+
+		Vector2 hit_by_position = *WECS_GET_READ(Vector2, pos_2d, hit_collision->entity_a);		
+
+		Vector2 nudge_direction = Vector2Normalize(Vector2Subtract(*pos_2d, hit_by_position));
+
+		*rot_v += (GetRandomValue(-270, 270));
+
+		debug_printf("system:player_hit_nudge:velocity before %fx%f\n", vel_2d->x, vel_2d->y);
+		*vel_2d = Vector2Scale(nudge_direction, PLAYER_HIT_NUDGE_FORCE);
+
+		debug_printf("system:player_hit_nudge:velocity after %fx%f\n", vel_2d->x, vel_2d->y);
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
+	WECS_READS(asteroids_component_collision, hit_collision, 2)
+	WECS_READS(Vector2, pos_2d, 3)
+	WECS_READS_ALL(Vector2, pos_2d, 3)
+	WECS_WRITES(float, rot_v, 0)
+	WECS_WRITES(Vector2, vel_2d, 1)
+)
+
+WECS_SYSTEM(asteroids_player_hit_to_recover,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
+		debug_printf("system:player_hit_to_recover\n");
+		*p_state = ASTEROIDS_PLAYER_STATE_COOLDOWN;
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 0)
+)
+
+WECS_SYSTEM(asteroids_entity_deferred_destroy,
+{
+	whisker_ecs_destroy_entity(asteroids_ecs, system.entity_id);
+},
+	WECS_HAS(t_cull, 0)
+)
+
+// draw systems
+WECS_SYSTEM(asteroids_draw_asteroid,
+{
+	DrawPolyLines(*pos_2d, 3, 16 * (int)*ast_size, *rot, WHITE);
+},
+	WECS_HAS(t_ast, 0)
+	WECS_READS(float, rot, 1)
+	WECS_READS(Vector2, pos_2d, 2)
+	WECS_READS(ASTEROIDS_ASTEROID_SIZE, ast_size, 3)
+)
+
+WECS_SYSTEM(asteroids_draw_projectile,
+{
+	Rectangle rect = {};
+	rect.x = pos_2d->x;
+	rect.y = pos_2d->y;
+	rect.width = PROJECTILE_WIDTH;
+	rect.height = PROJECTILE_LENGTH;
+	Vector2 origin = {};
+	origin.x = rect.width / 2;
+	origin.y = rect.height / 2;
+	DrawRectanglePro(rect, origin, *rot, RED);
+},
+	WECS_HAS(t_bullet, 0)
+	WECS_READS(float, rot, 1)
+	WECS_READS(Vector2, pos_2d, 2)
+)
+
+WECS_SYSTEM(asteroids_draw_player,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD)
+	{
+		float explosion_radius = (GetTime() - (*hit_time + PLAYER_HIT_COOLDOWN)) * 1750;
+		const Color explosion_color = Fade(RED, 0.25f);
+
+		if (explosion_radius > (asteroids_screen_width + asteroids_screen_height))
+		{
+			DrawRectangle(0, 0, asteroids_screen_width, asteroids_screen_height, explosion_color);
+		}
+		else
+		{
+			DrawCircle(pos_2d->x, pos_2d->y, explosion_radius, explosion_color);
+		}
+		return;
+	}
+
+	Rectangle source = {};
+	source.x = 0;
+	source.y = 0;
+	source.width = 32;
+	source.height = 32;
+
+	Rectangle dest = {};
+	dest.x = pos_2d->x;
+	dest.y = pos_2d->y;
+	dest.width = 48;
+	dest.height = 48;
+
+	Vector2 origin = {};
+	origin.x = dest.width / 2;
+	origin.y = dest.height / 2;
+
+	const Color color = Fade((*p_state == ASTEROIDS_PLAYER_STATE_COOLDOWN) ? RED : WHITE, ((*p_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && (int)(GetTime() * 100) % 2)) ? 0.4f : 1.0f);
+	DrawTexturePro(asteroids_player_ship, source, dest, origin, *rot + 180, color);
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(float, rot, 1)
+	WECS_READS(Vector2, pos_2d, 2)
+	WECS_READS(double, hit_time, 3)
+	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 4)
+)
+
+WECS_SYSTEM(asteroids_draw_hud,
+{
+	const int font_size = 64;
+	const Color black = Fade(BLACK, 0.8f);
+	const Color white = Fade(WHITE, 0.8f);
+	const int x_pad = 16;
+	const int y_pad = 8;
+	const int shadow = 8;
+
+	if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD)
+	{
+		return;
+	}
+
+	// score
+	char* score_text = TextFormat("%d POINTS", *score);
+	float score_measure = MeasureText(score_text, font_size);
+
+	int score_x = asteroids_screen_width - score_measure;
+	int score_y = font_size + y_pad;
+
+	DrawText(score_text, score_x, score_y, 48, black);
+	DrawText(score_text, score_x + shadow, score_y + shadow, 48, white);
+
+	// life
+	char* life_text = TextFormat("%d%% LIFE", *life);
+	float life_measure = MeasureText(life_text, font_size);
+
+	int life_x = x_pad;
+	int life_y = font_size + y_pad;
+
+	DrawText(life_text, life_x, life_y, 48, black);
+	DrawText(life_text, life_x + shadow, life_y + shadow, 48, white);
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
+	WECS_READS(int, score, 2)
+	WECS_READS(int, life, 3)
+)
+
+WECS_SYSTEM(asteroids_draw_game_over,
+{
+	if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD)
+	{
+		// game end
+		const char* game_over = "Game Over!";
+		const char* press_r = "Press R to restart";
+		const char* score_text = TextFormat("POINTS: %d", *score);
+
+		/* DrawRectangle(0, 0, screen_width, screen_height, Fade(RAYWHITE, 0.8f)); */
+		DrawText(score_text, asteroids_screen_width / 2 - MeasureText(score_text, 60) / 2, asteroids_screen_height * 0.15f, 60, WHITE);
+		DrawText(game_over, asteroids_screen_width / 2 - MeasureText(game_over, 40) / 2, asteroids_screen_height / 2 - 10, 40, WHITE);
+		DrawText(press_r, asteroids_screen_width / 2 - MeasureText(press_r, 20) / 2, asteroids_screen_height * 0.75f, 20, WHITE);
+
+		int mins = (int)(*hit_time - *ctime) / 60;
+		int secs = (int)(*hit_time - *ctime) % 60;
+
+		DrawText(TextFormat("Time played: %d minutes, %d seconds", mins, secs), 20, asteroids_screen_height - 40, 20, WHITE);
+	}
+},
+	WECS_HAS(t_player, 0)
+	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
+	WECS_READS(int, score, 2)
+	WECS_READS(int, life, 3)
+	WECS_READS(double, hit_time, 4)
+	WECS_READS(double, ctime, 5)
+)
+
 void asteroids_game_init()
 {
 	asteroids_game_state = ASTEROIDS_GAME_STATE_PLAYING;
@@ -199,192 +817,38 @@ void asteroids_game_init()
 		asteroids_spawn_asteroid();
 	}
 
-	// update
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_asteroid_spawn,
-    	"asteroid_spawn",
-    	"",
-    	"asteroid_spawn"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_movement_velocity,
-    	"movement_velocity",
-    	"",
-    	"pos_2d,vel_2d"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_rotation_velocity,
-    	"rotation_velocity",
-    	"",
-    	"rot,rot_v"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_controller,
-    	"player_controller",
-    	"t_player,p_state,pos_2d",
-    	"rot,rot_v,vel_2d,fire_time"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_movement_direction,
-    	"movement_velocity",
-    	"t_move_dir",
-    	"pos_2d,rot"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_collision,
-    	"collision_2d",
-    	"radius,pos_2d",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_destroy_offscreen,
-    	"destroy_offscreen",
-    	"t_screen_cull,pos_2d",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_screen_wrap,
-    	"screen_wrap",
-    	"t_screen_wrap",
-    	"pos_2d"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_collision_cull,
-    	"collision_cull",
-    	"collision",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_projectile_collide_destroy,
-    	"projectile_collide_destroy",
-    	"collision",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_asteroid_respawn_on_hit,
-    	"asteroid_score",
-    	"t_ast_hit,ast_size,pos_2d",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_asteroid_score,
-    	"asteroid_score",
-    	"t_ast_hit,ast_size",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_asteroid_hit_asteroid,
-    	"asteroid_hit_asteroid",
-    	"collision",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_hit_asteroid,
-    	"player_hit_asteroid",
-    	"collision",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_hit_nudge,
-    	"player_hit_nudge",
-    	"t_player,p_state,hit_collision,pos_2d",
-    	"vel_2d,rot_v"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_hit_cooldown,
-    	"player_hit_cooldown",
-    	"t_player,hit_time",
-    	"p_state"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_death_on_life_depleted,
-    	"player_death_on_life_depleted",
-    	"t_player,life",
-    	"p_state"
-	);
+	// register systems
+	system_asteroids_asteroid_spawn_init(asteroids_ecs);
+	system_asteroids_velocity_2d_init(asteroids_ecs);
+	system_asteroids_rotation_velocity_init(asteroids_ecs);
+	system_asteroids_player_controller_init(asteroids_ecs);
+	system_asteroids_movement_direction_init(asteroids_ecs);
+	system_asteroids_screen_wrap_init(asteroids_ecs);
+	system_asteroids_collision_init(asteroids_ecs);
+	system_asteroids_destroy_offscreen_init(asteroids_ecs);
+	system_asteroids_collision_cull_init(asteroids_ecs);
+	system_asteroids_projectile_collide_destroy_init(asteroids_ecs);
+	system_asteroids_asteroid_respawn_on_hit_init(asteroids_ecs);
+	system_asteroids_asteroid_score_init(asteroids_ecs);
+	system_asteroids_asteroid_hit_asteroid_init(asteroids_ecs);
+	system_asteroids_player_hit_asteroid_init(asteroids_ecs);
+	system_asteroids_player_hit_nudge_init(asteroids_ecs);
+	system_asteroids_player_hit_cooldown_init(asteroids_ecs);
+	system_asteroids_player_death_on_life_depleted_init(asteroids_ecs);
+	system_asteroids_player_hit_to_recover_init(asteroids_ecs);
+	system_asteroids_entity_deferred_destroy_init(asteroids_ecs);
 	/*  */
 	/* // draw */
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_draw_asteroid,
-    	"draw_asteroid",
-    	"t_ast,pos_2d,rot,ast_size",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_draw_projectile,
-    	"draw_projectile",
-    	"t_bullet,pos_2d,rot",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_draw_player,
-    	"draw_player",
-    	"p_state,pos_2d,rot,hit_time",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_draw_hud,
-    	"draw_hud",
-    	"score,p_state,life",
-    	""
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_draw_game_over,
-    	"draw_game_over",
-    	"p_state,score,hit_time,ctime",
-    	""
-	);
+	system_asteroids_draw_asteroid_init(asteroids_ecs);
+	system_asteroids_draw_projectile_init(asteroids_ecs);
+	system_asteroids_draw_player_init(asteroids_ecs);
+	system_asteroids_draw_hud_init(asteroids_ecs);
+	system_asteroids_draw_game_over_init(asteroids_ecs);
 	/*  */
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_player_hit_to_recover,
-    	"player_hit_to_recover",
-    	"t_player",
-    	"p_state"
-	);
-	whisker_ecs_register_system(
-    	asteroids_ecs,
-    	asteroids_system_entity_deferred_destroy,
-    	"entity_deferred_destroy",
-    	"t_cull",
-    	""
-	);
-    /*  */
-	/* if (DRAW_FPS) */
-	/* { */
-	/* 	register_system(system_draw_fps); */
-	/* } */
+
 	if (DRAW_FRAMETIME)
 	{
-		whisker_ecs_register_system(
-			asteroids_ecs, 
-			asteroids_system_draw_frame_time, 
-			"draw_frametime", 
-			"frametime", 
-			"frametime"
-		);
+		system_asteroids_draw_frame_time_init(asteroids_ecs);
 	}
 }
 
@@ -525,587 +989,4 @@ void asteroids_add_projectile(Vector2 position, float rotation)
 	whisker_ecs_set_tag(asteroids_ecs, t_screen_cull, e);    
 
 	debug_printf("add_projectile:rot %f at %fx%f\n", rotation, position.x, position.y);
-}
-
-
-/*************
-*  systems  *
-*************/
-void asteroids_system_collision(whisker_ecs_system_update system)
-{
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-	float radius_size = *whisker_ecs_sys_get_read_alias(radius, float);		
-
-	size_t entity_count = whisker_ecs_e_count(system.entities);
-	whisker_ecs_entity_id id = system.entity_id;
-
-	for (size_t ci = 0; ci < entity_count; ++ci)
-	{
-		whisker_ecs_entity_id ce = system.entities->entities[ci].id;
-
-		// skip entities not matching the same archetype as the system, or
-		// identitical entities as the one being processed
-		if (id.index == ce.index || !whisker_ecs_a_match(system.system->read_archetype, system.entities->entities[ci].archetype)) {
-			continue;
-		}
-
-		Vector2 colliding_position = *whisker_ecs_sys_get_read_alias_e(pos_2d, Vector2, ce);		
-		float colliding_radius_size = *whisker_ecs_sys_get_read_alias_e(radius, float, ce);		
-
-    	float distance = Vector2Distance(position, colliding_position);
-    	if (distance <= (radius_size + colliding_radius_size))
-    	{
-			/* debug_printf("system:collision:%zu->%zu (on)\n", e, ce); */
-
-			/* DrawCircle(position.x, position.y, radius_size, Fade(GREEN, 0.6f)); */
-			/* DrawCircle(colliding_position.x, colliding_position.y, colliding_radius_size, Fade(BLUE, 0.6f)); */
-
-			whisker_ecs_entity_id collision = whisker_ecs_create_entity(asteroids_ecs);
-
-			asteroids_component_collision col = {id, ce};
-			whisker_ecs_set(asteroids_ecs, collision, asteroids_component_collision, collision, &col);
-    	}
-	}
-}
-
-void asteroids_system_collision_cull(whisker_ecs_system_update system)
-{
-	whisker_ecs_set_tag(asteroids_ecs, t_cull, system.entity_id);
-}
-
-void asteroids_system_asteroid_hit_asteroid(whisker_ecs_system_update system)
-{
-		asteroids_component_collision *collision = whisker_ecs_sys_get_read_alias(collision, asteroids_component_collision);		
-
-		// find asteroids that collided with other asteroids
-		if (
-				// asteroid -> asteroid
-				(whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_b))
-				)
-		{
-
-			/* debug_printf("collision %d: %d hit asteroid %d\n", system.entity->id.index, collision->entity_a.index, collision->entity_b.index); */
-
-			// asteroid a
-			Vector2* asteroida_velocity = whisker_ecs_get(asteroids_ecs,vel_2d, Vector2, collision->entity_a);
-			float* asteroida_rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_a);		
-
-
-			Vector2 asteroida_position = *whisker_ecs_get(asteroids_ecs, pos_2d, Vector2, collision->entity_a);		
-			Vector2 asteroida_hit_by_position = *whisker_ecs_get(asteroids_ecs, pos_2d, Vector2, collision->entity_b);		
-
-			Vector2 asteroida_nudge_direction = Vector2Normalize(Vector2Subtract(asteroida_position, asteroida_hit_by_position));
-
-
-			// asteroid b
-			Vector2* asteroidb_velocity = whisker_ecs_get(asteroids_ecs, vel_2d, Vector2, collision->entity_b);
-			float* asteroidb_rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_b);		
-
-			/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
-
-			*asteroida_rotation_velocity = (GetRandomValue(-180, 180));
-			*asteroida_velocity = Vector2Scale(asteroida_nudge_direction, PLAYER_HIT_NUDGE_FORCE);
-			*asteroidb_rotation_velocity = (GetRandomValue(-180, 180));
-
-			/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
-		}
-}
-
-
-
-void asteroids_system_player_controller(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_read_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	if (*player_state == ASTEROIDS_PLAYER_STATE_DEAD && IsKeyPressed(KEY_R)) {
-		asteroids_game_state = ASTEROIDS_GAME_STATE_END;
-		return;
-	}
-	if (*player_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
-		return;
-	}
-
-	// player rotation
-	float *rotation = whisker_ecs_sys_get_write_alias(rot, float);		
-	float *rotation_velocity = whisker_ecs_sys_get_write_alias(rot_v, float);		
-
-	int rotation_input = (int)IsKeyDown(KEY_D) - (int)IsKeyDown(KEY_A);
-	/* *rotation += (rotation_input * PLAYER_ROTATION_VELOCITY * delta_time); */
-	*rotation_velocity = PLAYER_ROTATION_VELOCITY * rotation_input;
-
-	// player thrust
-	Vector2 *velocity = whisker_ecs_sys_get_write_alias(vel_2d, Vector2);		
-
-	Vector2 facing_direction = Vector2Rotate((Vector2){0, 1}, *rotation * DEG2RAD);
-
-	int thrust_input = (int)IsKeyDown(KEY_W) - (int)IsKeyDown(KEY_S);
-	if (thrust_input > 0) {
-		*velocity = Vector2Add(*velocity, Vector2Scale(facing_direction, PLAYER_ACCELERATION * system.system->delta_time));
-
-		float mag = Vector2Length(*velocity);
-		if (mag > PLAYER_VELOCITY) {
-			*velocity = Vector2Scale(*velocity, PLAYER_VELOCITY / mag);
-		}
-	}
-	else
-	{
-		*velocity = Vector2Add(*velocity, Vector2Scale(*velocity, -PLAYER_DECELLERATION * system.system->delta_time));
-	}
-
-	// projectiles
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-	double *projectile_time = whisker_ecs_sys_get_write_alias(fire_time, double);		
-
-	double now = GetTime();
-	bool can_fire = (now > *projectile_time + PROJECTILE_FIRE_RATE);
-
-	if (IsKeyDown(KEY_SPACE) && can_fire) {
-		asteroids_add_projectile(Vector2Add(position, Vector2Scale(facing_direction, 24)), *rotation);
-		*projectile_time = now;
-	}
-}
-
-void asteroids_system_projectile_collide_destroy(whisker_ecs_system_update system)
-{
-		asteroids_component_collision *collision = whisker_ecs_sys_get_read_alias(collision, asteroids_component_collision);		
-
-
-		// find projectiles colliding with asteroids
-		if (
-				// asteroid -> asteroid
-				(whisker_ecs_has_tag(asteroids_ecs, t_bullet, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_b))
-				)
-		{
-			debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b);
-
-			// destroy existing asteroid and projectile
-			whisker_ecs_set_tag(asteroids_ecs, t_cull, collision->entity_a);    
-			whisker_ecs_set_tag(asteroids_ecs, t_cull, collision->entity_b);    
-
-			whisker_ecs_set_tag(asteroids_ecs, t_ast_hit, collision->entity_b);    
-		}
-}
-
-void asteroids_system_screen_wrap(whisker_ecs_system_update system)
-{
-	Vector2* position = whisker_ecs_sys_get_write_alias(pos_2d, Vector2);		
-	if (
-			position->x < 0 ||
-			position->y < 0 ||
-			position->x > asteroids_screen_width ||
-			position->y > asteroids_screen_height
-			)
-	{
-		debug_printf("system:screen_wrap:e = %d\n", system.entity_id.index);
-
-		if (position->x < 0)
-		{
-			position->x += asteroids_screen_width;
-		}
-		if (position->x > asteroids_screen_width)
-		{
-			position->x -= asteroids_screen_width;
-		}
-		if (position->y < 0)
-		{
-			position->y += asteroids_screen_height;
-		}
-		if (position->y > asteroids_screen_height)
-		{
-			position->y -= asteroids_screen_height;
-		}
-	}
-}
-
-void asteroids_system_movement_velocity(whisker_ecs_system_update system)
-{
-	Vector2 *position = whisker_ecs_sys_get_write_alias(pos_2d, Vector2);		
-	Vector2 *velocity = whisker_ecs_sys_get_write_alias(vel_2d, Vector2);		
-
-	position->x += velocity->x * system.system->delta_time;
-	position->y += velocity->y * system.system->delta_time;
-}
-
-void asteroids_system_rotation_velocity(whisker_ecs_system_update system)
-{
-	float *rotation = whisker_ecs_sys_get_write_alias(rot, float);		
-	float *rotation_velocity = whisker_ecs_sys_get_write_alias(rot_v, float);		
-
-	*rotation += *rotation_velocity * system.system->delta_time;
-}
-
-void asteroids_system_movement_direction(whisker_ecs_system_update system)
-{
-	Vector2 *position = whisker_ecs_sys_get_write_alias(pos_2d, Vector2);		
-	float rotation = *whisker_ecs_sys_get_write_alias(rot, float);		
-
-	float radians = DEG2RAD * (rotation + 90.0f);
-	position->x += PROJECTILE_VELOCITY * cos(radians) * system.system->delta_time;
-	position->y += PROJECTILE_VELOCITY * sin(radians) * system.system->delta_time;
-}
-
-void asteroids_system_asteroid_spawn(whisker_ecs_system_update system)
-{
-	double *asteroid_spawn = whisker_ecs_sys_get_write_alias(asteroid_spawn, double);
-	double time = GetTime();
-
-	bool can_spawn = (time > *asteroid_spawn + ASTEROID_SPAWN_RATE);
-
-	if (can_spawn)
-	{
-		asteroids_spawn_asteroid();
-		*asteroid_spawn = time;
-	}
-}
-
-void asteroids_system_destroy_offscreen(whisker_ecs_system_update system)
-{
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-	if (
-			position.x < -(ASTEROID_OFF_SCREEN_PAD) ||
-			position.y < -(ASTEROID_OFF_SCREEN_PAD) ||
-			position.x > (asteroids_screen_width + ASTEROID_OFF_SCREEN_PAD) ||
-			position.y > (asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD)
-			)
-	{
-		debug_printf("system:destroy_offscreen:e = %d\n", system.entity_id.index);
-		whisker_ecs_set_tag(asteroids_ecs, t_cull, system.entity_id);
-	}
-}
-
-void asteroids_system_entity_deferred_destroy(whisker_ecs_system_update system)
-{
-	whisker_ecs_destroy_entity(asteroids_ecs, system.entity_id);
-}
-
-void asteroids_system_asteroid_score(whisker_ecs_system_update system)
-{
-	ASTEROIDS_ASTEROID_SIZE size = *whisker_ecs_sys_get_read_alias(ast_size, ASTEROIDS_ASTEROID_SIZE);
-
-	size_t entity_count = whisker_ecs_e_count(system.entities);
-	whisker_ecs_entity_id id = system.entity_id;
-
-	for (size_t si = 0; si < entity_count; ++si)
-	{
-		whisker_ecs_entity_id se = system.entities->entities[si].id;
-
-		if (whisker_ecs_has_tag(asteroids_ecs, score, se))
-		{
-			int add_score = (int)size * ASTEROID_SCORE;
-
-			int *score = whisker_ecs_get(asteroids_ecs, score, int, se);
-			*score += add_score;
-
-			debug_printf("system:asteroid_score:+%d points for %zu (%d total)\n", add_score, se, *score);
-		}
-	}
-}
-
-void asteroids_system_player_hit_asteroid(whisker_ecs_system_update system)
-{
-		asteroids_component_collision *collision = whisker_ecs_sys_get_read_alias(collision, asteroids_component_collision);		
-
-		// find asteroids colliding with the player
-		if (
-				// asteroid -> asteroid
-				(whisker_ecs_has_tag(asteroids_ecs, t_ast, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs, t_player, collision->entity_b))
-				)
-		{
-			ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_get(asteroids_ecs, p_state, ASTEROIDS_PLAYER_STATE, collision->entity_b);
-
-			// deal damage to the player, only in the default state
-			// TODO: maybe figure out a more ECS-like way to handle this,
-			// e.g. a component t_player_STATE_DEFAULT?
-			if (*player_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
-				return;
-			}
-
-			*player_state = ASTEROIDS_PLAYER_STATE_HIT;
-			whisker_ecs_set(asteroids_ecs, hit_time, double, collision->entity_b, (void*)&(double){GetTime()});
-			asteroids_component_collision col = {collision->entity_a, collision->entity_b};
-			whisker_ecs_set(asteroids_ecs, hit_collision, asteroids_component_collision, collision->entity_b, &col);
-
-			// TODO: refactor this into a separate system
-			int* player_life = whisker_ecs_get(asteroids_ecs, life, int, collision->entity_b);
-			ASTEROIDS_ASTEROID_SIZE* asteroid_size = whisker_ecs_get(asteroids_ecs, ast_size, ASTEROIDS_ASTEROID_SIZE, collision->entity_a);
-
-			int damage = *asteroid_size * ASTEROID_DAMAGE;
-
-			Vector2* asteroid_velocity = whisker_ecs_get(asteroids_ecs, vel_2d, Vector2, collision->entity_a);
-			*asteroid_velocity = Vector2Scale(*asteroid_velocity, ASTEROID_HIT_VELOCITY_REDUCTION);
-			float* rotation_velocity = whisker_ecs_get(asteroids_ecs, rot_v, float, collision->entity_a);		
-			*rotation_velocity += (GetRandomValue(-270, 270));
-
-			debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
-
-			*player_life -= damage;
-			if (*player_life <= 0) {
-				*player_life = 0;
-			}
-		}
-}
-
-void asteroids_system_player_hit_cooldown(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_write_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	double* hit_time = whisker_ecs_sys_get_read_alias(hit_time, double);
-
-	if (*player_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && *hit_time + PLAYER_HIT_COOLDOWN < GetTime()) {
-		debug_printf("system:player_hit_cooldown:returning to default state\n");
-		*player_state = ASTEROIDS_PLAYER_STATE_DEFAULT;
-	}
-}
-
-void asteroids_system_player_death_on_life_depleted(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_write_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	int* player_life = whisker_ecs_sys_get_read_alias(life, int);
-
-	if (*player_state == ASTEROIDS_PLAYER_STATE_DEFAULT && *player_life <= 0) {
-		debug_printf("system:player_death_on_life_depleted\n");
-		/* whisker_ecs_remove_component(asteroids_ecs, "vel_2d", sizeof(Vector2), system.entity_id); */
-		*player_state = ASTEROIDS_PLAYER_STATE_DEAD;
-	}
-}
-
-void asteroids_system_player_hit_nudge(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_read_alias(p_state, ASTEROIDS_PLAYER_STATE);
-
-	if (*player_state == ASTEROIDS_PLAYER_STATE_HIT) {
-		debug_printf("system:player_hit_nudge:nudging player from the hit\n");
-
-		asteroids_component_collision* collision = whisker_ecs_sys_get_read_alias(hit_collision, asteroids_component_collision);		
-		Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-		Vector2 hit_by_position = *whisker_ecs_sys_get_read_alias_e(pos_2d, Vector2, collision->entity_a);		
-
-		Vector2 nudge_direction = Vector2Normalize(Vector2Subtract(position, hit_by_position));
-
-		Vector2* velocity = whisker_ecs_sys_get_write_alias(vel_2d, Vector2);		
-		float* rotation_velocity = whisker_ecs_sys_get_write_alias(rot_v, float);		
-		*rotation_velocity += (GetRandomValue(-270, 270));
-
-		debug_printf("system:player_hit_nudge:velocity before %fx%f\n", velocity->x, velocity->y);
-		*velocity = Vector2Scale(nudge_direction, PLAYER_HIT_NUDGE_FORCE);
-
-		debug_printf("system:player_hit_nudge:velocity after %fx%f\n", velocity->x, velocity->y);
-	}
-}
-
-void asteroids_system_player_hit_to_recover(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_write_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	if (*player_state == ASTEROIDS_PLAYER_STATE_HIT) {
-		debug_printf("system:player_hit_to_recover\n");
-		*player_state = ASTEROIDS_PLAYER_STATE_COOLDOWN;
-	}
-}
-
-void asteroids_system_asteroid_respawn_on_hit(whisker_ecs_system_update system)
-{
-	ASTEROIDS_ASTEROID_SIZE size = *whisker_ecs_sys_get_read_alias(ast_size, ASTEROIDS_ASTEROID_SIZE);
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-
-	int spawn_count = 0;
-
-	ASTEROIDS_ASTEROID_SIZE new_size = ASTEROIDS_ASTEROID_SIZE_LARGE;
-
-	switch (size) {
-		case ASTEROIDS_ASTEROID_SIZE_LARGE:
-			new_size = ASTEROIDS_ASTEROID_SIZE_MEDIUM;
-			spawn_count = 3;
-			break;
-		case ASTEROIDS_ASTEROID_SIZE_MEDIUM:
-			new_size = ASTEROIDS_ASTEROID_SIZE_SMALL;
-			spawn_count = 2;
-			break;
-	}
-
-	debug_printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, size);
-
-	for (int ii = 0; ii < spawn_count; ++ii)
-	{
-		debug_printf("system:asteroid_respawn_on_destroy:spawning (from %d) size %d\n", system.entity_id.index, size);
-
-		asteroids_add_asteroid(position, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
-	}
-}
-
-
-// draw systems
-void asteroids_system_draw_asteroid(whisker_ecs_system_update system)
-{
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-	float rotation = *whisker_ecs_sys_get_read_alias(rot, float);		
-	ASTEROIDS_ASTEROID_SIZE size = *whisker_ecs_sys_get_read_alias(ast_size, ASTEROIDS_ASTEROID_SIZE);
-
-	DrawPolyLines(position, 3, 16 * (int)size, rotation, WHITE);
-}
-
-void asteroids_system_draw_projectile(whisker_ecs_system_update system)
-{
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-	float rotation = *whisker_ecs_sys_get_read_alias(rot, float);		
-
-	Rectangle rect = { position.x, position.y, PROJECTILE_WIDTH, PROJECTILE_LENGTH };
-	Vector2 origin = { rect.width / 2, rect.height / 2 };
-	DrawRectanglePro(rect, origin, rotation, RED);
-}
-
-void asteroids_system_draw_player(whisker_ecs_system_update system)
-{
-	// get a component of type ASTEROIDS_PLAYER_STATE with the same name
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_read_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	// get a component of type Vector2 with the alias name pos_2d
-	Vector2 position = *whisker_ecs_sys_get_read_alias(pos_2d, Vector2);		
-
-	if (*player_state == ASTEROIDS_PLAYER_STATE_DEAD)
-	{
-		double hit_time = *whisker_ecs_sys_get_read_alias(hit_time, double);		
-		float explosion_radius = (GetTime() - (hit_time + PLAYER_HIT_COOLDOWN)) * 1750;
-		const Color explosion_color = Fade(RED, 0.25f);
-
-		if (explosion_radius > (asteroids_screen_width + asteroids_screen_height))
-		{
-			DrawRectangle(0, 0, asteroids_screen_width, asteroids_screen_height, explosion_color);
-		}
-		else
-		{
-			DrawCircle(position.x, position.y, explosion_radius, explosion_color);
-		}
-		return;
-	}
-
-	float rotation = *whisker_ecs_sys_get_read_alias(rot, float);		
-
-	const Rectangle source = {0, 0, 32, 32};
-	Rectangle dest = {position.x, position.y, 48, 48};
-	Vector2 origin = {dest.width / 2, dest.height / 2};
-
-	const Color color = Fade((*player_state == ASTEROIDS_PLAYER_STATE_COOLDOWN) ? RED : WHITE, ((*player_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && (int)(GetTime() * 100) % 2)) ? 0.4f : 1.0f);
-	DrawTexturePro(asteroids_player_ship, source, dest, origin, rotation + 180, color);
-}
-
-
-void asteroids_system_draw_hud(whisker_ecs_system_update system)
-{
-	const int font_size = 64;
-	const Color black = Fade(BLACK, 0.8f);
-	const Color white = Fade(WHITE, 0.8f);
-	const int x_pad = 16;
-	const int y_pad = 8;
-	const int shadow = 8;
-
-	ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_sys_get_read_alias(p_state, ASTEROIDS_PLAYER_STATE);
-	if (*player_state == ASTEROIDS_PLAYER_STATE_DEAD)
-	{
-		return;
-	}
-
-	// score
-	int score = *whisker_ecs_sys_get_read_alias(score, int);		
-
-	char* score_text = TextFormat("%d POINTS", score);
-	float score_measure = MeasureText(score_text, font_size);
-
-	int score_x = asteroids_screen_width - score_measure;
-	int score_y = font_size + y_pad;
-
-	DrawText(score_text, score_x, score_y, 48, black);
-	DrawText(score_text, score_x + shadow, score_y + shadow, 48, white);
-
-	// life
-	int life = *whisker_ecs_sys_get_read_alias(life, int);		
-
-	char* life_text = TextFormat("%d%% LIFE", life);
-	float life_measure = MeasureText(life_text, font_size);
-
-	int life_x = x_pad;
-	int life_y = font_size + y_pad;
-
-	DrawText(life_text, life_x, life_y, 48, black);
-	DrawText(life_text, life_x + shadow, life_y + shadow, 48, white);
-}
-
-void asteroids_system_draw_game_over(whisker_ecs_system_update system)
-{
-	ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_sys_get_read_alias(p_state, ASTEROIDS_PLAYER_STATE);
-
-	if (*player_state == ASTEROIDS_PLAYER_STATE_DEAD)
-	{
-		// game end
-		int score = *whisker_ecs_sys_get_read_alias(score, int);		
-		double hit_time = *whisker_ecs_sys_get_read_alias(hit_time, double);
-		double creation_time = *whisker_ecs_sys_get_read_alias(ctime, double);
-
-		const char* game_over = "Game Over!";
-		const char* press_r = "Press R to restart";
-		const char* score_text = TextFormat("POINTS: %d", score);
-
-		/* DrawRectangle(0, 0, screen_width, screen_height, Fade(RAYWHITE, 0.8f)); */
-		DrawText(score_text, asteroids_screen_width / 2 - MeasureText(score_text, 60) / 2, asteroids_screen_height * 0.15f, 60, WHITE);
-		DrawText(game_over, asteroids_screen_width / 2 - MeasureText(game_over, 40) / 2, asteroids_screen_height / 2 - 10, 40, WHITE);
-		DrawText(press_r, asteroids_screen_width / 2 - MeasureText(press_r, 20) / 2, asteroids_screen_height * 0.75f, 20, WHITE);
-
-		int mins = (int)(hit_time - creation_time) / 60;
-		int secs = (int)(hit_time - creation_time) % 60;
-
-		DrawText(TextFormat("Time played: %d minutes, %d seconds", mins, secs), 20, asteroids_screen_height - 40, 20, WHITE);
-	}
-}
-
-void asteroids_system_draw_frame_time(whisker_ecs_system_update system)
-{
-	asteroids_component_frametime *frametime = whisker_ecs_sys_get_write_alias(frametime, asteroids_component_frametime);
-	float current_frametime = system.system->delta_time * 1000;
-
-	// update frametime samples
-	/* if (GetTime() - 0.1 > frametime->time || frametime->time == 0) */
-	/* { */
-		/* frametime->time = GetTime(); */
-    	frametime->samples[frametime->index] = current_frametime;
-    	frametime->index = (frametime->index + 1) % DRAW_FRAMETIME_AVG_SAMPLES;
-	/* } */
-
-    if (frametime->index > frametime->max_index)
-    {
-    	frametime->max_index = frametime->index;
-    }
-
-	// calculate average frametime
-    float sum = 0.0;
-    for (int i = 0; i < frametime->max_index + 1; i++) {
-        sum += frametime->samples[i];
-    }
-    float average_frametime = (sum / frametime->max_index);
-
-	if (GetTime() - 2.5 > frametime->time || frametime->time == 0)
-	{
-		frametime->time = GetTime();
-    	frametime->max = current_frametime;
-    	frametime->min = current_frametime;
-    }
-
-    if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
-    {
-    	frametime->max = current_frametime;
-    }
-    if ((current_frametime < frametime->min || frametime->min <= 0) && frametime->max_index >= 10)
-    {
-    	frametime->min = current_frametime;
-    }
-
-	const int frametime_string_count = 4;
-	char* frametime_strings[frametime_string_count] = {};
-	frametime_strings[0] = TextFormat("ms/f cur  : %.4f", current_frametime);
-	frametime_strings[1] = TextFormat("ms/f avg  : %.4f", average_frametime);
-	frametime_strings[2] = TextFormat("ms/f min  : %.4f", frametime->min);
-	frametime_strings[3] = TextFormat("ms/f spike: %.4f", frametime->max);
-
-	const int font_size = 48;
-	const int line_padding = 8;
-	const int top_padding = (font_size + line_padding) * 2;
-	for (int i = 0; i < frametime_string_count; ++i)
-	{
-		DrawText(frametime_strings[i], 16, (i + 1) * (line_padding + font_size) + top_padding, font_size, RED);
-	}
 }
