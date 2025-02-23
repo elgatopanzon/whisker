@@ -30,7 +30,7 @@ typedef struct whisker_array_header
 
 // macros
 #define whisker_arr_create(t, l, p) whisker_arr_create_f(sizeof(t), l, (void**) p)
-#define whisker_arr_resize(p, e) whisker_arr_resize_f((void**) p, e)
+#define whisker_arr_resize(p, e) whisker_arr_resize_f((void**) p, e, false)
 #define whisker_arr_increment_size(p) whisker_arr_increment_size_f((void**) p)
 #define whisker_arr_push(p, v) whisker_arr_push_f((void**) p, (void*) v)
 #define whisker_arr_pop(p, v) whisker_arr_pop_f((void**) p, (void*) v)
@@ -40,6 +40,9 @@ typedef struct whisker_array_header
 #define whisker_arr_compact(p) whisker_arr_compact_f((void**) p)
 #define whisker_arr_insert(p, i, v) whisker_arr_insert_f((void**) p, i, (void*) v)
 #define whisker_arr_grow_get(p, i) whisker_arr_grow_get_f((void**) p, i)
+#define whisker_arr_length(a) whisker_arr_length_f((char*)a)
+#define whisker_arr_header(a) whisker_arr_header_f((char*)a)
+#define whisker_arr_reset(a) whisker_arr_reset_f((char*)a)
 
 // short macros
 #define warr_create whisker_arr_create
@@ -59,7 +62,7 @@ typedef struct whisker_array_header
 
 // array management functions
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr);
-E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements);
+E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements, bool allow_shrink);
 E_WHISKER_ARR whisker_arr_increment_size_f(void** arr);
 E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value);
@@ -67,11 +70,11 @@ E_WHISKER_ARR whisker_arr_pop_front_f(void** arr, void* value);
 E_WHISKER_ARR whisker_arr_swap(void** arr, size_t index_from, size_t index_to);
 E_WHISKER_ARR whisker_arr_compact_f(void** arr);
 E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value);
-E_WHISKER_ARR whisker_arr_reset(void* arr);
+E_WHISKER_ARR whisker_arr_reset_f(char* arr);
 
 // utility functions to work with the array
-whisker_array_header* whisker_arr_header(void* arr);
-size_t whisker_arr_length(void* arr);
+whisker_array_header* whisker_arr_header_f(char* arr);
+size_t whisker_arr_length_f(char* arr);
 void* whisker_arr_grow_get_f(void** arr, size_t index);
 
 void whisker_arr_free(void* arr);

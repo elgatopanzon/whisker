@@ -52,7 +52,7 @@ typedef struct whisker_memory_block
 E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block** block);
 E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block* block, size_t size);
 void whisker_mem_block_free(whisker_memory_block* block);
-void* whisker_mem_block_header_from_data_pointer(void* data, size_t header_size);
+void* whisker_mem_block_header_from_data_pointer(char* data, size_t header_size);
 size_t whisker_mem_block_calc_header_size(size_t header_type_size, size_t data_type_size);
 
 #endif /* end of include guard WHISKER_MEMORY_H */

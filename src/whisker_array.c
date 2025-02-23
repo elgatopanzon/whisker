@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include "whisker_debug.h"
 #include "whisker_array.h"
 #include "whisker_array_internal.h"
 #include "whisker_memory.h"
@@ -41,10 +42,22 @@ E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 }
 
 // resize an array with the given pointer, putting the new pointer
-E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements)
+E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements, bool allow_shrink)
 {
 	// build block from array pointer
 	whisker_array_header* header = whisker_arr_header(*arr);
+
+	// if the new size is the same, nothing needs to be done
+	if (header->length == elements)
+	{
+		return E_WHISKER_ARR_OK;
+	}
+	if (header->length > elements && !allow_shrink)
+	{
+		header->length = elements;
+		return E_WHISKER_ARR_OK;
+	}
+
 	whisker_memory_block block = {
 		.header = header,
 		.header_size = sizeof(whisker_array_header),
@@ -102,7 +115,7 @@ E_WHISKER_ARR whisker_arr_push_f(void** arr, void* value)
 E_WHISKER_ARR whisker_arr_compact_f(void** arr)
 {
 	whisker_array_header* header = whisker_arr_header(*arr);
-	E_WHISKER_ARR err = whisker_arr_resize_f(arr, header->length);
+	E_WHISKER_ARR err = whisker_arr_resize_f(arr, header->length, true);
 	if (err != E_WHISKER_ARR_OK)
 	{
 		return err;
@@ -187,7 +200,7 @@ E_WHISKER_ARR whisker_arr_insert_f(void** arr, size_t index, void* value)
 }
 
 // reset length to 0 keeping allocated size and values
-E_WHISKER_ARR whisker_arr_reset(void* arr)
+E_WHISKER_ARR whisker_arr_reset_f(char* arr)
 {
 	whisker_arr_header(arr)->length = 0;
 
@@ -202,14 +215,14 @@ void whisker_arr_free(void* arr)
 }
 
 // obtain the header from the array pointer
-inline whisker_array_header* whisker_arr_header(void* arr)
+inline whisker_array_header* whisker_arr_header_f(char* arr)
 {
-	return whisker_mem_block_header_from_data_pointer(arr, sizeof(whisker_array_header));
+	return (whisker_array_header*)((char*)arr - sizeof(whisker_array_header));
 }
 
 // get array length from underlying header
 // shortcut to use in loops
-inline size_t whisker_arr_length(void* arr)
+inline size_t whisker_arr_length_f(char* arr)
 {
 	return whisker_arr_header(arr)->length;
 }

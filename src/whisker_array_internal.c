@@ -14,7 +14,7 @@ E_WHISKER_ARR whisker_arr_try_resize_if_required_(void** arr, size_t elements)
 	whisker_array_header* header = whisker_arr_header(*arr);
 	if (elements * header->element_size > header->size)
 	{
-		E_WHISKER_ARR err = whisker_arr_resize_f(arr, elements);
+		E_WHISKER_ARR err = whisker_arr_resize_f(arr, elements, false);
 		if (err != E_WHISKER_ARR_OK)
 		{
 			return err;
