@@ -317,7 +317,7 @@ E_WHISKER_DICT whisker_dict_resize_(void** dict, size_t capacity)
 // get dict header from opaque pointer
 whisker_dict_header* whisker_dict_get_header(void* dict)
 {
-	return whisker_mem_block_header_from_data_pointer(dict, sizeof(whisker_dict_header));
+	return (whisker_dict_header*)((char*)dict - sizeof(whisker_dict_header));
 }
 
 // check if the dict contains the provided key
