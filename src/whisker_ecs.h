@@ -150,6 +150,8 @@ typedef whisker_ecs wecs;
 		{ \
 			__VA_ARGS__ \
 			double delta_time = system.system->delta_time; \
+			whisker_ecs_entity_id entity_id = system.entity_id; \
+			whisker_ecs_entity_index entity_index = system.entity_id.index; \
 			sys \
 		}
 
