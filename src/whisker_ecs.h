@@ -160,6 +160,11 @@ typedef whisker_ecs wecs;
 // note: there should be no reason to use these macro manually within a function
 #define WECS_READS(type, name, idx) WECS_DECLARE(type, name, idx, false)
 #define WECS_WRITES(type, name, idx) WECS_DECLARE(type, name, idx, true)
+// defines a read archetype and a write component declaration with their own
+// indexes
+#define WECS_READ_WRITES(type, name, idx_read, idx_write) \
+	WECS_HAS(name, idx_read) \
+	WECS_DECLARE(type, name, idx_write, true)
 
 // note: system's delta_time is 0 during the init function
 #define WECS_DECLARE(type, name, idx, mode) \
