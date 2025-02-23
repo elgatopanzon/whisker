@@ -361,7 +361,8 @@ WECS_SYSTEM(asteroids_draw_frame_time,
 		DrawText(frametime_strings[i], 16, (i + 1) * (line_padding + font_size) + top_padding, font_size, RED);
 	}
 },
-	WECS_READ_WRITES(asteroids_component_frametime, frametime, 0, 0)
+	WECS_HAS(asteroids_draw_frame_time, 0)
+	WECS_WRITES(asteroids_component_frametime, frametime, 0)
 )
 
 
@@ -912,8 +913,8 @@ void asteroids_create_player_entity()
 	whisker_ecs_set(asteroids_ecs, hit_collision, asteroids_component_collision, e, (void*)&(asteroids_component_collision){});
 
 	// TODO: store this on a central game/world entity instead of the player
-	whisker_ecs_set(asteroids_ecs, fps, asteroids_component_fps, e, (void*)&(asteroids_component_fps){0});
-	whisker_ecs_set(asteroids_ecs, frametime, asteroids_component_frametime, e, (void*)&(asteroids_component_frametime){0});
+	/* whisker_ecs_set(asteroids_ecs, fps, asteroids_component_fps, e, (void*)&(asteroids_component_fps){0}); */
+	/* whisker_ecs_set(asteroids_ecs, frametime, asteroids_component_frametime, e, (void*)&(asteroids_component_frametime){0}); */
 	whisker_ecs_set_tag(asteroids_ecs, t_player, e);    
 	whisker_ecs_set_tag(asteroids_ecs, t_screen_wrap, e);    
 }
