@@ -91,36 +91,6 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 void asteroids_add_projectile(Vector2 position, float rotation);
 void asteroids_create_player_entity();
 
-// systems
-void asteroids_system_movement_direction(whisker_ecs_system_update system);
-void asteroids_system_movement_velocity(whisker_ecs_system_update system);
-void asteroids_system_rotation_velocity(whisker_ecs_system_update system);
-void asteroids_system_collision(whisker_ecs_system_update system);
-void asteroids_system_collision_cull(whisker_ecs_system_update system);
-void asteroids_system_destroy_offscreen(whisker_ecs_system_update system);
-void asteroids_system_screen_wrap(whisker_ecs_system_update system);
-void asteroids_system_entity_deferred_destroy(whisker_ecs_system_update system);
-
-void asteroids_system_asteroid_spawn(whisker_ecs_system_update system);
-void asteroids_system_player_controller(whisker_ecs_system_update system);
-void asteroids_system_projectile_collide_destroy(whisker_ecs_system_update system);
-void asteroids_system_asteroid_respawn_on_hit(whisker_ecs_system_update system);
-void asteroids_system_asteroid_score(whisker_ecs_system_update system);
-void asteroids_system_asteroid_hit_asteroid(whisker_ecs_system_update system);
-void asteroids_system_player_hit_asteroid(whisker_ecs_system_update system);
-void asteroids_system_player_hit_nudge(whisker_ecs_system_update system);
-void asteroids_system_player_hit_cooldown(whisker_ecs_system_update system);
-void asteroids_system_player_hit_to_recover(whisker_ecs_system_update system);
-void asteroids_system_player_death_on_life_depleted(whisker_ecs_system_update system);
-
-void asteroids_system_draw_asteroid(whisker_ecs_system_update system);
-void asteroids_system_draw_projectile(whisker_ecs_system_update system);
-void asteroids_system_draw_player(whisker_ecs_system_update system);
-void asteroids_system_draw_hud(whisker_ecs_system_update system);
-void asteroids_system_draw_game_over(whisker_ecs_system_update system);
-void asteroids_system_draw_fps(whisker_ecs_system_update system);
-void asteroids_system_draw_frame_time(whisker_ecs_system_update system);
-
 typedef struct asteroids_component_collision
 {
 	whisker_ecs_entity_id entity_a;
