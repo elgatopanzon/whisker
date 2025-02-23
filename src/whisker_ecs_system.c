@@ -123,7 +123,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 			whisker_ecs_entity_id *entity_archetype = entities->entities[ei].archetype;
 			whisker_ecs_entity_id entity_id = entities->entities[ei].id;
 
-			if (whisker_ecs_a_match(system->read_archetype, entity_archetype) && whisker_ecs_a_match(system->write_archetype, entity_archetype))
+			if (whisker_ecs_a_match(system->read_archetype, entity_archetype))
 			{
 				whisker_ecs_s_update_system(system, entities, system->write_components, entity_id);				
 			}
@@ -181,16 +181,25 @@ void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, c
 		}
 
 		// grow and set archetype index manually
-		warr_resize(&archetype, index + 1);
-		archetype[index] = whisker_ecs_e_create_named(system->entities, name);
+		if (warr_length(archetype) < index + 1)
+		{
+			warr_resize(&archetype, index + 1);
 
-		if (read_or_write == 0)
-		{
-			system->read_archetype = archetype;
+			if (read_or_write == 0)
+			{
+				system->read_archetype = archetype;
+			}
+			else
+			{
+				system->write_archetype = archetype;
+			}
 		}
-		else
+
+		// set archetype index if it's set to 0
+		// note: this might conflict with the idea that 0 == wildcard
+		if (archetype[index].index == 0)
 		{
-			system->write_archetype = archetype;
+			archetype[index] = whisker_ecs_e_create_named(system->entities, name);
 		}
 	}
 
