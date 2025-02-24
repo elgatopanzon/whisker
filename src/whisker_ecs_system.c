@@ -48,6 +48,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	// TODO: better error checking here and return the pointer to the system
 	// instead
 	wdict_create(&system.component_name_index, int, 0);
+	warr_create(whisker_ecs_entity_id*, 0, &system.custom_archetypes);
 	warr_push(&systems->systems, &system);
 
 	return &systems->systems[warr_length(systems->systems) - 1];
@@ -99,6 +100,11 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 
 	wstr_free(system->read_component_names);
 	wstr_free(system->write_component_names);
+	for (int i = 0; i < warr_length(system->custom_archetypes); ++i)
+	{
+		warr_free(system->custom_archetypes[i]);
+	}
+	warr_free(system->custom_archetypes);
 }
 
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
@@ -143,6 +149,19 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whiske
 		});
 
 	return E_WHISKER_ECS_SYS_OK;
+}
+
+whisker_ecs_entity_id *whisker_ecs_s_get_custom_archetype(whisker_ecs_system *system, int index)
+{
+	return system->custom_archetypes[index];
+}
+whisker_ecs_entity_id *whisker_ecs_s_set_custom_archetype(whisker_ecs_system *system, int index, whisker_ecs_entity_id *archetype)
+{
+	debug_printf("setting system custom archetype %d %d\n", system->entity_id.index, index);
+
+	warr_resize(&system->custom_archetypes, index + 1);
+	system->custom_archetypes[index] = archetype;
+	return archetype;
 }
 
 void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, char *name, int index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)

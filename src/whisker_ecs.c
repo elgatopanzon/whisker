@@ -90,8 +90,8 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
 		.entity_id = e,
 		.system_ptr = system_ptr,
-		.read_archetype = whisker_ecs_archetype_from_named_entities(ecs, read_component_archetype_names),
-		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs, write_component_archetype_names),
+		.read_archetype = whisker_ecs_archetype_from_named_entities(ecs->entities, read_component_archetype_names),
+		.write_archetype = whisker_ecs_archetype_from_named_entities(ecs->entities, write_component_archetype_names),
 		.read_component_names = read_components,
 		.write_component_names = write_components,
 		.components = ecs->components,
@@ -163,7 +163,7 @@ whisker_block_array* whisker_ecs_get_components(whisker_ecs_entities *entities, 
 	return components_array;
 }
 
-whisker_block_array* whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id)
+void* whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id)
 {
 	whisker_block_array *components_array = whisker_ecs_get_components(entities, components, component_name, component_size);
 
@@ -196,9 +196,9 @@ E_WHISKER_ECS whisker_ecs_remove_component(whisker_ecs_entities *entities, whisk
 /*************************
 *  archetype functions  *
 *************************/
-whisker_ecs_entity_id* whisker_ecs_archetype_from_named_entities(whisker_ecs *ecs, char* entity_names)
+whisker_ecs_entity_id* whisker_ecs_archetype_from_named_entities(whisker_ecs_entities *entities, char* entity_names)
 {
-	return whisker_ecs_e_from_named_entities(ecs->entities, entity_names);
+	return whisker_ecs_e_from_named_entities(entities, entity_names);
 }
 
 E_WHISKER_ECS whisker_ecs_archetype_set(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, whisker_ecs_entity_id archetype_id)
