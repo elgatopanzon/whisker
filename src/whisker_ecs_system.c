@@ -89,13 +89,23 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 		wdict_free(system->component_name_index);
 	}
 
-	wstr_free(system->read_component_names);
-	wstr_free(system->write_component_names);
-	for (int i = 0; i < warr_length(system->custom_archetypes); ++i)
+	if (system->read_component_names != NULL)
 	{
-		warr_free(system->custom_archetypes[i]);
+		wstr_free(system->read_component_names);
 	}
-	warr_free(system->custom_archetypes);
+	if (system->read_component_names != NULL)
+	{
+		wstr_free(system->write_component_names);
+	}
+
+	if (system->custom_archetypes != NULL)
+	{
+		for (int i = 0; i < warr_length(system->custom_archetypes); ++i)
+		{
+			warr_free(system->custom_archetypes[i]);
+		}
+		warr_free(system->custom_archetypes);
+	}
 }
 
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
