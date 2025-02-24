@@ -317,19 +317,10 @@ WECS_SYSTEM(asteroids_draw_frame_time,
     }
 
 	const int frametime_string_count = 4;
-	char* frametime_strings[frametime_string_count] = {};
-	frametime_strings[0] = TextFormat("ms/f cur  : %.4f", current_frametime);
-	frametime_strings[1] = TextFormat("ms/f avg  : %.4f", average_frametime);
-	frametime_strings[2] = TextFormat("ms/f min  : %.4f", frametime->min);
-	frametime_strings[3] = TextFormat("ms/f spike: %.4f", frametime->max);
+	const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
 
-	const int font_size = 48;
-	const int line_padding = 8;
-	const int top_padding = (font_size + line_padding) * 2;
-	for (int i = 0; i < frametime_string_count; ++i)
-	{
-		DrawText(frametime_strings[i], 16, (i + 1) * (line_padding + font_size) + top_padding, font_size, RED);
-	}
+	const int font_size = 32;
+	DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
 },
 	WECS_HAS(asteroids_draw_frame_time, 0)
 	WECS_WRITES(asteroids_component_frametime, frametime, 0)
