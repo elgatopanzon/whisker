@@ -5,6 +5,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_debug.h"
 #include "whisker_array.h"
 
 #include "whisker_ecs_archetype.h"
@@ -20,6 +21,8 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_set(whisker_ecs_entity_id **archetype, whisker_
 		warr_push(&*archetype, &archetype_id);
 	}
 
+	whisker_ecs_e_sort_entity_array(*archetype);
+
 	return E_WHISKER_ECS_ARCH_OK;
 }
 
@@ -32,6 +35,8 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_remove(whisker_ecs_entity_id **archetype, whisk
 		whisker_arr_pop(&*archetype, &archetype_id);
 	}
 
+	whisker_ecs_e_sort_entity_array(*archetype);
+
 	return E_WHISKER_ECS_ARCH_OK;
 }
 
@@ -41,7 +46,6 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_free(whisker_ecs_entity_id *archetype)
 
 	return E_WHISKER_ECS_ARCH_OK;
 }
-
 
 /************************
 *  utility functions   *

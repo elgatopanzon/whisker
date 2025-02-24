@@ -329,5 +329,17 @@ whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *e
 
 	wstr_free(entity_names);
 
+	whisker_ecs_e_sort_entity_array(entities_new);
+
 	return entities_new;
+}
+
+int whisker_ecs_e_compare_entity_ids(const void *id_a, const void *id_b)
+{
+	return ((*(whisker_ecs_entity_id*)id_a).id - (*(whisker_ecs_entity_id*)id_b).id);
+}
+
+void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities)
+{
+	qsort(entities, warr_length(entities), sizeof(whisker_ecs_entity_id), whisker_ecs_e_compare_entity_ids);
 }
