@@ -26,6 +26,7 @@ typedef struct whisker_array_header
 	size_t size;
 	size_t element_size;
 	size_t length;
+	void *swap_buffer;
 } whisker_array_header;
 
 // macros

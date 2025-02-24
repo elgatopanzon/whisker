@@ -33,6 +33,7 @@ E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 	header->element_size = type_size;
 	header->length = length;
 	header->size = type_size * length;
+	header->swap_buffer = malloc(type_size);
 
 	// set array pointer to data pointer
 	*arr = block->data;
@@ -168,7 +169,7 @@ E_WHISKER_ARR whisker_arr_swap(void** arr, size_t index_a, size_t index_b)
 	}
 
 	// copy a into temp
-	void* temp = calloc(1, header->element_size);
+	void* temp = header->swap_buffer;
 	memcpy(temp, ((char*)*arr) + (index_a * header->element_size), header->element_size);
 
 	// copy over a
@@ -176,8 +177,6 @@ E_WHISKER_ARR whisker_arr_swap(void** arr, size_t index_a, size_t index_b)
 
 	// copy temp into b
 	memcpy(((char*)*arr) + (index_b * header->element_size), temp, header->element_size);
-
-	free(temp);
 
 	return E_WHISKER_ARR_OK;
 }
@@ -216,7 +215,9 @@ E_WHISKER_ARR whisker_arr_reset_f(char* arr)
 // free the array by obtaining the header
 void whisker_arr_free(void* arr)
 {
-	free(whisker_arr_header(arr));
+	whisker_array_header *header = whisker_arr_header(arr);
+	free(header->swap_buffer);
+	free(header);
 }
 
 // obtain the header from the array pointer
