@@ -88,32 +88,6 @@ typedef whisker_ecs wecs;
 // update function, requiring an instance of whisker_ecs_system_update named
 // "system" and operating on the current system's entity
 
-// create an entity (from within a system)
-// #define whisker_ecs_sys_create_entity() whisker_ecs_e_create(system->entities)
-// // create a named entity (from within a system)
-// #define whisker_ecs_sys_create_named_entity(n) whisker_ecs_e_create_named(system->entities, #n)
-// // check if system's entity is alive (from within a system)
-// #define whisker_ecs_sys_is_alive() whisker_ecs_e_is_alive(system->entities, system.entity_id)
-// // destroy system's entity (from within a system)
-// #define whisker_ecs_sys_destroy_entity() whisker_ecs_e_destroy(system->entities, system.entity_id)
-// // check if an entity is alive (from within a system)
-// #define whisker_ecs_sys_is_alive_e(e) whisker_ecs_e_is_alive(system->entities, e)
-// // destroy an entity (from within a system)
-// #define whisker_ecs_sys_destroy_entity_e(e) whisker_ecs_e_destroy(system->entities, e)
-//
-//
-// // component macros
-//
-// #define whisker_ecs_sys_get_read(t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), system.entity_id, false)
-// #define whisker_ecs_sys_get_write(t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), system.entity_id, true)
-// #define whisker_ecs_sys_get_read_alias(n, t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), system.entity_id, false)
-// #define whisker_ecs_sys_get_write_alias(n, t) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), system.entity_id, true)
-//
-// #define whisker_ecs_sys_get_read_e(t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), e, false)
-// #define whisker_ecs_sys_get_write_e(t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #t, -1, sizeof(t), e, true)
-// #define whisker_ecs_sys_get_read_alias_e(n, t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), e, false)
-// #define whisker_ecs_sys_get_write_alias_e(n, t, e) (t*)whisker_ecs_s_get_component_by_name_or_index(system.system, #n, -1, sizeof(t), e, true)
-
 /////////////////////////////////
 //  system declaration macros  //
 /////////////////////////////////
@@ -183,7 +157,7 @@ typedef whisker_ecs wecs;
 
 // note: using WRITEs does NOT add to the system's matching archetype, it is
 // declared as an optional write whether or not the component exists on the
-// entity or not
+// entity or not, and regardless of whether the write happens or not
 #define WECS_WRITES(type, name, idx) \
 	WECS_WRITES_TAG(name, idx) \
 	WECS_INIT_CACHE(type, name, idx, true) \
@@ -204,27 +178,20 @@ typedef whisker_ecs wecs;
 	WECS_DECLARE_STORE(type, name, idx_write, write) \
 	WECS_DECLARE(type, name, idx, write)
 
-// base macro used to declare read/write mode components in scope
+// base macro used to declare read/write mode components in scope accessed via a
+// declared store
 #define WECS_DECLARE(type, name, idx, mode) \
 	type *name = wbarr_get(name##_##mode##_store, system.entity_id.index);
 
 
-// currently these macros create block array stores of the given component
-// however, they should NOT be used for writing
-// reason: writing directly to the component array won't trigger archetype
-// changes on the entity
+
+// setup the component cache and declare a read store, but do NOT update the
+// system's archetype for READ or WRITE
 #define WECS_READS_ALL(type, name, idx) \
-	WECS_HAS(name, idx) \
+	WECS_INIT_CACHE(type, name, idx, false) \
 	WECS_DECLARE_STORE(type, name, idx, read)
 #define WECS_WRITES_ALL(type, name, idx) \
-	WECS_WRITES_TAG(name, idx) \
-	WECS_DECLARE_STORE(type, name, idx, write)
-
-// since the system cache for components is directly linked to the archetype
-// index to declare a read store for components which don't belong to the entity
-// must be delared as a write store
-#define WECS_WRITES_ALL_E(type, name, idx) \
-	WECS_INIT(type, name, idx, false) \
+	WECS_INIT_CACHE(type, name, idx, true) \
 	WECS_DECLARE_STORE(type, name, idx, write)
 
 // base macro to declare component store in scope with different mode
@@ -242,6 +209,10 @@ typedef whisker_ecs wecs;
 // WRITES_TAG is the same as WRITES, it just sets up the write archetype
 #define WECS_WRITES_TAG(name, idx) \
 	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true, (system.entities == NULL), true); };
+// READS_TAG is different, it doesn't setup the archetype
+// it's an alternative to HAS
+#define WECS_READS_TAG(name, idx) \
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true, (system.entities == NULL), false); };
 
 
 ///////////////////////////////////
@@ -261,7 +232,7 @@ typedef whisker_ecs wecs;
 // component and since this is used after WRITE_ALL the component array is
 // already initialised with the correct type size
 #define WECS_GET_WRITE_E(name, idx, entity) \
-	wbarr_get(name##_write_store, entity.index)
+	wbarr_get(name##_write_store, entity.index); WECS_TAG_ON_E(name, idx, entity)
 
 // this macro gets a non-read/write specific component for an entity using the
 // main ECS interface, meaning it has to lookup the component id from name
@@ -271,19 +242,8 @@ typedef whisker_ecs wecs;
 	whisker_ecs_get_component(system.system->entities, system.system->components, #name, 0, entity)
 
 // uses the main ECS interface to check if an entity has an archetype (tag)
-#define WECS_HAS_TAG_E(name, entity) \
-	whisker_ecs_has_component_archetype(system.system->entities, #name, entity)
-
-// shortcuts to SET values either on the current entity or any other with _E
-// they do not work with the scoped components defined by the archetype, and
-// instead they work using the main ECS interface
-// programatically it's the same as first getting a component and writing to it
-#define WECS_SET(type, name, idx, value) \
-	WECS_TAG_ON(name, idx) \
-	wbarr_set(name##_write_store, system.entity_id.index, value);
-#define WECS_SET_E(type, name, idx, entity, value) \
-	WECS_TAG_ON_E(name, idx) \
-	wbarr_set(name##_write_store, entity_id.index, value);
+#define WECS_HAS_TAG_E(name, idx, entity) \
+	(whisker_ecs_a_has_id(system.system->entities->entities[entity.index].archetype, system.system->components_cache_archetypes[idx]) != -1)
 
 // shortcuts to remove components from entities, which really just removes the
 // archetype and leaves the data as-is in the component array

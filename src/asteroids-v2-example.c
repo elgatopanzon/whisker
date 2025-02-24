@@ -367,8 +367,8 @@ WECS_SYSTEM(asteroids_collision,
 			continue;
 		}
 
-		Vector2 *colliding_position = WECS_GET_E(pos_2d, ce);		
-		float *colliding_radius_size = WECS_GET_E(radius, ce);		
+		Vector2 *colliding_position = WECS_GET_READ_E(pos_2d, 0, ce);		
+		float *colliding_radius_size = WECS_GET_READ_E(radius, 1, ce);		
 
     	float distance = Vector2Distance(*pos_2d, *colliding_position);
     	if (distance <= (*radius + *colliding_radius_size))
@@ -380,17 +380,14 @@ WECS_SYSTEM(asteroids_collision,
 
 			whisker_ecs_entity_id collision_e = whisker_ecs_create_entity(system.system->entities);
 
-			asteroids_component_collision col = {};
-			col.entity_a = id;
-			col.entity_b = ce;
-			whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, collision, asteroids_component_collision, collision_e, &col);
+			asteroids_component_collision *col = WECS_GET_WRITE_E(collision, 2, collision_e);
+			col->entity_a = id;
+			col->entity_b = ce;
     	}
 	}
 },
 	WECS_READS(Vector2, pos_2d, 0)
-	/* WECS_READS_ALL(Vector2, pos_2d, 0) */
 	WECS_READS(float, radius, 1)
-	/* WECS_READS_ALL(float, radius, 1) */
 	WECS_WRITES(asteroids_component_collision, collision, 2)
 )
 
@@ -421,11 +418,7 @@ WECS_SYSTEM(asteroids_destroy_offscreen,
 
 WECS_SYSTEM(asteroids_projectile_collide_destroy,
 {
-	// find projectiles colliding with asteroids
 	if (WECS_MATCHES_ARCHETYPE(0, collision->entity_a) && WECS_MATCHES_ARCHETYPE(1, collision->entity_b))
-			// asteroid -> asteroid
-			/* (WECS_HAS_TAG_E(t_bullet, collision->entity_a) && WECS_HAS_TAG_E(t_ast, collision->entity_b)) */
-			/* ) */
 	{
 		debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b);
 
@@ -437,10 +430,10 @@ WECS_SYSTEM(asteroids_projectile_collide_destroy,
 	}
 },
 	WECS_READS(asteroids_component_collision, collision, 0)
-	WECS_USES_ARCHETYPE(0, t_bullet)
-	WECS_USES_ARCHETYPE(1, t_ast)
 	WECS_WRITES_TAG(t_cull, 1)
 	WECS_WRITES_TAG(t_ast_hit, 2)
+	WECS_USES_ARCHETYPE(0, t_bullet)
+	WECS_USES_ARCHETYPE(1, t_ast)
 )
 
 WECS_SYSTEM(asteroids_asteroid_respawn_on_hit,
@@ -483,19 +476,19 @@ WECS_SYSTEM(asteroids_asteroid_hit_asteroid,
 		/* debug_printf("collision %d: %d hit asteroid %d\n", system.entity->id.index, collision->entity_a.index, collision->entity_b.index); */
 
 		// asteroid a
-		Vector2 *asteroida_velocity = WECS_GET_E(vel_2d, collision->entity_a);
-		float *asteroida_rotation_velocity = WECS_GET_E(rot_v, collision->entity_a);		
+		Vector2 *asteroida_velocity = WECS_GET_WRITE_E(vel_2d, 1, collision->entity_a);
+		float *asteroida_rotation_velocity = WECS_GET_WRITE_E(rot_v, 2, collision->entity_a);		
 
 
-		Vector2 *asteroida_position = WECS_GET_E(pos_2d, collision->entity_a);		
-		Vector2 *asteroida_hit_by_position = WECS_GET_E(pos_2d, collision->entity_b);		
+		Vector2 *asteroida_position = WECS_GET_READ_E(pos_2d, 2, collision->entity_a);		
+		Vector2 *asteroida_hit_by_position = WECS_GET_READ_E(pos_2d, 2, collision->entity_b);		
 
 		Vector2 asteroida_nudge_direction = Vector2Normalize(Vector2Subtract(*asteroida_position, *asteroida_hit_by_position));
 
 
 		// asteroid b
-		Vector2 *asteroidb_velocity = WECS_GET_E(vel_2d, collision->entity_b);
-		float *asteroidb_rotation_velocity = WECS_GET_E(rot_v, collision->entity_b);		
+		Vector2 *asteroidb_velocity = WECS_GET_READ_E(vel_2d, 1, collision->entity_b);
+		float *asteroidb_rotation_velocity = WECS_GET_READ_E(rot_v, 2, collision->entity_b);		
 
 		/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
 
@@ -508,6 +501,11 @@ WECS_SYSTEM(asteroids_asteroid_hit_asteroid,
 },
 	WECS_READS(asteroids_component_collision, collision, 0)
 	WECS_USES_ARCHETYPE(0, t_ast,pos_2d,vel_2d,rot_v)
+	WECS_WRITES_ALL(Vector2, vel_2d, 1)
+	WECS_WRITES_ALL(float, rot_v, 2)
+	WECS_READS_ALL(Vector2, vel_2d, 1)
+	WECS_READS_ALL(float, rot_v, 2)
+	WECS_READS_ALL(Vector2, pos_2d, 3)
 )
 
 WECS_SYSTEM(asteroids_asteroid_score,
@@ -521,11 +519,12 @@ WECS_SYSTEM(asteroids_asteroid_score,
 	{
 		whisker_ecs_entity_id se = system.entities->entities[si].id;
 
-		if (WECS_HAS_TAG_E(score, se))
+		if (WECS_HAS_TAG_E(score, 2, se))
 		{
+			int *score = WECS_GET_WRITE_E(score, 2, se);
+
 			int add_score = (int)*ast_size * ASTEROID_SCORE;
 
-			int *score = WECS_GET_E(score, se);
 			*score += add_score;
 
 			debug_printf("system:asteroid_score:+%d points for %zu (%d total)\n", add_score, se, *score);
@@ -534,52 +533,61 @@ WECS_SYSTEM(asteroids_asteroid_score,
 },
 	WECS_HAS(t_ast_hit, 0)
 	WECS_READS(ASTEROIDS_ASTEROID_SIZE, ast_size, 1)
+	WECS_WRITES_ALL(int, score, 2)
+	WECS_READS_TAG(score, 2)
 )
 
 WECS_SYSTEM(asteroids_player_hit_asteroid,
 {
-		// find asteroids colliding with the player
-		if (
-				// asteroid -> asteroid
-				(whisker_ecs_has_tag(asteroids_ecs->entities, t_ast, collision->entity_a) && whisker_ecs_has_tag(asteroids_ecs->entities, t_player, collision->entity_b))
-				)
-		{
-			ASTEROIDS_PLAYER_STATE* player_state = whisker_ecs_get(asteroids_ecs->entities, asteroids_ecs->components, p_state, ASTEROIDS_PLAYER_STATE, collision->entity_b);
+	// find asteroids colliding with the player
+	if (WECS_MATCHES_ARCHETYPE(0, collision->entity_a) && WECS_MATCHES_ARCHETYPE(1, collision->entity_b))
+	{
+		ASTEROIDS_PLAYER_STATE *player_state = WECS_GET_WRITE_E(p_state, 1, collision->entity_b);
 
-			// deal damage to the player, only in the default state
-			// TODO: maybe figure out a more ECS-like way to handle this,
-			// e.g. a component t_player_STATE_DEFAULT?
-			if (*player_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
-				return;
-			}
-
-			*player_state = ASTEROIDS_PLAYER_STATE_HIT;
-			whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, hit_time, double, collision->entity_b, (void*)&(double){GetTime()});
-			asteroids_component_collision col = {};
-			col.entity_a = collision->entity_a;
-			col.entity_b = collision->entity_b;
-			whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, hit_collision, asteroids_component_collision, collision->entity_b, &col);
-
-			// TODO: refactor this to use system access macros
-			int* player_life = whisker_ecs_get(asteroids_ecs->entities, asteroids_ecs->components, life, int, collision->entity_b);
-			ASTEROIDS_ASTEROID_SIZE* asteroid_size = whisker_ecs_get(asteroids_ecs->entities, asteroids_ecs->components, ast_size, ASTEROIDS_ASTEROID_SIZE, collision->entity_a);
-
-			int damage = *asteroid_size * ASTEROID_DAMAGE;
-
-			Vector2* asteroid_velocity = whisker_ecs_get(asteroids_ecs->entities, asteroids_ecs->components, vel_2d, Vector2, collision->entity_a);
-			*asteroid_velocity = Vector2Scale(*asteroid_velocity, ASTEROID_HIT_VELOCITY_REDUCTION);
-			float* rotation_velocity = whisker_ecs_get(asteroids_ecs->entities, asteroids_ecs->components, rot_v, float, collision->entity_a);		
-			*rotation_velocity += (GetRandomValue(-270, 270));
-
-			debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
-
-			*player_life -= damage;
-			if (*player_life <= 0) {
-				*player_life = 0;
-			}
+		// deal damage to the player, only in the default state
+		// TODO: maybe figure out a better way to handle this state
+		if (*player_state != ASTEROIDS_PLAYER_STATE_DEFAULT) {
+			return;
 		}
+
+		*player_state = ASTEROIDS_PLAYER_STATE_HIT;
+
+		double *hit_time = WECS_GET_WRITE_E(hit_time, 2, collision->entity_b);
+		*hit_time = GetTime();
+
+		asteroids_component_collision *col = WECS_GET_WRITE_E(hit_collision, 3, collision->entity_b);
+		col->entity_a = collision->entity_a;
+		col->entity_b = collision->entity_b;
+
+		// TODO: refactor this to use system access macros
+		int* player_life = WECS_GET_WRITE_E(life, 4, collision->entity_b);
+		ASTEROIDS_ASTEROID_SIZE* asteroid_size = WECS_GET_READ_E(ast_size, 5, collision->entity_a);
+
+		int damage = *asteroid_size * ASTEROID_DAMAGE;
+
+		Vector2* asteroid_velocity = WECS_GET_WRITE_E(vel_2d, 6, collision->entity_a);
+		*asteroid_velocity = Vector2Scale(*asteroid_velocity, ASTEROID_HIT_VELOCITY_REDUCTION);
+		float* rotation_velocity = WECS_GET_WRITE_E(rot_v, 7, collision->entity_a);		
+		*rotation_velocity += (GetRandomValue(-270, 270));
+
+		debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
+
+		*player_life -= damage;
+		if (*player_life <= 0) {
+			*player_life = 0;
+		}
+	}
 },
+	WECS_USES_ARCHETYPE(0, t_ast)
+	WECS_USES_ARCHETYPE(1, t_player)
 	WECS_READS(asteroids_component_collision, collision, 0)
+	WECS_WRITES_ALL(ASTEROIDS_PLAYER_STATE, p_state, 1)
+	WECS_WRITES_ALL(double, hit_time, 2)
+	WECS_WRITES_ALL(asteroids_component_collision, hit_collision, 3)
+	WECS_WRITES_ALL(int, life, 4)
+	WECS_READS_ALL(ASTEROIDS_ASTEROID_SIZE, ast_size, 5)
+	WECS_WRITES_ALL(Vector2, vel_2d, 6)
+	WECS_WRITES_ALL(float, rot_v, 7)
 )
 
 WECS_SYSTEM(asteroids_player_hit_nudge,
