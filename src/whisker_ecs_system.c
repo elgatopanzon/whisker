@@ -94,7 +94,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	{
 		wstr_free(system->read_component_names);
 	}
-	if (system->read_component_names != NULL)
+	if (system->write_component_names != NULL)
 	{
 		wstr_free(system->write_component_names);
 	}
