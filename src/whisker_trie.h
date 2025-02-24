@@ -35,13 +35,16 @@ typedef struct whisker_trie
 } whisker_trie;
 
 // macros
+#define whisker_trie_search_value_key(r, k, t, v) whisker_trie_search_value_str_f(r, k, sizeof(t), (void**)v)
 #define whisker_trie_search_value_str(r, k, v) whisker_trie_search_value_str_f(r, k, (void**)v)
 
 // short macros
 #define wtrie_create_node whisker_trie_create_node
 #define wtrie_create_child_node whisker_trie_create_child_node
 #define wtrie_set_child_node whisker_trie_set_child_node
+#define wtrie_search_node whisker_trie_search_node
 #define wtrie_search_node_str whisker_trie_search_node_str
+#define wtrie_search_value whisker_trie_search_value
 #define wtrie_search_value_str whisker_trie_search_value_str
 #define wtrie_set_value_str whisker_trie_set_value
 #define wtrie_free_node whisker_trie_free_node
@@ -50,9 +53,11 @@ typedef struct whisker_trie
 E_WHISKER_TRIE whisker_trie_create_node(whisker_trie** node);
 E_WHISKER_TRIE whisker_trie_create_child_node(whisker_trie* node, char byte, whisker_trie** child);
 void whisker_trie_set_child_node(whisker_trie* node, char byte, whisker_trie* child);
-E_WHISKER_TRIE whisker_trie_search_node_str(whisker_trie* root, char* key, whisker_trie** match);
 E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, void* key, size_t key_size, int key_position, bool create_missing_nodes, whisker_trie** match);
+E_WHISKER_TRIE whisker_trie_search_node_str(whisker_trie* root, char* key, whisker_trie** match);
+E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, void* key, size_t key_size, void** match);
 E_WHISKER_TRIE whisker_trie_search_value_str_f(whisker_trie* root, char* key, void** match);
+E_WHISKER_TRIE whisker_trie_set_value(whisker_trie** root, void* key, size_t key_size, void* value);
 E_WHISKER_TRIE whisker_trie_set_value_str(whisker_trie** root, char* key, void* value);
 E_WHISKER_TRIE whisker_trie_free_node(whisker_trie* node, bool free_values);
 

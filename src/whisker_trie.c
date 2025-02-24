@@ -111,6 +111,11 @@ E_WHISKER_TRIE whisker_trie_search_node_str(whisker_trie* root, char* key, whisk
 // uses search_node to traverse the tree and returns the node's value instead
 E_WHISKER_TRIE whisker_trie_search_value_str_f(whisker_trie* root, char* key, void** match)
 {
+	return whisker_trie_search_value_f(root, key, strlen(key), match);
+}
+
+E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, void* key, size_t key_size, void** match)
+{
 	whisker_trie* matching_node;
 	E_WHISKER_TRIE search_err = whisker_trie_search_node_str(root, key, &matching_node);
 
@@ -144,8 +149,13 @@ E_WHISKER_TRIE whisker_trie_search_value_str_f(whisker_trie* root, char* key, vo
 // value pointer
 E_WHISKER_TRIE whisker_trie_set_value_str(whisker_trie** root, char* key, void* value)
 {
+	return whisker_trie_set_value(root, key, strlen(key), value);
+}
+
+E_WHISKER_TRIE whisker_trie_set_value(whisker_trie** root, void* key, size_t key_size, void* value)
+{
 	whisker_trie* matching_node;
-	E_WHISKER_TRIE search_err = whisker_trie_search_node_(*root, key, strlen(key), 0, true, &matching_node);
+	E_WHISKER_TRIE search_err = whisker_trie_search_node_(*root, key, key_size, 0, true, &matching_node);
 
 	// if the node isn't a match, we cannot set the value
 	if (search_err != E_WHISKER_TRIE_OK)
