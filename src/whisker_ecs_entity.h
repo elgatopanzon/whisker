@@ -42,12 +42,24 @@ typedef struct whisker_ecs_entity
     char* name;
 } whisker_ecs_entity;
 
+typedef enum WHISKER_ECS_ENTITY_DEFERRED_ACTION  
+{
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE,
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY,
+} WHISKER_ECS_ENTITY_DEFERRED_ACTION;
+typedef struct whisker_ecs_entity_deferred_action
+{
+	whisker_ecs_entity_id id;
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION action;
+	
+} whisker_ecs_entity_deferred_action;
 
 typedef struct whisker_ecs_entities
 {
 	whisker_ecs_entity *entities;
 	whisker_ecs_entity_index *dead_entities;
 	whisker_ecs_entity_id *entity_names;
+	whisker_ecs_entity_deferred_action *deferred_actions;
 } whisker_ecs_entities;
 
 // entity struct management functions
@@ -64,6 +76,7 @@ whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities,
 E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char *name, whisker_ecs_entity_id *entity_id);
 E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities);
 
 // utility functions
 whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);

@@ -38,6 +38,14 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
 
+	if (warr_create(whisker_ecs_entity_deferred_action, 0, &e->deferred_actions) != E_WHISKER_ARR_OK)
+	{
+		warr_free(e->entities);
+		warr_free(e->dead_entities);
+		free(e);
+		return E_WHISKER_ECS_ENTITY_ARR;
+	}
+
 	if (wdict_create(&e->entity_names, char*, 0) != E_WHISKER_DICT_OK)
 	{
 		warr_free(e->entities);
@@ -67,6 +75,7 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 	warr_free(entities->entities);
 	warr_free(entities->dead_entities);
 	wdict_free(entities->entity_names);
+	warr_free(entities->deferred_actions);
 
 	free(entities);
 }
@@ -229,6 +238,23 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 	return E_WHISKER_ECS_ENTITY_OK;
 }
 
+E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
+{
+	whisker_ecs_entity_deferred_action action;
+	while (warr_pop(&entities->deferred_actions, &action) == E_WHISKER_ARR_OK) 
+	{
+		switch (action.action) {
+			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
+				entities->entities[action.id.index].alive = true;		
+				break;
+			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
+				whisker_ecs_e_destroy(entities, action.id);
+				break;
+		}
+	}
+
+	return E_WHISKER_ECS_ENTITY_OK;
+}
 
 /***********************
 *  utility functions  *

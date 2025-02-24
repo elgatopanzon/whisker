@@ -129,11 +129,16 @@ E_WHISKER_ARR whisker_arr_pop_f(void** arr, void* value)
 {
 	whisker_array_header* header = whisker_arr_header(*arr);
 
-	memcpy(value, ((char*)*arr) + (header->length - 1) * header->element_size, header->element_size);
+	if (header->length > 0)
+	{
+		memcpy(value, ((char*)*arr) + (header->length - 1) * header->element_size, header->element_size);
 
-	header->length--;
+		header->length--;
 
-	return E_WHISKER_ARR_OK;
+		return E_WHISKER_ARR_OK;
+	}
+
+	return E_WHISKER_ARR_OUT_OF_BOUNDS;
 }
 
 // retreive the first element, then shrink the array length keeping same capacity

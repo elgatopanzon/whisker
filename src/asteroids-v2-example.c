@@ -378,7 +378,7 @@ WECS_SYSTEM(asteroids_collision,
 			/* DrawCircle(position.x, position.y, radius_size, Fade(GREEN, 0.6f)); */
 			/* DrawCircle(colliding_position.x, colliding_position.y, colliding_radius_size, Fade(BLUE, 0.6f)); */
 
-			whisker_ecs_entity_id collision_e = whisker_ecs_create_entity(system.system->entities);
+			whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(system.system->entities);
 
 			asteroids_component_collision *col = WECS_GET_WRITE_E(collision, 2, collision_e);
 			col->entity_a = id;
@@ -869,8 +869,7 @@ void asteroids_game_draw_frame()
 
 void asteroids_create_player_entity()
 {
-	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_(asteroids_ecs->entities, &e);
+	whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
 
 	Vector2 position = asteroids_screen_center;
 
@@ -927,7 +926,7 @@ void asteroids_spawn_asteroid()
 void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, float rotation_velocity, ASTEROIDS_ASTEROID_SIZE size)
 {
 	// create an entity id
-	whisker_ecs_entity_id e = whisker_ecs_create_entity(asteroids_ecs->entities);
+	whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
 
 	// set the entity component data
 	whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, pos_2d, Vector2, e, &(position));
@@ -946,8 +945,7 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 void asteroids_add_projectile(Vector2 position, float rotation)
 {
 	// create an entity id
-	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_(asteroids_ecs->entities, &e);
+	whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
 
 	// set the entity component data
 	whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, pos_2d, Vector2, e, &(position));
