@@ -63,7 +63,7 @@ START_TEST(test_whisker_trie_search_node_by_key)
 
 	// search for the prefix match "ca" node
 	whisker_trie* ca_node;
-	E_WHISKER_TRIE errCa = whisker_trie_search_node(trie_root, "ca", &ca_node);
+	E_WHISKER_TRIE errCa = whisker_trie_search_node_str(trie_root, "ca", &ca_node);
 
 	// verify error code
 	ck_assert_int_eq(errCa, E_WHISKER_TRIE_OK);
@@ -73,7 +73,7 @@ START_TEST(test_whisker_trie_search_node_by_key)
 
 	// search for the "cat" node
 	whisker_trie* cat_node;
-	E_WHISKER_TRIE errCat = whisker_trie_search_node(trie_root, "cat", &cat_node);
+	E_WHISKER_TRIE errCat = whisker_trie_search_node_str(trie_root, "cat", &cat_node);
 
 	// verify error code
 	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
@@ -83,14 +83,14 @@ START_TEST(test_whisker_trie_search_node_by_key)
 
 	// search for a partially missing "cut" node
 	whisker_trie* cut_node;
-	E_WHISKER_TRIE errCut = whisker_trie_search_node(trie_root, "cut", &cut_node);
+	E_WHISKER_TRIE errCut = whisker_trie_search_node_str(trie_root, "cut", &cut_node);
 
 	// verify error code
 	ck_assert_int_eq(errCut, E_WHISKER_TRIE_SEARCH_MISSING_NODE);
 
 	// search for a missing "dog" node
 	whisker_trie* dog_node;
-	E_WHISKER_TRIE errDog = whisker_trie_search_node(trie_root, "dog", &dog_node);
+	E_WHISKER_TRIE errDog = whisker_trie_search_node_str(trie_root, "dog", &dog_node);
 
 	// verify error code
 	ck_assert_int_eq(errDog, E_WHISKER_TRIE_SEARCH_MISSING_ALL);
@@ -108,7 +108,7 @@ START_TEST(test_whisker_trie_search_value_by_key)
 
 	// search for the "cat" key's value
 	char* cat_value;
-	E_WHISKER_TRIE errCat = whisker_trie_search_value(trie_root, "cat", &cat_value);
+	E_WHISKER_TRIE errCat = whisker_trie_search_value_str(trie_root, "cat", &cat_value);
 
 	// verify error code
 	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
@@ -118,7 +118,7 @@ START_TEST(test_whisker_trie_search_value_by_key)
 
 	// search for the partial match "ca" key's value
 	char* ca_value;
-	E_WHISKER_TRIE errCa = whisker_trie_search_value(trie_root, "ca", &ca_value);
+	E_WHISKER_TRIE errCa = whisker_trie_search_value_str(trie_root, "ca", &ca_value);
 
 	// verify error code
 	ck_assert_int_eq(errCa, E_WHISKER_TRIE_SEARCH_MISSING_VALUE);
@@ -136,7 +136,7 @@ START_TEST(test_whisker_trie_set_value)
 
 	// search for the "cat" key's value
 	char* cat_value;
-	E_WHISKER_TRIE errCat = whisker_trie_search_value(trie_root, "cat", &cat_value);
+	E_WHISKER_TRIE errCat = whisker_trie_search_value_str(trie_root, "cat", &cat_value);
 
 	// verify error code
 	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
@@ -145,11 +145,11 @@ START_TEST(test_whisker_trie_set_value)
 	ck_assert_str_eq("cat", cat_value);
 
 	// set value to dog
-	whisker_trie_set_value(&trie_root, "dog", "dog");
+	whisker_trie_set_value_str(&trie_root, "dog", "dog");
 	
 	// search for the "dog" key's value
 	char* dog_value;
-	E_WHISKER_TRIE errDog = whisker_trie_search_value(trie_root, "dog", &dog_value);
+	E_WHISKER_TRIE errDog = whisker_trie_search_value_str(trie_root, "dog", &dog_value);
 
 	// verify error code
 	ck_assert_int_eq(errDog, E_WHISKER_TRIE_OK);
@@ -168,7 +168,7 @@ void whisker_trie_test_set_int(whisker_trie* root)
 	int* val = malloc(sizeof(int));
 	*val = 123;
 
-	whisker_trie_set_value(&root, "dog", val);
+	whisker_trie_set_value_str(&root, "dog", val);
 }
 
 START_TEST(test_whisker_trie_set_value_int)
@@ -181,7 +181,7 @@ START_TEST(test_whisker_trie_set_value_int)
 	
 	// search for the "dog" key's value
 	int* dog_value;
-	E_WHISKER_TRIE errDog = whisker_trie_search_value(trie_root, "dog", &dog_value);
+	E_WHISKER_TRIE errDog = whisker_trie_search_value_str(trie_root, "dog", &dog_value);
 
 	// verify error code
 	ck_assert_int_eq(errDog, E_WHISKER_TRIE_OK);

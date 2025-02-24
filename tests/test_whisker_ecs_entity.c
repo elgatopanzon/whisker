@@ -159,7 +159,8 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	ck_assert_int_eq(3, warr_length(a3));
 
 	// verify the entity IDs created
-	int expected_2[] = {2, 3, 0};
+	// note: this is now updated since it's sorted
+	int expected_2[] = {0, 2, 3};
 	for (int i = 0; i < 3; ++i)
 	{
 		ck_assert_uint_eq(expected_2[i], a3[i].index);

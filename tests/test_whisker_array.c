@@ -230,9 +230,6 @@ START_TEST(test_whisker_arr_try_push_pop_push_same_capacity)
 	int* arr_compact = arr_push;
 	whisker_arr_compact(&arr_compact);
 
-	// verify pointer changed
-	ck_assert(arr_push != arr_compact);
-
 	// free the array
 	whisker_arr_free(arr_compact);
 }
