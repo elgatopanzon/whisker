@@ -603,7 +603,6 @@ WECS_SYSTEM(asteroids_player_hit_nudge,
 	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
 	WECS_READS(asteroids_component_collision, hit_collision, 2)
 	WECS_READS(Vector2, pos_2d, 3)
-	WECS_READS_ALL(Vector2, pos_2d, 3)
 	WECS_READ_WRITES(float, rot_v, 4, 4)
 	WECS_READ_WRITES(Vector2, vel_2d, 5,5)
 )

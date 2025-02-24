@@ -73,7 +73,8 @@ whisker_ecs_entity_id *whisker_ecs_s_set_custom_archetype(whisker_ecs_system *sy
 // system component functions
 E_WHISKER_ECS_SYS whisker_ecs_s_add_component_name_archetype(whisker_ecs_system *system, char *component_name, bool read_or_write);
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write);
-void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, char *name, int index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write, bool init);
+void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, char *name, int index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write, bool init, bool init_archetype);
+E_WHISKER_ECS_SYS whisker_ecs_s_init_component_cache(whisker_ecs_system *system, char *name, int index, size_t size, bool read_or_write, bool update_archetype);
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name);
 
 #endif /* WHISKER_ECS_SYSTEM_H */

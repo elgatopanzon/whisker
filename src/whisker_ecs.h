@@ -175,24 +175,38 @@ typedef whisker_ecs wecs;
 // archetype matching is done by READs, and WRITEs archetype is used by the
 // system scheduler in other ways
 // both of these create the read/write component in the system's scope
-#define WECS_READS(type, name, idx) WECS_DECLARE(type, name, idx, false)
+#define WECS_READS(type, name, idx) \
+	WECS_HAS(name, idx) /* add name to read archetype */ \
+	WECS_INIT_CACHE(type, name, idx, false) /* init read cache */ \
+	WECS_DECLARE_STORE(type, name, idx, read) \
+	WECS_DECLARE(type, name, idx, read)
 
 // note: using WRITEs does NOT add to the system's matching archetype, it is
 // declared as an optional write whether or not the component exists on the
 // entity or not
-#define WECS_WRITES(type, name, idx) WECS_DECLARE(type, name, idx, true)
+#define WECS_WRITES(type, name, idx) \
+	WECS_WRITES_TAG(name, idx) \
+	WECS_INIT_CACHE(type, name, idx, true) \
+	WECS_DECLARE_STORE(type, name, idx, write) \
+	WECS_DECLARE(type, name, idx, write)
+
+// setup a cache store without updating the system's read/write archetype
+#define WECS_INIT_CACHE(type, name, idx, mode) \
+	whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, mode, (system.entities == NULL), false);
 
 // a shortcut to setup a READs tag, and a WRITEs component within the scope
 // same as WRITEs, but it DOES add to the system's matching archetype
 // note: this should be used for components which exist and get updated, not
 // optional writes
 #define WECS_READ_WRITES(type, name, idx_read, idx_write) \
+	WECS_INIT_CACHE(type, name, idx_read, true) \
 	WECS_HAS(name, idx_read) \
-	WECS_DECLARE(type, name, idx_write, true)
+	WECS_DECLARE_STORE(type, name, idx_write, write) \
+	WECS_DECLARE(type, name, idx, write)
 
 // base macro used to declare read/write mode components in scope
 #define WECS_DECLARE(type, name, idx, mode) \
-	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, mode, (system.entity_id.id == 0));
+	type *name = wbarr_get(name##_##mode##_store, system.entity_id.index);
 
 
 // currently these macros create block array stores of the given component
@@ -210,6 +224,7 @@ typedef whisker_ecs wecs;
 // index to declare a read store for components which don't belong to the entity
 // must be delared as a write store
 #define WECS_WRITES_ALL_E(type, name, idx) \
+	WECS_INIT(type, name, idx, false) \
 	WECS_DECLARE_STORE(type, name, idx, write)
 
 // base macro to declare component store in scope with different mode
@@ -222,11 +237,11 @@ typedef whisker_ecs wecs;
 // note: this also allows HAS being used with normal components which are not
 // read within the system, but the system still cares that the entity has it
 #define WECS_HAS(name, idx) \
-	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, false, (system.entity_id.id == 0)); };
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, false, (system.entities == NULL), true); };
 
 // WRITES_TAG is the same as WRITES, it just sets up the write archetype
 #define WECS_WRITES_TAG(name, idx) \
-	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true, (system.entity_id.id == 0)); };
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true, (system.entities == NULL), true); };
 
 
 ///////////////////////////////////
