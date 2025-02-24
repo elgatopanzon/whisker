@@ -55,15 +55,13 @@ void whisker_trie_set_child_node(whisker_trie* node, char byte, whisker_trie* ch
 
 // internal function to recursively traverse the tree looking for a matching
 // node for a given key, accepting position
-E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, char* key, int key_position, bool create_missing_nodes, whisker_trie** match)
+E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, void* key, size_t key_size, int key_position, bool create_missing_nodes, whisker_trie** match)
 {
-	int key_len = strlen(key);
-
 	// loop over the key starting at the current key position
 	// each part of the loop checks for the node's matching index
-	for (int i = key_position; i < key_len; ++i)
+	for (size_t i = key_position; i < key_size; ++i)
 	{
-		int key_index = key[i];
+		int key_index = ((char*)key)[i];
 
 		// if the key index is null, the search ends here if
 		// create_missing_nodes is false
@@ -85,12 +83,12 @@ E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, char* key, int key_
 			root->nodes[key_index] = missing_node;
 		}
 
-		return whisker_trie_search_node_(root->nodes[key_index], key, i + 1, create_missing_nodes, match);
+		return whisker_trie_search_node_(root->nodes[key_index], key, key_size, i + 1, create_missing_nodes, match);
 	}
 
 	// check if this is the end of the key
 	// if it is, assign the current node to it because that means it's a match
-	if (key_position >= key_len)
+	if (key_position >= key_size)
 	{
 		*match = root;		
 
@@ -105,16 +103,16 @@ E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, char* key, int key_
 // traverse the tree, but still be able to update the array pointer if required
 // it will stop searching when encountering an invalid node, or when finding the
 // end node
-E_WHISKER_TRIE whisker_trie_search_node(whisker_trie* root, char* key, whisker_trie** match)
+E_WHISKER_TRIE whisker_trie_search_node_str(whisker_trie* root, char* key, whisker_trie** match)
 {
-	return whisker_trie_search_node_(root, key, 0, false, match);
+	return whisker_trie_search_node_(root, key, strlen(key), 0, false, match);
 }
 
 // uses search_node to traverse the tree and returns the node's value instead
-E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, char* key, void** match)
+E_WHISKER_TRIE whisker_trie_search_value_str_f(whisker_trie* root, char* key, void** match)
 {
 	whisker_trie* matching_node;
-	E_WHISKER_TRIE search_err = whisker_trie_search_node(root, key, &matching_node);
+	E_WHISKER_TRIE search_err = whisker_trie_search_node_str(root, key, &matching_node);
 
 	// if the node isn't a match, we certainly dont have a value
 	if (search_err != E_WHISKER_TRIE_OK)
@@ -144,10 +142,10 @@ E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, char* key, void**
 //    pointer to the current node, then advance into it
 // 3. when the end of the key is reached, assign the node's pointer to provided
 // value pointer
-E_WHISKER_TRIE whisker_trie_set_value(whisker_trie** root, char* key, void* value)
+E_WHISKER_TRIE whisker_trie_set_value_str(whisker_trie** root, char* key, void* value)
 {
 	whisker_trie* matching_node;
-	E_WHISKER_TRIE search_err = whisker_trie_search_node_(*root, key, 0, true, &matching_node);
+	E_WHISKER_TRIE search_err = whisker_trie_search_node_(*root, key, strlen(key), 0, true, &matching_node);
 
 	// if the node isn't a match, we cannot set the value
 	if (search_err != E_WHISKER_TRIE_OK)

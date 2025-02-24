@@ -114,7 +114,7 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, char* key, void* value)
 	}
 
 	*array_index = header->arr_header.length - 1;
-	if (whisker_trie_set_value(&header->trie, key, array_index) != E_WHISKER_TRIE_OK)
+	if (whisker_trie_set_value_str(&header->trie, key, array_index) != E_WHISKER_TRIE_OK)
 	{
 		return E_WHISKER_DICT_TRIE;
 	}
@@ -130,7 +130,7 @@ E_WHISKER_DICT whisker_dict_get_index(void* dict, char* key, size_t** index)
 	// try to get the node with the pointer to the value
 	// if we can't get the value, then it doesn't exist in the dict
 	size_t* index_pointer;
-	E_WHISKER_TRIE err = whisker_trie_search_value(header->trie, key, &index_pointer);
+	E_WHISKER_TRIE err = whisker_trie_search_value_str(header->trie, key, &index_pointer);
 	if (err != E_WHISKER_TRIE_OK)
 	{
 		return E_WHISKER_DICT_MISSING_KEY;
@@ -191,7 +191,7 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, char* key)
 
 	// remove trie value for key 
 	whisker_trie* removed_node;
-	E_WHISKER_TRIE trie_err = whisker_trie_search_node(header->trie, key, &removed_node);
+	E_WHISKER_TRIE trie_err = whisker_trie_search_node_str(header->trie, key, &removed_node);
 	if (trie_err != E_WHISKER_TRIE_OK)
 	{
 		return E_WHISKER_DICT_TRIE;
@@ -209,7 +209,7 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, char* key)
 
 		// free the end node's index value
 		whisker_trie* end_node;
-		trie_err = whisker_trie_search_node(header->trie, end_key, &end_node);
+		trie_err = whisker_trie_search_node_str(header->trie, end_key, &end_node);
 		if (trie_err != E_WHISKER_TRIE_OK)
 		{
 			return E_WHISKER_DICT_TRIE;
@@ -325,7 +325,7 @@ whisker_dict_header* whisker_dict_get_header(void* dict)
 bool whisker_dict_contains_key(void* dict, char* key)
 {
 	void* value;
-	return (whisker_trie_search_value(whisker_dict_get_header(dict)->trie, key, &value) == E_WHISKER_TRIE_OK);
+	return (whisker_trie_search_value_str(whisker_dict_get_header(dict)->trie, key, &value) == E_WHISKER_TRIE_OK);
 }
 
 // check if the dict contains the provided value
