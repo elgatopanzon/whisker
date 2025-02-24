@@ -34,6 +34,13 @@ typedef struct whisker_ecs_entity_id
     };
 } whisker_ecs_entity_id;
 
+typedef struct whisker_ecs_entity_archetype_change
+{
+	whisker_ecs_entity_id entity_id;
+	whisker_ecs_entity_id archetype_id;
+	bool change_type;
+} whisker_ecs_entity_archetype_change;
+
 typedef struct whisker_ecs_entity
 {
     whisker_ecs_entity_id id;
@@ -58,6 +65,7 @@ typedef struct whisker_ecs_entities
 {
 	whisker_ecs_entity *entities;
 	whisker_ecs_entity_index *dead_entities;
+    whisker_ecs_entity_archetype_change *archetype_changes;
 	whisker_ecs_entity_id *entity_names;
 	whisker_ecs_entity_deferred_action *deferred_actions;
 } whisker_ecs_entities;
@@ -76,6 +84,7 @@ whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities,
 E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char *name, whisker_ecs_entity_id *entity_id);
 E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+E_WHISKER_ECS_ENTITY whisker_ecs_e_set_archetype_changed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, whisker_ecs_entity_id archetype_id, bool change_type);
 E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities);
 
 // utility functions

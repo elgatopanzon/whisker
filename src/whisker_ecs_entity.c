@@ -54,6 +54,15 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		return E_WHISKER_ECS_ENTITY_DICT;
 	}
 
+	if (warr_create(*e->archetype_changes, 0, &e->archetype_changes) != E_WHISKER_ARR_OK)
+	{
+		warr_free(e->entities);
+		warr_free(e->dead_entities);
+		wdict_free(e->entity_names);
+		free(e);
+		return E_WHISKER_ECS_ENTITY_ARR;
+	}
+
 	*entities = e;
 
 	return E_WHISKER_ECS_ENTITY_OK;
@@ -76,6 +85,7 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 	warr_free(entities->dead_entities);
 	wdict_free(entities->entity_names);
 	warr_free(entities->deferred_actions);
+	warr_free(entities->archetype_changes);
 
 	free(entities);
 }
@@ -229,6 +239,12 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 {
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 
+	// move all archetypes into archetype changes
+	for (int i = 0; i < warr_length(e->archetype); ++i)
+	{
+		whisker_ecs_e_set_archetype_changed(entities, e->id, e->archetype[i], false);
+	}
+
 	warr_resize(&e->archetype, 0);
 	e->alive = false;
 
@@ -236,6 +252,17 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 		return E_WHISKER_ECS_ENTITY_ARR;
 
 	return E_WHISKER_ECS_ENTITY_OK;
+}
+
+E_WHISKER_ECS_ENTITY whisker_ecs_e_set_archetype_changed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, whisker_ecs_entity_id archetype_id, bool change_type)
+{
+	whisker_ecs_entity_archetype_change change = {
+		.entity_id = entity_id,
+		.archetype_id = archetype_id,
+		.change_type = change_type
+	};
+
+	return (warr_push(&entities->archetype_changes, &change) == E_WHISKER_ARR_OK) ? E_WHISKER_ECS_ENTITY_OK : E_WHISKER_ECS_ENTITY_ARR;
 }
 
 E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)

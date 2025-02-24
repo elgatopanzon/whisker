@@ -113,6 +113,9 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	// process deferred actions
 	whisker_ecs_e_process_deferred(ecs->entities);
 
+	// sync system archetype entities
+	whisker_ecs_s_sync_system_archetype_entities(ecs->systems, ecs->entities);
+
 	return E_WHISKER_ECS_OK;
 }
 
@@ -236,10 +239,9 @@ E_WHISKER_ECS whisker_ecs_archetype_set(whisker_ecs_entities *entities, whisker_
 {
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 
-	if (whisker_ecs_a_set(&e->archetype, archetype_id) != E_WHISKER_ECS_ARCH_OK)
+	if (whisker_ecs_a_set(&e->archetype, archetype_id) == E_WHISKER_ECS_ARCH_MATCH)
 	{
-		// TODO: figure out what can fail during this call
-		return E_WHISKER_ECS_UNKNOWN;
+		whisker_ecs_e_set_archetype_changed(entities, entity_id, archetype_id, true);
 	}
 
 	return E_WHISKER_ECS_OK;
@@ -248,10 +250,9 @@ E_WHISKER_ECS whisker_ecs_archetype_remove(whisker_ecs_entities *entities, whisk
 {
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 
-	if (whisker_ecs_a_remove(&e->archetype, archetype_id) != E_WHISKER_ECS_ARCH_OK)
+	if (whisker_ecs_a_remove(&e->archetype, archetype_id) == E_WHISKER_ECS_ARCH_MATCH)
 	{
-		// TODO: figure out what can fail during this call
-		return E_WHISKER_ECS_UNKNOWN;
+		whisker_ecs_e_set_archetype_changed(entities, entity_id, archetype_id, false);
 	}
 
 	return E_WHISKER_ECS_OK;
@@ -266,7 +267,9 @@ E_WHISKER_ECS whisker_ecs_set_component_archetype(whisker_ecs_entities *entities
 E_WHISKER_ECS whisker_ecs_remove_component_archetype(whisker_ecs_entities *entities, char* component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
-	return whisker_ecs_archetype_remove(entities, entity_id, component_id);
+
+	whisker_ecs_archetype_remove(entities, entity_id, component_id);
+	return true;
 }
 
 bool whisker_ecs_has_component_archetype(whisker_ecs_entities *entities, char* component_name, whisker_ecs_entity_id entity_id)

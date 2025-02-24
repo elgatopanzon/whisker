@@ -354,16 +354,16 @@ WECS_SYSTEM(asteroids_player_hit_cooldown,
 
 WECS_SYSTEM(asteroids_collision,
 {
-	size_t entity_count = whisker_ecs_e_count(system.entities);
+	size_t entity_count = warr_length(system.system->archetype_entities);
 	whisker_ecs_entity_id id = system.entity_id;
 
 	for (size_t ci = 0; ci < entity_count; ++ci)
 	{
-		whisker_ecs_entity_id ce = system.entities->entities[ci].id;
+		whisker_ecs_entity_id ce = system.system->archetype_entities[ci];
 
 		// skip entities not matching the same archetype as the system, or
 		// identitical entities as the one being processed
-		if (id.index == ce.index || !whisker_ecs_a_match(system.system->read_archetype, system.entities->entities[ci].archetype)) {
+		if (id.index == ce.index) {
 			continue;
 		}
 

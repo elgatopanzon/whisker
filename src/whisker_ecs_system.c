@@ -50,6 +50,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	wdict_create(&system.component_name_index, int, 0);
 	warr_create(whisker_ecs_entity_id*, 0, &system.custom_archetypes);
 	warr_create(whisker_ecs_entity_id*, 0, &system.components_cache_archetypes);
+	warr_create(whisker_ecs_entity_id*, 0, &system.archetype_entities);
 	warr_push(&systems->systems, &system);
 
 	return &systems->systems[warr_length(systems->systems) - 1];
@@ -106,34 +107,37 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 		}
 		warr_free(system->custom_archetypes);
 	}
+	if (system->archetype_entities != NULL)
+	{
+		warr_free(system->archetype_entities);
+	}
 }
 
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
 	// iterate over all systems, processing each entity and it's archetype for
 	// matches, excluding updates for those which don't match
-	size_t entity_count = whisker_ecs_e_count(entities);
 	size_t systems_count = warr_length(systems->systems);
 
 	for (size_t si = 0; si < systems_count; ++si)
 	{
 		whisker_ecs_system *system = &systems->systems[si];
 		system->delta_time = delta_time;
+		size_t entity_count = warr_length(system->archetype_entities);
 
 		for (size_t ei = 0; ei < entity_count; ++ei)
 		{
-			if (!entities->entities[ei].alive)
-			{
-				continue;
-			}
+			whisker_ecs_entity_id e = system->archetype_entities[ei];
+			/* if (!entities->entities[e.index].alive) */
+			/* { */
+			/* 	continue; */
+			/* } */
 
-			whisker_ecs_entity_id *entity_archetype = entities->entities[ei].archetype;
-			whisker_ecs_entity_id entity_id = entities->entities[ei].id;
-
-			if (whisker_ecs_a_match(system->read_archetype, entity_archetype))
-			{
-				whisker_ecs_s_update_system(system, entities, system->components_cache, entity_id);				
-			}
+			/* whisker_ecs_entity_id *entity_archetype = entities->entities[e.index].archetype; */
+			/* if (whisker_ecs_a_match(system->read_archetype, entity_archetype)) */
+			/* { */
+				whisker_ecs_s_update_system(system, entities, system->components_cache, e);				
+			/* } */
 		}
 	}
 
@@ -149,6 +153,45 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whiske
 		.entity_id = entity_id,
 		});
 
+	return E_WHISKER_ECS_SYS_OK;
+}
+
+E_WHISKER_ECS_SYS whisker_ecs_s_sync_system_archetype_entities(whisker_ecs_systems *systems, whisker_ecs_entities *entities)
+{
+	// check for changed entity archetypes
+	whisker_ecs_entity_archetype_change change;
+	while (warr_pop(&entities->archetype_changes, &change) == E_WHISKER_ARR_OK) 
+	{
+		/* debug_printf("ecs:sys:syncing changes: e=%zu a=%zu t=%d\n", change.entity_id.id, change.archetype_id.id, change.change_type); */
+
+		bool entity_alive = entities->entities[change.entity_id.index].alive;
+
+		for (int si = 0; si < warr_length(systems->systems); ++si)
+		{
+			whisker_ecs_system *system = &systems->systems[si];
+
+			/* debug_printf("ecs:sys:syncing changes: archetype %zu in system %zu (alive: %d)\n", change.archetype_id.id, system->entity_id.id, entity_alive); */
+
+			// determine if we need to set it or unset it in the system's
+			// archetype
+			// -1 = nothing
+			// 0 = unset
+			// 1 = set
+			int action = (!entity_alive || !whisker_ecs_a_match(system->read_archetype, entities->entities[change.entity_id.index].archetype)) ? 0 : 1;
+
+			/* debug_printf("ecs:sys:syncing archetype changes: entity %zu archetype %zu in system %zu (action: %d)\n", change.entity_id.id, change.archetype_id.id, system->entity_id.id, action); */
+
+			if (action == 0)
+			{
+				whisker_ecs_a_remove(&system->archetype_entities, change.entity_id);
+			}
+			else if (action == 1)
+			{
+				whisker_ecs_a_set(&system->archetype_entities, change.entity_id);
+			}
+		}
+	}
+	
 	return E_WHISKER_ECS_SYS_OK;
 }
 
