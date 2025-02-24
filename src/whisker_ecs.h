@@ -140,10 +140,12 @@ typedef whisker_ecs wecs;
     		"", \
     		"" \
 		); \
+		int index = 0; \
 		__VA_ARGS__ \
 	} \
 	inline void system_ ## system_name ## _fn(whisker_ecs_system_update system) \
 		{ \
+			int index = 0; \
 			__VA_ARGS__ \
 			double delta_time = system.system->delta_time; \
 			whisker_ecs_entity_id entity_id = system.entity_id; \
@@ -190,7 +192,7 @@ typedef whisker_ecs wecs;
 
 // base macro used to declare read/write mode components in scope
 #define WECS_DECLARE(type, name, idx, mode) \
-	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, mode);
+	type *name = whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, sizeof(type), system.entity_id, mode, (system.entity_id.id == 0));
 
 
 // currently these macros create block array stores of the given component
@@ -212,7 +214,7 @@ typedef whisker_ecs wecs;
 
 // base macro to declare component store in scope with different mode
 #define WECS_DECLARE_STORE(type, name, idx, mode) \
-	whisker_block_array *name##_##mode##_store = system.system->mode##_components->components[idx];
+	whisker_block_array *name##_##mode##_store = system.system->components_cache->components[idx];
 
 // these macros allow specifying which tags the system is interested in
 // this is accomplished by adding the tag to the system archetype during init
@@ -220,11 +222,11 @@ typedef whisker_ecs wecs;
 // note: this also allows HAS being used with normal components which are not
 // read within the system, but the system still cares that the entity has it
 #define WECS_HAS(name, idx) \
-	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, false); };
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, false, (system.entity_id.id == 0)); };
 
 // WRITES_TAG is the same as WRITES, it just sets up the write archetype
 #define WECS_WRITES_TAG(name, idx) \
-	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true); };
+	if (system.system->delta_time == 0) { whisker_ecs_s_get_component_by_name_or_index(system.system, #name, idx, 0, system.entity_id, true, (system.entity_id.id == 0)); };
 
 
 ///////////////////////////////////
@@ -279,15 +281,15 @@ typedef whisker_ecs wecs;
 // set the archetype using the ECS main interface
 // it expects to be used in a system which WRITES_TAG in the archetype
 #define WECS_TAG_ON(name, idx) \
-	whisker_ecs_archetype_set(system.system->entities, system.entity_id, system.system->write_archetype[idx]);
+	whisker_ecs_archetype_set(system.system->entities, system.entity_id, system.system->components_cache_archetypes[idx]);
 #define WECS_TAG_OFF(name, idx) \
-	whisker_ecs_archetype_remove(system.system->entities, system.entity_id, system.system->write_archetype[idx]);
+	whisker_ecs_archetype_remove(system.system->entities, system.entity_id, system.system->components_cache_archetypes[idx]);
 
 // _E variants allowing setting any entities tag
 #define WECS_TAG_ON_E(name, idx, entity) \
-	whisker_ecs_archetype_set(system.system->entities, entity, system.system->write_archetype[idx]);
+	whisker_ecs_archetype_set(system.system->entities, entity, system.system->components_cache_archetypes[idx]);
 #define WECS_TAG_OFF_E(name, idx, entity) \
-	whisker_ecs_archetype_remove(system.system->entities, entity, system.system->write_archetype[idx]);
+	whisker_ecs_archetype_remove(system.system->entities, entity, system.system->components_cache_archetypes[idx]);
 
 #endif /* WHISKER_ECS_H */
 

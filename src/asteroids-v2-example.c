@@ -156,7 +156,7 @@ WECS_SYSTEM(asteroids_velocity_2d,
 	pos_2d->y += vel_2d->y * delta_time;
 },
 	WECS_READS(Vector2, vel_2d, 0)
-	WECS_READ_WRITES(Vector2, pos_2d, 1, 0)
+	WECS_READ_WRITES(Vector2, pos_2d, 1, 1)
 )
 
 WECS_SYSTEM(asteroids_asteroid_spawn,
@@ -179,7 +179,7 @@ WECS_SYSTEM(asteroids_rotation_velocity,
 	*rot += *rot_v * system.system->delta_time;
 },
 	WECS_READS(float, rot_v, 0)
-	WECS_READ_WRITES(float, rot, 1, 0)
+	WECS_READ_WRITES(float, rot, 1, 1)
 )
 
 WECS_SYSTEM(asteroids_movement_direction,
@@ -190,7 +190,7 @@ WECS_SYSTEM(asteroids_movement_direction,
 },
 	WECS_HAS(t_move_dir, 0)
 	WECS_READS(float, rot, 1)
-	WECS_READ_WRITES(Vector2, pos_2d, 2, 0)
+	WECS_READ_WRITES(Vector2, pos_2d, 2, 2)
 )
 
 WECS_SYSTEM(asteroids_player_controller,
@@ -237,10 +237,10 @@ WECS_SYSTEM(asteroids_player_controller,
 	WECS_HAS(t_player, 0)
 	WECS_READS(ASTEROIDS_PLAYER_STATE, p_state, 1)
 	WECS_READS(Vector2, pos_2d, 2)
-	WECS_READ_WRITES(float, rot, 3, 0)
-	WECS_READ_WRITES(float, rot_v, 4, 1)
-	WECS_READ_WRITES(Vector2, vel_2d, 5, 2)
-	WECS_WRITES(double, fire_time, 3)
+	WECS_READ_WRITES(float, rot, 3, 3)
+	WECS_READ_WRITES(float, rot_v, 4, 4)
+	WECS_READ_WRITES(Vector2, vel_2d, 5, 5)
+	WECS_WRITES(double, fire_time, 6)
 )
 
 WECS_SYSTEM(asteroids_screen_wrap,
@@ -273,7 +273,7 @@ WECS_SYSTEM(asteroids_screen_wrap,
 	}
 },
 	WECS_HAS(t_screen_wrap, 0)
-	WECS_READ_WRITES(Vector2, pos_2d, 1, 0)
+	WECS_READ_WRITES(Vector2, pos_2d, 1, 1)
 )
 
 WECS_SYSTEM(asteroids_draw_frame_time,
@@ -323,7 +323,7 @@ WECS_SYSTEM(asteroids_draw_frame_time,
 	DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
 },
 	WECS_HAS(asteroids_draw_frame_time, 0)
-	WECS_WRITES(asteroids_component_frametime, frametime, 0)
+	WECS_WRITES(asteroids_component_frametime, frametime, 1)
 )
 
 
@@ -337,7 +337,7 @@ WECS_SYSTEM(asteroids_player_death_on_life_depleted,
 },
 	WECS_HAS(t_player, 0)
 	WECS_READS(int, life, 1)
-	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 2, 0)
+	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 2, 2)
 )
 
 WECS_SYSTEM(asteroids_player_hit_cooldown,
@@ -349,7 +349,7 @@ WECS_SYSTEM(asteroids_player_hit_cooldown,
 },
 	WECS_HAS(t_player, 0)
 	WECS_READS(double, hit_time, 1)
-	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 2, 0)
+	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 2, 2)
 )
 
 WECS_SYSTEM(asteroids_collision,
@@ -367,8 +367,8 @@ WECS_SYSTEM(asteroids_collision,
 			continue;
 		}
 
-		Vector2 *colliding_position = WECS_GET_READ_E(pos_2d, 0, ce);		
-		float *colliding_radius_size = WECS_GET_READ_E(radius, 1, ce);		
+		Vector2 *colliding_position = WECS_GET_E(pos_2d, ce);		
+		float *colliding_radius_size = WECS_GET_E(radius, ce);		
 
     	float distance = Vector2Distance(*pos_2d, *colliding_position);
     	if (distance <= (*radius + *colliding_radius_size))
@@ -388,18 +388,18 @@ WECS_SYSTEM(asteroids_collision,
 	}
 },
 	WECS_READS(Vector2, pos_2d, 0)
+	/* WECS_READS_ALL(Vector2, pos_2d, 0) */
 	WECS_READS(float, radius, 1)
-	WECS_READS_ALL(Vector2, pos_2d, 0)
-	WECS_READS_ALL(float, radius, 1)
-	WECS_WRITES(asteroids_component_collision, collision, 0)
+	/* WECS_READS_ALL(float, radius, 1) */
+	WECS_WRITES(asteroids_component_collision, collision, 2)
 )
 
 WECS_SYSTEM(asteroids_collision_cull,
 {
-	WECS_TAG_ON(t_cull, 0);
+	WECS_TAG_ON(t_cull, 1);
 },
 	WECS_HAS(collision, 0)
-	WECS_WRITES_TAG(t_cull, 0)
+	WECS_WRITES_TAG(t_cull, 1)
 )
 
 WECS_SYSTEM(asteroids_destroy_offscreen,
@@ -411,12 +411,12 @@ WECS_SYSTEM(asteroids_destroy_offscreen,
 		)
 	{
 		debug_printf("system:destroy_offscreen:e = %d\n", entity_index);
-		WECS_TAG_ON(t_cull, 0);
+		WECS_TAG_ON(t_cull, 2);
 	}
 },
 	WECS_HAS(t_screen_cull, 0)
 	WECS_READS(Vector2, pos_2d, 1)
-	WECS_WRITES_TAG(t_cull, 0)
+	WECS_WRITES_TAG(t_cull, 2)
 )
 
 WECS_SYSTEM(asteroids_projectile_collide_destroy,
@@ -430,17 +430,17 @@ WECS_SYSTEM(asteroids_projectile_collide_destroy,
 		debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b);
 
 		// destroy existing asteroid and projectile
-		WECS_TAG_ON_E(t_cull, 0, collision->entity_a);    
-		WECS_TAG_ON_E(t_cull, 0, collision->entity_b);    
+		WECS_TAG_ON_E(t_cull, 1, collision->entity_a);    
+		WECS_TAG_ON_E(t_cull, 1, collision->entity_b);    
 
-		WECS_TAG_ON_E(t_ast_hit, 1, collision->entity_b);    
+		WECS_TAG_ON_E(t_ast_hit, 2, collision->entity_b);    
 	}
 },
 	WECS_READS(asteroids_component_collision, collision, 0)
 	WECS_USES_ARCHETYPE(0, t_bullet)
 	WECS_USES_ARCHETYPE(1, t_ast)
-	WECS_WRITES_TAG(t_cull, 0)
-	WECS_WRITES_TAG(t_ast_hit, 1)
+	WECS_WRITES_TAG(t_cull, 1)
+	WECS_WRITES_TAG(t_ast_hit, 2)
 )
 
 WECS_SYSTEM(asteroids_asteroid_respawn_on_hit,
@@ -604,8 +604,8 @@ WECS_SYSTEM(asteroids_player_hit_nudge,
 	WECS_READS(asteroids_component_collision, hit_collision, 2)
 	WECS_READS(Vector2, pos_2d, 3)
 	WECS_READS_ALL(Vector2, pos_2d, 3)
-	WECS_READ_WRITES(float, rot_v, 4, 0)
-	WECS_READ_WRITES(Vector2, vel_2d, 5,1)
+	WECS_READ_WRITES(float, rot_v, 4, 4)
+	WECS_READ_WRITES(Vector2, vel_2d, 5,5)
 )
 
 WECS_SYSTEM(asteroids_player_hit_to_recover,
@@ -616,7 +616,7 @@ WECS_SYSTEM(asteroids_player_hit_to_recover,
 	}
 },
 	WECS_HAS(t_player, 0)
-	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 1, 0)
+	WECS_READ_WRITES(ASTEROIDS_PLAYER_STATE, p_state, 1, 1)
 )
 
 WECS_SYSTEM(asteroids_entity_deferred_destroy,

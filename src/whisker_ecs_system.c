@@ -49,6 +49,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	// instead
 	wdict_create(&system.component_name_index, int, 0);
 	warr_create(whisker_ecs_entity_id*, 0, &system.custom_archetypes);
+	warr_create(whisker_ecs_entity_id*, 0, &system.components_cache_archetypes);
 	warr_push(&systems->systems, &system);
 
 	return &systems->systems[warr_length(systems->systems) - 1];
@@ -56,18 +57,9 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 
 E_WHISKER_ECS_SYS whisker_ecs_s_set_archetype_components(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system *system)
 {
-	// if archetype read/write components array is null, create a new one with just
-	// pointers to this system's read/write components
-	// note: this will require runtime system archetype changes to reset it
-	if (system->read_components == NULL)
+	if (system->components_cache == NULL)
 	{
-		whisker_ecs_c_create_components(&system->read_components);
-		whisker_ecs_c_grow_components_(system->read_components, warr_length(system->read_archetype));
-	}
-	if (system->write_components == NULL)
-	{
-		whisker_ecs_c_create_components(&system->write_components);
-		whisker_ecs_c_grow_components_(system->write_components, warr_length(system->write_archetype));
+		whisker_ecs_c_create_components(&system->components_cache);
 	}
 
 	return E_WHISKER_ECS_SYS_OK;
@@ -83,15 +75,14 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	{
 		warr_free(system->write_archetype);
 	}
-	if (system->read_components != NULL)
+	if (system->components_cache != NULL)
 	{
-		warr_free(system->read_components->components);
-		free(system->read_components);
+		warr_free(system->components_cache->components);
+		free(system->components_cache);
 	}
-	if (system->write_components != NULL)
+	if (system->components_cache_archetypes != NULL)
 	{
-		warr_free(system->write_components->components);
-		free(system->write_components);
+		warr_free(system->components_cache_archetypes);
 	}
 	if (system->component_name_index != NULL)
 	{
@@ -131,7 +122,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 
 			if (whisker_ecs_a_match(system->read_archetype, entity_archetype))
 			{
-				whisker_ecs_s_update_system(system, entities, system->write_components, entity_id);				
+				whisker_ecs_s_update_system(system, entities, system->components_cache, entity_id);				
 			}
 		}
 	}
@@ -164,20 +155,18 @@ whisker_ecs_entity_id *whisker_ecs_s_set_custom_archetype(whisker_ecs_system *sy
 	return archetype;
 }
 
-void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, char *name, int index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)
+void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, char *name, int index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write, bool init)
 {
-	whisker_ecs_components *components;
+	whisker_ecs_components *components = system->components_cache;
 	whisker_ecs_entity_id *archetype;
 	char *component_names;
 	if (read_or_write == 0)
 	{
-		components = system->read_components;
 		archetype = system->read_archetype;
 		component_names = system->read_component_names;
 	}
 	else
 	{
-		components = system->write_components;
 		archetype = system->write_archetype;
 		component_names = system->write_component_names;
 	}
@@ -199,40 +188,33 @@ void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, c
 			}
 		}
 
-		// grow and set archetype index manually
-		if (warr_length(archetype) < index + 1)
-		{
-			warr_resize(&archetype, index + 1);
-
-			if (read_or_write == 0)
-			{
-				system->read_archetype = archetype;
-			}
-			else
-			{
-				system->write_archetype = archetype;
-			}
-		}
-
 		// set archetype index if it's set to 0
-		// note: this might conflict with the idea that 0 == wildcard
-		if (archetype[index].index == 0)
+		whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(system->entities, name);
+		whisker_ecs_a_set(&archetype, component_id);
+		warr_resize(&system->components_cache_archetypes, index + 1);
+		system->components_cache_archetypes[index] = component_id;
+
+		if (read_or_write == 0)
 		{
-			archetype[index] = whisker_ecs_e_create_named(system->entities, name);
+			system->read_archetype = archetype;
+		}
+		else
+		{
+			system->write_archetype = archetype;
 		}
 	}
 
 	// if the index is -1, then perform the full name lookup
-	else
-	{
-		int name_index = whisker_ecs_s_get_component_name_index(system, component_names, name);
-		if (name_index == -1) {
-			whisker_ecs_s_add_component_name_archetype(system, name, read_or_write);
-			name_index = whisker_ecs_s_get_component_name_index(system, component_names, name);
-		}
-
-		index = name_index;
-	}
+	/* else */
+	/* { */
+	/* 	int name_index = whisker_ecs_s_get_component_name_index(system, component_names, name); */
+	/* 	if (name_index == -1) { */
+	/* 		whisker_ecs_s_add_component_name_archetype(system, name, read_or_write); */
+	/* 		name_index = whisker_ecs_s_get_component_name_index(system, component_names, name); */
+	/* 	} */
+    /*  */
+	/* 	index = name_index; */
+	/* } */
 
 	// return NULL for a 0 size component
 	if (size == 0)
@@ -243,81 +225,70 @@ void *whisker_ecs_s_get_component_by_name_or_index(whisker_ecs_system *system, c
 	return whisker_ecs_s_get_component(system, index, size, entity_id, read_or_write);
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_add_component_name_archetype(whisker_ecs_system *system, char *component_name, bool read_or_write)
-{
-	char* old_names;
-	whisker_ecs_entity_id *archetype;
-	whisker_ecs_components *components;
-
-	if (read_or_write == 0)
-	{
-		old_names = system->read_component_names;
-		archetype = system->read_archetype;
-		components = system->read_components;
-	}
-	else
-	{
-		old_names = system->write_component_names;
-		archetype = system->write_archetype;
-		components = system->write_components;
-	}
-
-	// append new component name
-	char *new_names = old_names;
-	wstr_join(",", &new_names, component_name, NULL);
-	wstr_free(old_names);
-
-	if (read_or_write == 0)
-		system->read_component_names = new_names;
-	else
-		system->write_component_names = new_names;
-
-	// update archetype from new names
-	warr_free(archetype);
-	archetype = whisker_ecs_e_from_named_entities(system->entities, new_names);
-
-	if (read_or_write == 0)
-		system->read_archetype = archetype;
-	else
-		system->write_archetype = archetype;
-
-	// grow components to new archetype size if required
-	E_WHISKER_ECS_COMP grow_err = whisker_ecs_c_grow_components_(components, warr_length(archetype));
-	if (grow_err != E_WHISKER_ECS_COMP_OK)
-	{
-		return E_WHISKER_ECS_SYS_ARR;
-	}
-
-	return E_WHISKER_ECS_SYS_OK;
-}
+/* E_WHISKER_ECS_SYS whisker_ecs_s_add_component_name_archetype(whisker_ecs_system *system, char *component_name, bool read_or_write) */
+/* { */
+/* 	char* old_names; */
+/* 	whisker_ecs_entity_id *archetype; */
+/* 	whisker_ecs_components *components; */
+/*  */
+/* 	if (read_or_write == 0) */
+/* 	{ */
+/* 		old_names = system->read_component_names; */
+/* 		archetype = system->read_archetype; */
+/* 		components = system->read_components; */
+/* 	} */
+/* 	else */
+/* 	{ */
+/* 		old_names = system->write_component_names; */
+/* 		archetype = system->write_archetype; */
+/* 		components = system->write_components; */
+/* 	} */
+/*  */
+/* 	// append new component name */
+/* 	char *new_names = old_names; */
+/* 	wstr_join(",", &new_names, component_name, NULL); */
+/* 	wstr_free(old_names); */
+/*  */
+/* 	if (read_or_write == 0) */
+/* 		system->read_component_names = new_names; */
+/* 	else */
+/* 		system->write_component_names = new_names; */
+/*  */
+/* 	// update archetype from new names */
+/* 	warr_free(archetype); */
+/* 	archetype = whisker_ecs_e_from_named_entities(system->entities, new_names); */
+/*  */
+/* 	if (read_or_write == 0) */
+/* 		system->read_archetype = archetype; */
+/* 	else */
+/* 		system->write_archetype = archetype; */
+/*  */
+/* 	// grow components to new archetype size if required */
+/* 	E_WHISKER_ECS_COMP grow_err = whisker_ecs_c_grow_components_(components, warr_length(archetype)); */
+/* 	if (grow_err != E_WHISKER_ECS_COMP_OK) */
+/* 	{ */
+/* 		return E_WHISKER_ECS_SYS_ARR; */
+/* 	} */
+/*  */
+/* 	return E_WHISKER_ECS_SYS_OK; */
+/* } */
 
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)
 {
 	whisker_ecs_components *components;
-	whisker_ecs_entity_id *archetype;
-	if (read_or_write == 0)
-	{
-		components = system->read_components;
-		archetype = system->read_archetype;
-	}
-	else
-	{
-		components = system->write_components;
-		archetype = system->write_archetype;
-	}
 
 	// verify if the components array exists in the cache
 	// if it's NULL, set the pointer to the real component array
-	if (components->components[index] == NULL)
+	if (system->components_cache->components[index] == NULL)
 	{
-		whisker_ecs_entity_id archetype_id = archetype[index];
+		whisker_ecs_entity_id archetype_id = system->components_cache_archetypes[index];
 
 		whisker_block_array *component_array;
 		whisker_ecs_c_get_component_array(system->components, archetype_id, size, (void**)&component_array);
-		components->components[index] = component_array;
+		system->components_cache->components[index] = component_array;
 	}
 
-	return wbarr_get(components->components[index], entity_id.index);
+	return wbarr_get(system->components_cache->components[index], entity_id.index);
 }
 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {
