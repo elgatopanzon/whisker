@@ -320,13 +320,19 @@ WECS_SYSTEM(asteroids_draw_frame_time,
 	const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
 
 	const int font_size = 32;
-	DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
+	DrawText(frametime_string, 20, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
+	DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, WHITE);
 
 	size_t entity_count = whisker_ecs_e_count(system.entities);
+	size_t entity_count_alive = whisker_ecs_e_alive_count(system.entities);
 
 	size_t asteroid_count = 0;
 	for (size_t si = 0; si < entity_count; ++si)
 	{
+		if (!system.entities->entities[si].alive)
+		{
+			continue;
+		}
 		whisker_ecs_entity_id se = system.entities->entities[si].id;
 
 		if (WECS_HAS_TAG_E(t_ast, 2, se))
@@ -335,8 +341,15 @@ WECS_SYSTEM(asteroids_draw_frame_time,
 		}
 	}
 
-	const char* asteroids_string = TextFormat("%d", asteroid_count);
-	DrawText(asteroids_string, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, RED);
+	const char* s1 = TextFormat("AC %d", asteroid_count);
+	const char* s2 = TextFormat("EA %d", entity_count_alive);
+	const char* s3 = TextFormat("ET %d", entity_count);
+	DrawText(s1, 20, asteroids_screen_height - ((font_size + 8) * 4) + 4, font_size, BLACK);
+	DrawText(s1, 16, asteroids_screen_height - ((font_size + 8) * 4), font_size, WHITE);
+	DrawText(s2, 20, asteroids_screen_height - ((font_size + 8) * 3) + 4, font_size, BLACK);
+	DrawText(s2, 16, asteroids_screen_height - ((font_size + 8) * 3), font_size, WHITE);
+	DrawText(s3, 20, asteroids_screen_height - ((font_size + 8) * 2) + 4, font_size, BLACK);
+	DrawText(s3, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, WHITE);
 },
 	WECS_HAS(asteroids_draw_frame_time, 0)
 	WECS_WRITES(asteroids_component_frametime, frametime, 1)
@@ -770,16 +783,16 @@ WECS_SYSTEM(asteroids_draw_game_over,
 		const char* game_over = "Game Over!";
 		const char* press_r = "Press R to restart";
 		const char* score_text = TextFormat("POINTS: %d", *score);
+		int mins = (int)(*hit_time - *ctime) / 60;
+		int secs = (int)(*hit_time - *ctime) % 60;
+
+		const char* time_text = TextFormat("Time played: %d minutes, %d seconds", mins, secs);
 
 		/* DrawRectangle(0, 0, screen_width, screen_height, Fade(RAYWHITE, 0.8f)); */
 		DrawText(score_text, asteroids_screen_width / 2 - MeasureText(score_text, 60) / 2, asteroids_screen_height * 0.15f, 60, WHITE);
 		DrawText(game_over, asteroids_screen_width / 2 - MeasureText(game_over, 40) / 2, asteroids_screen_height / 2 - 10, 40, WHITE);
 		DrawText(press_r, asteroids_screen_width / 2 - MeasureText(press_r, 20) / 2, asteroids_screen_height * 0.75f, 20, WHITE);
-
-		int mins = (int)(*hit_time - *ctime) / 60;
-		int secs = (int)(*hit_time - *ctime) % 60;
-
-		DrawText(TextFormat("Time played: %d minutes, %d seconds", mins, secs), 20, asteroids_screen_height - 40, 20, WHITE);
+		DrawText(time_text, asteroids_screen_width / 2 - MeasureText(time_text, 20) / 2, asteroids_screen_height / 2 + 40, 20, WHITE);
 	}
 },
 	WECS_HAS(t_player, 0)
