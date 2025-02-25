@@ -36,7 +36,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 	for (int i = 0; i < warr_length(components->components); i++) {
 		if (components->components[i] != NULL)
 		{
-			wbarr_free(components->components[i]);
+			whisker_block_arr_free(components->components[i]);
 		}
 	}
 	warr_free(components->components);
@@ -57,7 +57,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *
 	// create array
 	whisker_block_array *barr;
 	debug_printf("creating component block array %zu size %zu\n", component_id.id, component_size);
-	if (whisker_block_arr_create_f(component_size, 16, &barr) != E_WHISKER_BLOCK_ARR_OK)
+	if (whisker_block_arr_create_f(component_size, 256, &barr) != E_WHISKER_BLOCK_ARR_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;
 	}
@@ -134,7 +134,7 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 	/* components->components[component_id.index] = component_array; */
 
 	// return component pointer
-	return wbarr_get(component_array, entity_id.index);
+	return whisker_block_arr_get(component_array, entity_id.index);
 	/* return component_array + (entity_id.index * component_size); */
 }
 

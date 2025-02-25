@@ -301,7 +301,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_component_cache(whisker_ecs_system *system,
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)
 {
 	// note: this will crash if the array for this index hasn't been initialised
-	return wbarr_get(system->components_cache->components[index], entity_id.index);
+	return whisker_block_arr_get(system->components_cache->components[index], entity_id.index);
 }
 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {

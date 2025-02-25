@@ -184,7 +184,7 @@ typedef whisker_ecs wecs;
 // base macro used to declare read/write mode components in scope accessed via a
 // declared store
 #define WECS_DECLARE(type, name, idx, mode) \
-	type *name = wbarr_get(name##_##mode##_store, system.entity_id.index);
+	type *name = whisker_block_arr_get(name##_##mode##_store, system.entity_id.index);
 
 
 
@@ -230,12 +230,12 @@ typedef whisker_ecs wecs;
 // note: if READS_ALL/WRITES_ALL has not been set on the system the stores won't
 // exist and the indexes will be invalid
 #define WECS_GET_READ_E(name, idx, entity) \
-	wbarr_get(name##_read_store, entity.index)
+	whisker_block_arr_get(name##_read_store, entity.index)
 // note: this sets the type size to 1, because we want to trigger obtaining the
 // component and since this is used after WRITE_ALL the component array is
 // already initialised with the correct type size
 #define WECS_GET_WRITE_E(name, idx, entity) \
-	wbarr_get(name##_write_store, entity.index); WECS_TAG_ON_E(name, idx, entity)
+	whisker_block_arr_get(name##_write_store, entity.index); WECS_TAG_ON_E(name, idx, entity)
 
 // this macro gets a non-read/write specific component for an entity using the
 // main ECS interface, meaning it has to lookup the component id from name
