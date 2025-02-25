@@ -7,6 +7,10 @@
 #include "whisker_std.h"
 #include "whisker_ecs_err.h"
 
+#ifndef WHISKER_ECS_ENTITY_MIN
+#define WHISKER_ECS_ENTITY_MIN 1
+#endif
+
 #ifndef WHISKER_ECS_ENTITY_H
 #define WHISKER_ECS_ENTITY_H
 

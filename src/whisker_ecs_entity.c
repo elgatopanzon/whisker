@@ -63,6 +63,12 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
 
+	// create empty entities up to the MIN
+	for (int i = 0; i < WHISKER_ECS_ENTITY_MIN; ++i)
+	{
+		whisker_ecs_e_create(e);
+	}
+
 	*entities = e;
 
 	return E_WHISKER_ECS_ENTITY_OK;
