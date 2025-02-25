@@ -167,7 +167,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 
 E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
 {
-	E_WHISKER_DICT err = wdict_set(&entities->entity_names, name, &entity_id);
+	E_WHISKER_DICT err = whisker_dict_set_strk(&entities->entity_names, name, &entity_id);
 	if (err != E_WHISKER_DICT_OK)
 	{
 		return E_WHISKER_ECS_ENTITY_DICT;
@@ -229,7 +229,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	// clear name pointer
 	if (e->name != NULL)
 	{
-		wdict_remove(&entities->entity_names, e->name);
+		whisker_dict_remove_strk(&entities->entity_names, e->name);
 		wstr_free(e->name);
 		e->name = NULL;
 	}
@@ -311,7 +311,7 @@ inline whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id)
 whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name)
 {
 	// lookup entity by name and return a match, or NULL
-	whisker_ecs_entity_id *entity_id = wdict_get(entities->entity_names, entity_name);
+	whisker_ecs_entity_id *entity_id = whisker_dict_get_strk(entities->entity_names, entity_name);
 	if (entity_id == NULL)
 	{
 		return NULL;

@@ -53,9 +53,9 @@ void deinit_ecs()
     		/* free(component_entity[i]); */
 		}
 
-		if (whisker_dict_contains_key(components, (char*) &i))
+		if (whisker_dict_contains_key_strk(components, (char*) &i))
 		{
-			components_array* component_array = whisker_dict_get(components, (char*) &i);
+			components_array* component_array = whisker_dict_get_strk(components, (char*) &i);
 			whisker_arr_free(component_array->components);
 		}
 	}
@@ -203,11 +203,11 @@ bool has_component_entity(size_t component_id, size_t entity_id)
 *******************************/
 void init_component_array(size_t component_id, size_t component_size)
 {
-	if (!whisker_dict_contains_key(components, (char*) &component_id))
+	if (!whisker_dict_contains_key_strk(components, (char*) &component_id))
 	{
 		components_array component_array = {};
 		whisker_arr_create_f(component_size, ENTITY_MAX, &component_array.components);
-		whisker_dict_set(&components, (char*) &component_id, &component_array);
+		whisker_dict_set_strk(&components, (char*) &component_id, &component_array);
 	}
 }
 
@@ -215,7 +215,7 @@ void set_component(size_t component_id, size_t component_size, size_t entity, vo
 {
 	init_component_array(component_id, component_size);
 
-	components_array* component_array = whisker_dict_get(components, (char*) &component_id);
+	components_array* component_array = whisker_dict_get_strk(components, (char*) &component_id);
 
     memcpy((char*)component_array->components + entity * component_size, component_value, component_size);
 	add_component_entity(component_id, entity);    
@@ -225,7 +225,7 @@ void remove_component(size_t component_id, size_t component_size, size_t entity)
 {
 	init_component_array(component_id, component_size);
 
-	components_array* component_array = whisker_dict_get(components, (char*) &component_id);
+	components_array* component_array = whisker_dict_get_strk(components, (char*) &component_id);
 
     memset((char*)component_array->components + entity * component_size, 0, component_size);
 	remove_component_entity(component_id, entity);    
@@ -235,7 +235,7 @@ void* get_component(size_t component_id, size_t component_size, size_t entity)
 {
 	init_component_array(component_id, component_size);
 
-	components_array* component_array = whisker_dict_get(components, (char*) &component_id);
+	components_array* component_array = whisker_dict_get_strk(components, (char*) &component_id);
 
     return (char*)component_array->components + entity * component_size;
 }

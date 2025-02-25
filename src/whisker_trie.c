@@ -5,6 +5,7 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include "whisker_memory.h"
 #include "whisker_trie.h"
 
@@ -117,7 +118,7 @@ E_WHISKER_TRIE whisker_trie_search_value_str_f(whisker_trie* root, char* key, vo
 E_WHISKER_TRIE whisker_trie_search_value_f(whisker_trie* root, void* key, size_t key_size, void** match)
 {
 	whisker_trie* matching_node;
-	E_WHISKER_TRIE search_err = whisker_trie_search_node_str(root, key, &matching_node);
+	E_WHISKER_TRIE search_err = whisker_trie_search_node_(root, key, key_size, 0, false, &matching_node);
 
 	// if the node isn't a match, we certainly dont have a value
 	if (search_err != E_WHISKER_TRIE_OK)

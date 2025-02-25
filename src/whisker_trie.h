@@ -35,7 +35,7 @@ typedef struct whisker_trie
 } whisker_trie;
 
 // macros
-#define whisker_trie_search_value_key(r, k, t, v) whisker_trie_search_value_str_f(r, k, sizeof(t), (void**)v)
+#define whisker_trie_search_value_key(r, k, t, v) whisker_trie_search_value_f(r, k, sizeof(t), (void**)v)
 #define whisker_trie_search_value_str(r, k, v) whisker_trie_search_value_str_f(r, k, (void**)v)
 
 // short macros

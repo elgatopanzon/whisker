@@ -305,7 +305,7 @@ void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size
 }
 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {
-	int *component_name_index = wdict_get(system->component_name_index, component_name);
+	int *component_name_index = whisker_dict_get_strk(system->component_name_index, component_name);
 
 	if (component_name_index == NULL)
 	{
@@ -319,7 +319,7 @@ int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* com
 
 				// malloc value for the index and set the trie value
 				// this should trigger the trie search next time
-            	wdict_set(&system->component_name_index, component_name, &name_index);
+            	whisker_dict_set_strk(&system->component_name_index, component_name, &name_index);
 
             	return name_index;
         	}
