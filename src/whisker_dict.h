@@ -102,6 +102,9 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, void* key, size_t key_size);
 E_WHISKER_DICT whisker_dict_clear_f(void** dict);
 E_WHISKER_DICT whisker_dict_free(void* dict);
 
+void whisker_dict_order_by_key(void** dict);
+void whisker_dict_order_by_key_(void **keys, void *values, size_t length, size_t key_size, size_t type_size, void* key_temp, void* value_temp);
+
 // internal functions
 E_WHISKER_DICT whisker_dict_resize_(void** dict, size_t capacity);
 

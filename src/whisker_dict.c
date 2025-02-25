@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "whisker_string.h"
 #include "whisker_array.h"
 #include "whisker_trie.h"
@@ -59,6 +60,7 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 	header->arr_header.length = capacity;
 	header->arr_header.element_size = element_size;
 	header->arr_header.size = capacity * element_size;
+	header->arr_header.swap_buffer = malloc(element_size);
 	
 	*dict = block->data;
 	free(block);
@@ -102,7 +104,9 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, void *key, size_t key_size, void*
 	memcpy(array_dest, value, header->arr_header.element_size);
 
 	// create wstring from key and add it to keys array
-	whisker_arr_push(&header->keys, &key);
+	void* key_mem = malloc(key_size);
+	memcpy(key_mem, key, key_size);
+	whisker_arr_push(&header->keys, &key_mem);
 
 	// add the key pointing to the dict array index
 	size_t* array_index;
@@ -198,6 +202,7 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, void *key, size_t key_size)
 
 	size_t removed_index = *(size_t*)removed_node->value;
 	void* end_key = header->keys[dict_length - 1];
+	void* removed_key = header->keys[removed_index];
 
 	// inteligently re-pack values/keys array by moving the end element
 	// note: only required if the size is > 1 and not the end element
@@ -222,6 +227,8 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, void *key, size_t key_size)
 	{
 		free(removed_node->value);
 	}
+
+	free(end_key);
 
 	// clear the node value to invalid the key lookup
 	removed_node->value = NULL;
@@ -254,13 +261,66 @@ E_WHISKER_DICT whisker_dict_free(void* dict)
 	whisker_trie_free_node(header->trie, true);
 
 	// free each key string
+	for (int i = 0; i < header->arr_header.length; ++i)
+	{
+		if (header->keys[i] != NULL)
+		{
+			free(header->keys[i]);
+		}
+	}
 	whisker_arr_free(header->keys);
 
+	free(header->arr_header.swap_buffer);
 	free(header);
 
 	return E_WHISKER_DICT_OK;
 }
 
+void whisker_dict_order_by_key(void** dict)
+{
+	whisker_dict_header *header = whisker_dict_get_header(*dict);
+	whisker_dict_order_by_key_(header->keys, *dict, warr_length(*dict), warr_header(header->keys)->element_size, header->arr_header.element_size, warr_header(header->keys)->swap_buffer, header->arr_header.swap_buffer);
+}
+
+void whisker_dict_order_by_key_(void **keys, void *values, size_t length, size_t key_size, size_t value_size, void* key_temp, void* value_temp)
+{
+	whisker_dict_header *header = whisker_dict_get_header(values);
+
+    for (size_t i = 0; i < length - 1; i++) {
+        for (size_t j = i + 1; j < length; j++) {
+            uint64_t key_i = *(uint64_t*)((char*)keys[i]);
+            uint64_t key_j = *(uint64_t*)((char*)keys[j]);
+            if (key_i > key_j) {
+                memcpy(key_temp, keys[i], key_size);
+                memcpy(keys[i], keys[j], key_size);
+                memcpy(keys[j], key_temp, key_size);
+
+                memcpy(value_temp, (char*)values + i * value_size, value_size);
+                memcpy((char*)values + i * value_size, (char*)values + j * value_size, value_size);
+                memcpy((char*)values + j * value_size, value_temp, value_size);
+
+				// swap index nodes
+				whisker_trie* key_i_node;
+				E_WHISKER_TRIE trie_err = whisker_trie_search_node_(header->trie, keys[i], key_size, 0, false, &key_i_node);
+				if (trie_err != E_WHISKER_TRIE_OK)
+				{
+					return;
+				}
+
+				whisker_trie* key_j_node;
+				E_WHISKER_TRIE trie_err2 = whisker_trie_search_node_(header->trie, keys[j], key_size, 0, false, &key_j_node);
+				if (trie_err2 != E_WHISKER_TRIE_OK)
+				{
+					return;
+				}
+
+				void* trie_key_backup = key_i_node->value;
+				key_i_node->value = key_j_node->value;
+				key_j_node->value = trie_key_backup;
+            }
+        }
+    }
+}
 
 /************************
 *  internal functions  *

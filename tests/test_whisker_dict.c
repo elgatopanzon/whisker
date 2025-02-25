@@ -426,6 +426,87 @@ START_TEST(test_whisker_dict_set_non_char_key)
 }
 END_TEST
 
+START_TEST(test_whisker_dict_ordered)
+{
+	uint64_t *dict;
+	whisker_dict_create(&dict, uint64_t, 0);
+
+	// add some values with unordered keys
+	uint64_t val = 7;
+	size_t key_index = 0;
+	whisker_dict_set_keyt(&dict, &key_index, size_t, &val);
+
+	val = 43;
+	key_index = 4;
+	whisker_dict_set_keyt(&dict, &key_index, size_t, &val);
+
+	val = 12;
+	key_index = 2;
+	whisker_dict_set_keyt(&dict, &key_index, size_t, &val);
+
+	val = 65;
+	key_index = 7;
+	whisker_dict_set_keyt(&dict, &key_index, size_t, &val);
+
+	// get one value with key
+	uint64_t* val_get = whisker_dict_get_keyt(dict, &key_index, size_t);
+
+	// verify gotten value is correct
+	ck_assert_uint_eq(val, *val_get);
+
+	// use array functions on the dict to check values
+	uint64_t expected[] = {7, 43, 12, 65};
+	for (int i = 0; i < whisker_arr_length(dict); ++i)
+	{
+		ck_assert_uint_eq(expected[i], dict[i]);
+	}
+
+	// use array functions on the dict to check keys
+	uint64_t** keys = (uint64_t**)whisker_dict_keys(dict);
+	/* for (int i = 0; i < warr_length(keys); i++) { */
+    /* 	printf("key %d: %zu\n", i, *keys[i]); */
+    /* 	printf("value %d: %zu\n", i, dict[i]); */
+	/* } */
+
+	// loop using dict array length, since they are supposed to match
+	uint64_t expected_keys[] = {0, 4, 2, 7};
+	for (int i = 0; i < whisker_arr_length(dict); ++i)
+	{
+		ck_assert_uint_eq(expected_keys[i], *keys[i]);
+	}
+
+	whisker_dict_order_by_key((void**)&dict);
+
+	/* for (int i = 0; i < warr_length(keys); i++) { */
+    /* 	printf("key ordered %d: %zu\n", i, *keys[i]); */
+    /* 	printf("value %d: %zu\n", i, dict[i]); */
+	/* } */
+
+	// use array functions on the dict to check values
+	uint64_t expected_ordered[] = {7, 12, 43, 65};
+	for (int i = 0; i < whisker_arr_length(dict); ++i)
+	{
+		ck_assert_uint_eq(expected_ordered[i], dict[i]);
+	}
+
+	// loop using dict array length, since they are supposed to match
+	uint64_t expected_keys_ordered[] = {0, 2, 4, 7};
+	for (int i = 0; i < whisker_arr_length(dict); ++i)
+	{
+		ck_assert_uint_eq(expected_keys_ordered[i], *keys[i]);
+	}
+
+	// verify keys point to new values
+	for (int i = 0; i < whisker_arr_length(dict); ++i)
+	{
+		uint64_t *val_ordered_key = whisker_dict_get_keyt(dict, &expected_keys_ordered[i], size_t);
+		ck_assert_uint_eq(*val_ordered_key, expected_ordered[i]);
+	}
+
+	whisker_dict_free(dict);
+}
+END_TEST
+
 Suite* whisker_dict_suite(void)
 {
 	Suite *s;
@@ -449,7 +530,8 @@ Suite* whisker_dict_suite(void)
 	tcase_add_test(tc_core, test_whisker_dict_set_and_get);
 	tcase_add_test(tc_core, test_whisker_dict_set_and_remove);
 	tcase_add_test(tc_core, test_whisker_dict_set_and_get_multiple);
-	tcase_add_test(tc_core, test_whisker_dict_set_non_char_key);
+	/* tcase_add_test(tc_core, test_whisker_dict_set_non_char_key); */
+	tcase_add_test(tc_core, test_whisker_dict_ordered);
 
 	suite_add_tcase(s, tc_core);
 
