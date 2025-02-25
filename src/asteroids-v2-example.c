@@ -321,9 +321,26 @@ WECS_SYSTEM(asteroids_draw_frame_time,
 
 	const int font_size = 32;
 	DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
+
+	size_t entity_count = whisker_ecs_e_count(system.entities);
+
+	size_t asteroid_count = 0;
+	for (size_t si = 0; si < entity_count; ++si)
+	{
+		whisker_ecs_entity_id se = system.entities->entities[si].id;
+
+		if (WECS_HAS_TAG_E(t_ast, 2, se))
+		{
+			asteroid_count++;
+		}
+	}
+
+	const char* asteroids_string = TextFormat("%d", asteroid_count);
+	DrawText(asteroids_string, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, RED);
 },
 	WECS_HAS(asteroids_draw_frame_time, 0)
 	WECS_WRITES(asteroids_component_frametime, frametime, 1)
+	WECS_READS_TAG(t_ast, 2)
 )
 
 
