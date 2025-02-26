@@ -34,6 +34,14 @@ typedef struct whisker_sparse_set
 
 #define whisker_ss_create(ss, t) whisker_ss_create_f(ss, sizeof(t))
 
+// short macros
+#define wss_create whisker_ss_create
+#define wss_free whisker_ss_free
+#define wss_set whisker_ss_set
+#define wss_get whisker_ss_get
+#define wss_remove whisker_ss_remove
+#define wss_contains whisker_ss_contains
+
 // management functions
 E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size);
 void whisker_ss_free(whisker_sparse_set *ss);
