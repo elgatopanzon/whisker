@@ -63,9 +63,7 @@ E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, void* key, size_t k
 	// each part of the loop checks for the node's matching index
 	for (size_t i = key_position; i < key_size; ++i)
 	{
-		whisker_debug_print_value_layout(key, key_size, "key");
 		int key_index = ((unsigned char*)key)[i];
-		printf("%d\n", key_index);
 
 		// if the key index is null, the search ends here if
 		// create_missing_nodes is false
