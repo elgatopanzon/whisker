@@ -46,7 +46,21 @@ START_TEST(test_whisker_sparse_set_get_and_create)
 
 	// get a value, which should init with 0x00
 	int *created = whisker_ss_get(ss, 0, true);
-	ck_assert_int_eq(0, *created);
+	*created = 1;
+	ck_assert_int_eq(1, *created);
+
+	// get the value again, create shouldn't trigger change
+	int *created2 = whisker_ss_get(ss, 0, true);
+	ck_assert_int_eq(1, *created2);
+
+	// get a value with same block id index, which should init with 0x00
+	int *created3 = whisker_ss_get(ss, 1, true);
+	*created3 = 10;
+	ck_assert_int_eq(10, *created3);
+
+	// get the value again, create shouldn't trigger change
+	int *created4 = whisker_ss_get(ss, 1, true);
+	ck_assert_int_eq(10, *created4);
 
 	whisker_ss_free(ss);
 }
