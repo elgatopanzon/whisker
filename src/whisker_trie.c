@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "whisker_memory.h"
 #include "whisker_trie.h"
+#include "whisker_debug.h"
 
 const char* E_WHISKER_TRIE_STR[] = {
 	[E_WHISKER_TRIE_OK]="OK",
@@ -62,7 +63,9 @@ E_WHISKER_TRIE whisker_trie_search_node_(whisker_trie* root, void* key, size_t k
 	// each part of the loop checks for the node's matching index
 	for (size_t i = key_position; i < key_size; ++i)
 	{
-		int key_index = ((char*)key)[i];
+		whisker_debug_print_value_layout(key, key_size, "key");
+		int key_index = ((unsigned char*)key)[i];
+		printf("%d\n", key_index);
 
 		// if the key index is null, the search ends here if
 		// create_missing_nodes is false

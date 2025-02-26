@@ -195,6 +195,40 @@ START_TEST(test_whisker_trie_set_value_int)
 }
 END_TEST
 
+START_TEST(test_whisker_trie_set_value_uint64_key)
+{
+	// create trie root node
+	whisker_trie* trie_root;
+	whisker_trie_create_node(&trie_root);
+
+	// set some large keys
+	uint64_t uintkey_1 = 4294967296;
+	whisker_trie_set_value(&trie_root, &uintkey_1, sizeof(uint64_t), &trie_root);
+
+	uint64_t uintkey_2 = 8589934593;
+	whisker_trie_set_value(&trie_root, &uintkey_2, sizeof(uint64_t), &trie_root);
+
+	uint64_t uintkey_3 = 1095216660481;
+	whisker_trie_set_value(&trie_root, &uintkey_3, sizeof(uint64_t), &trie_root);
+
+	// search for the key's values
+	whisker_trie* key1_value;
+	whisker_trie_search_value_f(trie_root, &uintkey_1, sizeof(uint64_t), (void**)&key1_value);
+	whisker_trie* key2_value;
+	whisker_trie_search_value_f(trie_root, &uintkey_2, sizeof(uint64_t), (void**)&key2_value);
+	whisker_trie* key3_value;
+	whisker_trie_search_value_f(trie_root, &uintkey_3, sizeof(uint64_t), (void**)&key3_value);
+
+	// verify the value of the node 
+	ck_assert_ptr_eq(&trie_root, key1_value);
+	ck_assert_ptr_eq(&trie_root, key2_value);
+	ck_assert_ptr_eq(&trie_root, key3_value);
+
+	// free node from root (should free all children too)
+	whisker_trie_free_node(trie_root, false);
+}
+END_TEST
+
 Suite* whisker_trie_suite(void)
 {
 	Suite *s;
@@ -212,6 +246,7 @@ Suite* whisker_trie_suite(void)
 	tcase_add_test(tc_core, test_whisker_trie_search_value_by_key);
 	tcase_add_test(tc_core, test_whisker_trie_set_value);
 	tcase_add_test(tc_core, test_whisker_trie_set_value_int);
+	tcase_add_test(tc_core, test_whisker_trie_set_value_uint64_key);
 
 	suite_add_tcase(s, tc_core);
 
