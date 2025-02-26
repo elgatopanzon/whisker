@@ -34,7 +34,9 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_block(whisker_block_array *block_ar
 
 // array functions
 void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index);
+void* whisker_block_arr_get_and_fill(whisker_block_array *block_arr, size_t index, char fill_with);
 E_WHISKER_BLOCK_ARR whisker_block_arr_set(whisker_block_array *block_arr, size_t index, void *value);
+E_WHISKER_BLOCK_ARR whisker_block_arr_set_with(whisker_block_array *block_arr, size_t index, char set_with);
 
 // utility functions
 size_t whisker_block_arr_get_block_id(size_t block_size, size_t index);
@@ -51,8 +53,10 @@ size_t whisker_block_arr_get_block_offset(size_t block_size, size_t index);
 #define wbarr_free whisker_block_arr_free
 #define wbarr_free_blocks whisker_block_arr_free_blocks
 #define wbarr_get whisker_block_arr_get
+#define wbarr_get_and_fill whisker_block_arr_get_and_fill
 #define wbarr_get_t whisker_block_arr_get_t
 #define wbarr_set whisker_block_arr_set
+#define wbarr_set_with whisker_block_arr_set_with
 
 #endif /* WHISKER_BLOCK_ARRAY_H */
 

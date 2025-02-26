@@ -117,6 +117,22 @@ inline void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index)
 	return block_arr->blocks[block_id] + (block_offset * block_arr->type_size);
 }
 
+void* whisker_block_arr_get_and_fill(whisker_block_array *block_arr, size_t index, char fill_with)
+{
+	size_t block_id = whisker_block_arr_get_block_id(block_arr->block_size, index);
+	bool block_exists = (warr_length(block_arr->blocks) >= block_id + 1 && block_arr->blocks[block_id] != NULL);
+
+	void* value = whisker_block_arr_get(block_arr, index);
+
+	// if the block didn't exist before, fill it with fill_with
+	if (!block_exists)
+	{
+		memset(block_arr->blocks[block_id], fill_with, block_arr->block_size * block_arr->type_size);
+	}
+
+	return value;
+}
+
 // set value at given index translated to block + offset
 inline E_WHISKER_BLOCK_ARR whisker_block_arr_set(whisker_block_array *block_arr, size_t index, void *value)
 {
@@ -135,18 +151,30 @@ inline E_WHISKER_BLOCK_ARR whisker_block_arr_set(whisker_block_array *block_arr,
 	return E_WHISKER_BLOCK_ARR_OK;
 }
 
+E_WHISKER_BLOCK_ARR whisker_block_arr_set_with(whisker_block_array *block_arr, size_t index, char set_with)
+{
+	size_t block_id = whisker_block_arr_get_block_id(block_arr->block_size, index);
+	size_t block_offset = whisker_block_arr_get_block_offset(block_arr->block_size, index);
+
+	E_WHISKER_BLOCK_ARR err = whisker_block_arr_create_block(block_arr, block_id);
+	if (err != E_WHISKER_BLOCK_ARR_OK)
+	{
+		return err;
+	}
+
+	// copy value into block index
+	memset(block_arr->blocks[block_id] + (block_offset * block_arr->type_size), set_with, block_arr->type_size);
+
+	return E_WHISKER_BLOCK_ARR_OK;
+}
 
 /***********************
 *  utility functions  *
 ***********************/
-// calculate block ID from index and block size
-inline size_t whisker_block_arr_get_block_id(size_t block_size, size_t index)
-{
-	return index / block_size;
+inline size_t whisker_block_arr_get_block_id(size_t block_size, size_t index) {
+    return index >> __builtin_ctzll(block_size);
 }
 
-// calculate block offset from index and block size
-inline size_t whisker_block_arr_get_block_offset(size_t block_size, size_t index)
-{
-	return index % block_size;
+inline size_t whisker_block_arr_get_block_offset(size_t block_size, size_t index) {
+    return index & (block_size - 1);
 }
