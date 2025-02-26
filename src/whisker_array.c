@@ -33,7 +33,7 @@ E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 	header->element_size = type_size;
 	header->length = length;
 	header->size = type_size * length;
-	header->swap_buffer = malloc(type_size);
+	header->swap_buffer = calloc(1, type_size);
 
 	// set array pointer to data pointer
 	*arr = block->data;
