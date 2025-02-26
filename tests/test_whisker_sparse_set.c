@@ -16,7 +16,7 @@
 START_TEST(test_whisker_sparse_set_create)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	whisker_ss_free(ss);
 }
@@ -25,7 +25,7 @@ END_TEST
 START_TEST(test_whisker_sparse_set_get_nonexistant_sparse_index)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	// try to get a non-existant sparse index
 	uint64_t dense_index = whisker_ss_get_dense_index(ss, 123);
@@ -42,7 +42,7 @@ END_TEST
 START_TEST(test_whisker_sparse_set_get_and_create)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	// get a value, which should init with 0x00
 	int *created = whisker_ss_get(ss, 0, true);
@@ -69,7 +69,7 @@ END_TEST
 START_TEST(test_whisker_sparse_set_get_and_remove)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	// get a value, which should init with 0x00
 	int *created = whisker_ss_get(ss, 0, true);
@@ -130,7 +130,7 @@ END_TEST
 START_TEST(test_whisker_sparse_set_get_and_create_large)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	// get a value with a large index
 	int *created = whisker_ss_get(ss, 4294967296, true);
@@ -147,7 +147,7 @@ END_TEST
 START_TEST(test_whisker_sparse_set_set)
 {
 	whisker_sparse_set *ss;
-	whisker_ss_create(&ss, int);
+	whisker_ss_create_t(&ss, int);
 
 	// set a value
 	int val = 12312;

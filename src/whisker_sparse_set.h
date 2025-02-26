@@ -32,10 +32,12 @@ typedef struct whisker_sparse_set
 	whisker_trie *sparse_trie;
 } whisker_sparse_set;
 
-#define whisker_ss_create(ss, t) whisker_ss_create_f(ss, sizeof(t))
+#define whisker_ss_create_t(ss, t) whisker_ss_create_f(ss, sizeof(t))
+#define whisker_ss_create_s(ss, s) whisker_ss_create_f(ss, s)
 
 // short macros
-#define wss_create whisker_ss_create
+#define wss_create_t whisker_ss_create_t
+#define wss_create_s whisker_ss_create_s
 #define wss_free whisker_ss_free
 #define wss_set whisker_ss_set
 #define wss_get whisker_ss_get
