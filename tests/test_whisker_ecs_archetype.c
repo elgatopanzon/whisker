@@ -64,7 +64,7 @@ START_TEST(test_whisker_ecs_archetype_named_entities_to_archetype)
 	ck_assert_int_eq(2, warr_length(a1));
 
 	// verify the entity IDs created
-	int expected[] = {0, 1};
+	int expected[] = {1, 2};
 	for (int i = 0; i < 2; ++i)
 	{
 		ck_assert_uint_eq(expected[i], a1[i].index);
@@ -91,7 +91,7 @@ START_TEST(test_whisker_ecs_archetype_named_entities_to_archetype)
 	ck_assert_int_eq(3, warr_length(a3));
 
 	// verify the entity IDs created
-	int expected_2[] = {0, 2, 3};
+	int expected_2[] = {1, 3, 4};
 	for (int i = 0; i < 3; ++i)
 	{
 		ck_assert_uint_eq(expected_2[i], a3[i].index);

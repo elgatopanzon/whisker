@@ -20,7 +20,8 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 	whisker_ecs_e_create_entities(&entities);
 
 	// verify empty arrays
-	ck_assert_int_eq(0, warr_length(entities->entities));
+	// note: starts with 1, since it contains entity 0
+	ck_assert_int_eq(1, warr_length(entities->entities));
 	ck_assert_int_eq(0, warr_length(entities->dead_entities));
 	ck_assert_int_eq(0, warr_length(entities->entity_names));
 
@@ -41,18 +42,19 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	wecs_e_id e3; whisker_ecs_e_create_(entities, &e3);
 
 	// validate entity count
-	ck_assert_uint_eq(3, warr_length(entities->entities));
-	ck_assert_uint_eq(3, wecs_e_count(entities));
+	// note: since we added 3 and 0 already exists, the length is 4
+	ck_assert_uint_eq(4, warr_length(entities->entities));
+	ck_assert_uint_eq(4, wecs_e_count(entities));
 	
 	// validate returned indexes
-	ck_assert_uint_eq(0, e1.index);
-	ck_assert_uint_eq(1, e2.index);
-	ck_assert_uint_eq(2, e3.index);
+	ck_assert_uint_eq(1, e1.index);
+	ck_assert_uint_eq(2, e2.index);
+	ck_assert_uint_eq(3, e3.index);
 
 	// validate indexes with obtained entity pointers
-	ck_assert_uint_eq(0, whisker_ecs_e(entities, e1)->id.index);
-	ck_assert_uint_eq(1, whisker_ecs_e(entities, e2)->id.index);
-	ck_assert_uint_eq(2, whisker_ecs_e(entities, e3)->id.index);
+	ck_assert_uint_eq(1, whisker_ecs_e(entities, e1)->id.index);
+	ck_assert_uint_eq(2, whisker_ecs_e(entities, e2)->id.index);
+	ck_assert_uint_eq(3, whisker_ecs_e(entities, e3)->id.index);
 
 	// make sure entities are alive
 	ck_assert_int_eq(true, wecs_e_is_alive(entities, e1));
@@ -71,9 +73,9 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	ck_assert_uint_eq(0, e3.version);
 	ck_assert_uint_eq(1, whisker_ecs_e(entities, e3)->id.version);
 
-	// create a new entity (it should recycle 0 with version 1 first)
+	// create a new entity (it should recycle 1 with version 1 first)
 	wecs_e_id e4; whisker_ecs_e_create_(entities, &e4);
-	ck_assert_uint_eq(0, e4.index);
+	ck_assert_uint_eq(1, e4.index);
 	ck_assert_uint_eq(1, e4.version);
 
 	// free entities
@@ -97,9 +99,9 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	wecs_entity *e3_fetched = wecs_e_named(entities, "e3");
 
 	// validate returned indexes
-	ck_assert_uint_eq(0, e1_fetched->id.index);
-	ck_assert_uint_eq(1, e2_fetched->id.index);
-	ck_assert_uint_eq(2, e3_fetched->id.index);
+	ck_assert_uint_eq(1, e1_fetched->id.index);
+	ck_assert_uint_eq(2, e2_fetched->id.index);
+	ck_assert_uint_eq(3, e3_fetched->id.index);
 
 	// validate returned names
 	ck_assert_str_eq("e1", e1_fetched->name);
@@ -108,7 +110,7 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 
 	// create an entity with the same name, to get the existing entity
 	wecs_e_id e4; whisker_ecs_e_create_named_(entities, "e3", &e4);
-	ck_assert_uint_eq(2, e4.index);
+	ck_assert_uint_eq(3, e4.index);
 
 	// destroy an entity, validate the key no longer works
 	wecs_entity *e4_fetched = wecs_e_named(entities, "e3");
@@ -132,7 +134,7 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	ck_assert_int_eq(2, warr_length(a1));
 
 	// verify the entity IDs created
-	int expected[] = {0, 1};
+	int expected[] = {1, 2};
 	for (int i = 0; i < 2; ++i)
 	{
 		ck_assert_uint_eq(expected[i], a1[i].index);
@@ -160,7 +162,7 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 
 	// verify the entity IDs created
 	// note: this is now updated since it's sorted
-	int expected_2[] = {0, 2, 3};
+	int expected_2[] = {1, 3, 4};
 	for (int i = 0; i < 3; ++i)
 	{
 		ck_assert_uint_eq(expected_2[i], a3[i].index);
