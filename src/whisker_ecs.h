@@ -40,7 +40,7 @@ bool whisker_ecs_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id 
 
 // component functions
 whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs_entities *entities, char* component_name);
-whisker_block_array* whisker_ecs_get_components(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size);
+whisker_sparse_set* whisker_ecs_get_components(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size);
 void* whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id);
 E_WHISKER_ECS whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id, void* value);
 E_WHISKER_ECS whisker_ecs_remove_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id);
@@ -184,7 +184,7 @@ typedef whisker_ecs wecs;
 // base macro used to declare read/write mode components in scope accessed via a
 // declared store
 #define WECS_DECLARE(type, name, idx, mode) \
-	type *name = whisker_block_arr_get(name##_##mode##_store, system.entity_id.index);
+	type *name = wss_get(name##_##mode##_store, system.entity_id.index, true);
 
 
 
@@ -199,7 +199,7 @@ typedef whisker_ecs wecs;
 
 // base macro to declare component store in scope with different mode
 #define WECS_DECLARE_STORE(type, name, idx, mode) \
-	whisker_block_array *name##_##mode##_store = system.system->components_cache->components[idx];
+	whisker_sparse_set *name##_##mode##_store = system.system->components_cache->components[idx];
 
 // these macros allow specifying which tags the system is interested in
 // this is accomplished by adding the tag to the system archetype during init
@@ -230,12 +230,12 @@ typedef whisker_ecs wecs;
 // note: if READS_ALL/WRITES_ALL has not been set on the system the stores won't
 // exist and the indexes will be invalid
 #define WECS_GET_READ_E(name, idx, entity) \
-	whisker_block_arr_get(name##_read_store, entity.index)
+	wss_get(name##_read_store, entity.index, true)
 // note: this sets the type size to 1, because we want to trigger obtaining the
 // component and since this is used after WRITE_ALL the component array is
 // already initialised with the correct type size
 #define WECS_GET_WRITE_E(name, idx, entity) \
-	whisker_block_arr_get(name##_write_store, entity.index); WECS_TAG_ON_E(name, idx, entity)
+	wss_get(name##_write_store, entity.index, true); WECS_TAG_ON_E(name, idx, entity)
 
 // this macro gets a non-read/write specific component for an entity using the
 // main ECS interface, meaning it has to lookup the component id from name

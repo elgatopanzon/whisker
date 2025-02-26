@@ -189,28 +189,28 @@ whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs_entities *entities, c
 	return e;
 }
 
-whisker_block_array* whisker_ecs_get_components(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size)
+whisker_sparse_set* whisker_ecs_get_components(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size)
 {
-	whisker_block_array *components_array;
-	whisker_ecs_c_get_component_array(components, whisker_ecs_component_id(entities, component_name), component_size, (void**)&components_array);
+	whisker_sparse_set *components_array;
+	whisker_ecs_c_get_component_array(components, whisker_ecs_component_id(entities, component_name), component_size, &components_array);
 
 	return components_array;
 }
 
 void* whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id)
 {
-	whisker_block_array *components_array = whisker_ecs_get_components(entities, components, component_name, component_size);
+	whisker_sparse_set *components_array = whisker_ecs_get_components(entities, components, component_name, component_size);
 
-	return wbarr_get(components_array, entity_id.index);
+	return wss_get(components_array, entity_id.index, true);
 }
 
 E_WHISKER_ECS whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char* component_name, size_t component_size, whisker_ecs_entity_id entity_id, void* value)
 {
-	whisker_block_array *components_array = whisker_ecs_get_components(entities, components, component_name, component_size);
+	whisker_sparse_set *components_array = whisker_ecs_get_components(entities, components, component_name, component_size);
 
 	if (value != NULL)
 	{
-		wbarr_set(components_array, entity_id.index, value);
+		wss_set(components_array, entity_id.index, value);
 		whisker_ecs_archetype_set(entities, entity_id, whisker_ecs_component_id(entities, component_name));
 	}
 	else

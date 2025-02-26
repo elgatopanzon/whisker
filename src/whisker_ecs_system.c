@@ -281,8 +281,8 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_component_cache(whisker_ecs_system *system,
 		// cache the component array
 		whisker_ecs_entity_id archetype_id = system->components_cache_archetypes[index];
 
-		whisker_block_array *component_array;
-		whisker_ecs_c_get_component_array(system->components, archetype_id, size, (void**)&component_array);
+		whisker_sparse_set *component_array;
+		whisker_ecs_c_get_component_array(system->components, archetype_id, size, &component_array);
 
 		system->components_cache->components[index] = component_array;
 	}
@@ -301,7 +301,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_component_cache(whisker_ecs_system *system,
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)
 {
 	// note: this will crash if the array for this index hasn't been initialised
-	return whisker_block_arr_get(system->components_cache->components[index], entity_id.index);
+	return wss_get(system->components_cache->components[index], entity_id.index, true);
 }
 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {

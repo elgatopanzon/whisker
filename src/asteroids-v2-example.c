@@ -485,11 +485,15 @@ WECS_SYSTEM(asteroids_asteroid_respawn_on_hit,
 
 	debug_printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, *ast_size);
 
+	// note: the add asteroids triggers a component realloc leaving *pos_2d
+	// invalid after the first loop
+	Vector2 spawn_pos = *pos_2d;
+	ASTEROIDS_ASTEROID_SIZE asteroid_size = *ast_size;
 	for (int ii = 0; ii < spawn_count; ++ii)
 	{
-		debug_printf("system:asteroid_respawn_on_destroy:spawning (from %d) size %d\n", system.entity_id.index, *ast_size);
+		debug_printf("system:asteroid_respawn_on_destroy:spawning (from %d) size %d\n", system.entity_id.index, asteroid_size);
 
-		asteroids_add_asteroid(*pos_2d, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
+		asteroids_add_asteroid(spawn_pos, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
 	}
 },
 	WECS_HAS(t_ast_hit, 0)

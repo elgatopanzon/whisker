@@ -33,9 +33,9 @@ START_TEST(test_whisker_ecs_component_get_component_array)
 	whisker_ecs_c_create_components(&c);
 
 	// create component array for aritrary IDs
-	uint64_t *uint_component_array;
+	whisker_sparse_set *uint_component_array;
 	whisker_ecs_entity_id uint_id = {.id = 123};
-	whisker_ecs_c_get_component_array(c, uint_id, sizeof(uint64_t), (void**)&uint_component_array);
+	whisker_ecs_c_get_component_array(c, uint_id, sizeof(uint64_t), &uint_component_array);
 
 	// free
 	whisker_ecs_c_free_components(c);
@@ -67,6 +67,10 @@ START_TEST(test_whisker_ecs_component_get_and_set)
 
 	ck_assert_uint_eq(1, *uint_e1);
 	ck_assert_uint_eq(1, *(uint64_t*)whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1));
+
+	// note: not having pointer stability caused them to change
+	uint_e2 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e2);
+	uint_e3 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e3);
 	ck_assert_uint_eq(2, *uint_e2);
 	ck_assert_uint_eq(3, *uint_e3);
 
@@ -74,6 +78,7 @@ START_TEST(test_whisker_ecs_component_get_and_set)
 	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10});
 
 	// check array
+	uint_e1 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1);
 	ck_assert_uint_eq(10, *uint_e1);
 
 	// check edirectly
