@@ -144,6 +144,22 @@ START_TEST(test_whisker_sparse_set_get_and_create_large)
 }
 END_TEST
 
+START_TEST(test_whisker_sparse_set_set)
+{
+	whisker_sparse_set *ss;
+	whisker_ss_create(&ss, int);
+
+	// set a value
+	int val = 12312;
+	whisker_ss_set(ss, 4294967296, &val);
+
+	int *created = whisker_ss_get(ss, 4294967296, false);
+	ck_assert_int_eq(12312, *created);
+
+	whisker_ss_free(ss);
+}
+END_TEST
+
 Suite* whisker_sparse_set_suite(void)
 {
 	Suite *s;
@@ -160,6 +176,7 @@ Suite* whisker_sparse_set_suite(void)
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_create);
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_remove);
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_create_large);
+	tcase_add_test(tc_core, test_whisker_sparse_set_set);
 
 	suite_add_tcase(s, tc_core);
 

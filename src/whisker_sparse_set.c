@@ -163,6 +163,7 @@ E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, 
         }
 
 		uint64_t *dense_index_value = malloc(sizeof(*dense_index_value));
+		memcpy(dense_index_value, &dense_index, sizeof(*dense_index_value));
 		whisker_trie_set_value(&ss->sparse_trie, &index, sizeof(index), dense_index_value);
 	}
 	else
