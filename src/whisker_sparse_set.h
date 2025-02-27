@@ -13,6 +13,7 @@
 #define WHISKER_SPARSE_SET_H
 
 #define WHISKER_SPARSE_SET_BLOCK_SIZE 2048
+#define WHISKER_SPARSE_SET_AUTOSORT false
 
 // errors
 typedef enum E_WHISKER_SS  
@@ -28,7 +29,7 @@ typedef struct whisker_sparse_set
 {
 	whisker_block_array *sparse;
 	void *dense;
-	uint64_t *dense_index;
+	uint64_t *sparse_index;
 	whisker_trie *sparse_trie;
 } whisker_sparse_set;
 
@@ -56,6 +57,8 @@ bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index);
 
 E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index);
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index);
+
+void whisker_ss_sort(whisker_sparse_set *ss);
 
 #endif /* WHISKER_SPARSE_SET_H */
 

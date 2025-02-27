@@ -78,8 +78,8 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 
 	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
 	/* { */
-	/* 	printf("1 dense %d: %d\n", i, ((int*)ss->dense)[i]); */
-	/* 	printf("1 dense index %d: %zu\n", i, ss->dense_index[i]); */
+	/* 	printf("1 dense index %d: %zu\n", i, ss->sparse_index[i]); */
+	/* 	printf("1 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
 	/* } */
 
 	// create some more values
@@ -87,8 +87,8 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 
 	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
 	/* { */
-	/* 	printf("2 dense %d: %d\n", i, ((int*)ss->dense)[i]); */
-	/* 	printf("2 dense index %d: %zu\n", i, ss->dense_index[i]); */
+	/* 	printf("2 dense index %d: %zu\n", i, ss->sparse_index[i]); */
+	/* 	printf("2 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
 	/* } */
 
 	int *created_2 = whisker_ss_get(ss, 1, true);
@@ -97,8 +97,8 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 
 	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
 	/* { */
-	/* 	printf("3 dense %d: %d\n", i, ((int*)ss->dense)[i]); */
-	/* 	printf("3 dense index %d: %zu\n", i, ss->dense_index[i]); */
+	/* 	printf("3 dense index %d: %zu\n", i, ss->sparse_index[i]); */
+	/* 	printf("3 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
 	/* } */
 
 	// get it again without create
@@ -106,8 +106,8 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 
 	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
 	/* { */
-	/* 	printf("4 dense %d: %d\n", i, ((int*)ss->dense)[i]); */
-	/* 	printf("4 dense index %d: %zu\n", i, ss->dense_index[i]); */
+	/* 	printf("4 dense index %d: %zu\n", i, ss->sparse_index[i]); */
+	/* 	printf("4 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
 	/* } */
 
 	ck_assert_int_eq(456, *created_3);
@@ -160,6 +160,65 @@ START_TEST(test_whisker_sparse_set_set)
 }
 END_TEST
 
+START_TEST(test_whisker_sparse_set_sort_by_index)
+{
+	whisker_sparse_set *ss;
+	whisker_ss_create_t(&ss, int);
+
+	// set some values
+	whisker_ss_set(ss, 1, &(int){7});
+	whisker_ss_set(ss, 0, &(int){9});
+	whisker_ss_set(ss, 100, &(int){4});
+	whisker_ss_set(ss, 10, &(int){3});
+
+	// TODO: add option to disable auto sort
+	/* // validate dense index order */
+	/* int expected[] = {1,0,100,10}; */
+	/* for (int i = 0; i < warr_length(ss->sparse_index); ++i) */
+	/* { */
+	/* 	ck_assert_uint_eq(expected[i], ss->sparse_index[i]); */
+	/* 	printf("ss sort dense index %d: %zu:%zu\n", i, ss->sparse_index[i], ((int*)ss->dense)[i]); */
+	/* } */
+    /*  */
+	/* // validate dense order */
+	/* int expected_dense[] = {7, 9, 4, 3}; */
+	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* { */
+	/* 	ck_assert_uint_eq(expected_dense[i], ((int*)ss->dense)[i]); */
+	/* } */
+    /*  */
+	/* // sort dense array by sparse index */
+	/* whisker_ss_sort(ss); */
+
+	// validate dense index order
+	int expected_sorted[] = {0,1,10,100};
+	for (int i = 0; i < warr_length(ss->sparse_index); ++i)
+	{
+		ck_assert_uint_eq(expected_sorted[i], ss->sparse_index[i]);
+		printf("ss sorted dense index %d: %zu:%zu\n", i, ss->sparse_index[i], ((int*)ss->dense)[i]);
+	}
+
+	// validate dense order
+	int expected_dense_sorted[] = {9, 7, 3, 4};
+	for (int i = 0; i < warr_length(ss->dense); ++i)
+	{
+		ck_assert_uint_eq(expected_dense_sorted[i], ((int*)ss->dense)[i]);
+	}
+
+	// validate dense indexes point to the correct values
+	int *val1 = whisker_ss_get(ss, 0, false);
+	ck_assert_int_eq(9, *val1);
+	int *val2 = whisker_ss_get(ss, 1, false);
+	ck_assert_int_eq(7, *val2);
+	int *val3 = whisker_ss_get(ss, 10, false);
+	ck_assert_int_eq(3, *val3);
+	int *val4 = whisker_ss_get(ss, 100, false);
+	ck_assert_int_eq(4, *val4);
+
+	whisker_ss_free(ss);
+}
+END_TEST
+
 Suite* whisker_sparse_set_suite(void)
 {
 	Suite *s;
@@ -177,6 +236,7 @@ Suite* whisker_sparse_set_suite(void)
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_remove);
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_create_large);
 	tcase_add_test(tc_core, test_whisker_sparse_set_set);
+	tcase_add_test(tc_core, test_whisker_sparse_set_sort_by_index);
 
 	suite_add_tcase(s, tc_core);
 

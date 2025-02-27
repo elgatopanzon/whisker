@@ -44,7 +44,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 		return E_WHISKER_SS_ARR;
 	}
 
-	E_WHISKER_ARR arr_err3 = whisker_arr_create_f(sizeof(uint64_t), 0, (void**)&ss_new->dense_index);
+	E_WHISKER_ARR arr_err3 = whisker_arr_create_f(sizeof(uint64_t), 0, (void**)&ss_new->sparse_index);
 	if (arr_err3 != E_WHISKER_ARR_OK)
 	{
 		free(ss_new);
@@ -60,7 +60,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 		free(ss_new);
 		wbarr_free(ss_new->sparse);
 		warr_free(ss_new->dense);
-		warr_free(ss_new->dense_index);
+		warr_free(ss_new->sparse_index);
 	}
 
 	*ss = ss_new;
@@ -73,7 +73,7 @@ void whisker_ss_free(whisker_sparse_set *ss)
 {
 	wbarr_free(ss->sparse);
 	warr_free(ss->dense);
-	warr_free(ss->dense_index);
+	warr_free(ss->sparse_index);
 	wtrie_free_node(ss->sparse_trie, true);
 	free(ss);
 }
@@ -84,64 +84,84 @@ void whisker_ss_free(whisker_sparse_set *ss)
 // set an element in the sparse set with the given index
 E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 {
-    E_WHISKER_SS set_err = whisker_ss_set_dense_index(ss, index, warr_header(ss->dense)->length);
+    uint64_t dense_index = whisker_ss_get_dense_index(ss, index);
 
-    if (set_err != E_WHISKER_SS_OK)
-    {
-        return E_WHISKER_SS_ARR;
+    if (dense_index == UINT64_MAX) {
+    	E_WHISKER_SS set_err = whisker_ss_set_dense_index(ss, index, warr_header(ss->dense)->length);
+
+    	if (set_err != E_WHISKER_SS_OK)
+    	{
+        	return E_WHISKER_SS_ARR;
+    	}
+
+    	E_WHISKER_ARR push_err = warr_push(&ss->dense, value);
+    	if (push_err != E_WHISKER_ARR_OK)
+    	{
+        	return E_WHISKER_SS_ARR;
+    	}
+
+    	push_err = warr_push(&ss->sparse_index, &index);
+    	if (push_err != E_WHISKER_ARR_OK)
+    	{
+        	return E_WHISKER_SS_ARR;
+    	}
+
+		if (WHISKER_SPARSE_SET_AUTOSORT)
+		{
+    		whisker_ss_sort(ss);
+		}
     }
-
-    E_WHISKER_ARR push_err = warr_push(&ss->dense, value);
-    if (push_err != E_WHISKER_ARR_OK)
+    else
     {
-        return E_WHISKER_SS_ARR;
-    }
-
-    push_err = warr_push(&ss->dense_index, &index);
-    if (push_err != E_WHISKER_ARR_OK)
-    {
-        return E_WHISKER_SS_ARR;
+    	size_t element_size = warr_header(ss->dense)->element_size;
+		memcpy(ss->dense + dense_index * element_size, value, element_size);
     }
 
     return E_WHISKER_SS_OK;
 }
 
-void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index, bool create)
-{
+void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index, bool create) {
     uint64_t dense_index = whisker_ss_get_dense_index(ss, index);
 
-    if (dense_index == UINT64_MAX && !create)
-    {
-        return NULL;
-    }
-
-    if (dense_index == UINT64_MAX && create)
-    {
+    if (dense_index == UINT64_MAX) {
+        if (!create) return NULL;
         whisker_ss_set(ss, index, warr_header(ss->dense)->swap_buffer);
-        dense_index = warr_length(ss->dense_index) - 1;
+    	dense_index = whisker_ss_get_dense_index(ss, index);
     }
 
-    return (ss->dense + dense_index * warr_header(ss->dense)->element_size);
+    return ss->dense + dense_index * warr_header(ss->dense)->element_size;
 }
 
 E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     uint64_t dense_index = whisker_ss_get_dense_index(ss, index);
     if (dense_index == UINT64_MAX) return E_WHISKER_SS_OK;
 
+
+	// last into the dense and sparse_index array
     size_t last_index = warr_header(ss->dense)->length - 1;
-    uint64_t dense_index_last = ss->dense_index[last_index];
+    uint64_t sparse_index_last = ss->sparse_index[last_index];
+    uint64_t dense_index_last = whisker_ss_get_dense_index(ss, sparse_index_last);
 
-    if (dense_index != dense_index_last) {
-        size_t element_size = warr_header(ss->dense)->element_size;
-        memcpy(ss->dense + dense_index * element_size, ss->dense + dense_index_last * element_size, element_size);
-        ss->dense_index[dense_index] = dense_index_last;
+    /* debug_printf("sparse index remove: %zu\n", index); */
+    /* debug_printf("dense index remove: %zu\n", dense_index); */
+    /* debug_printf("sparse index last: %zu\n", sparse_index_last); */
+    /* debug_printf("dense index last: %zu\n", dense_index_last); */
 
-    	whisker_ss_set_dense_index(ss, dense_index_last, dense_index);
-    }
+	// swap end dense values and indexes
+    size_t element_size = warr_header(ss->dense)->element_size;
+	ss->sparse_index[dense_index] = sparse_index_last;
+    memcpy(ss->dense + dense_index * element_size, ss->dense + dense_index_last * element_size, element_size);
+    whisker_ss_set_dense_index(ss, sparse_index_last, dense_index);
 
-    whisker_ss_set_dense_index(ss, index, (uint64_t){UINT64_MAX});
+	// clear out old index
+    whisker_ss_set_dense_index(ss, index, UINT64_MAX);
     warr_header(ss->dense)->length--;
-    warr_header(ss->dense_index)->length--;
+    warr_header(ss->sparse_index)->length--;
+
+	if (WHISKER_SPARSE_SET_AUTOSORT)
+	{
+    	whisker_ss_sort(ss);
+	}
 
     return E_WHISKER_SS_OK;
 }
@@ -196,5 +216,33 @@ uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
 	else
 	{
     	return *(uint64_t*)wbarr_get_and_fill(ss->sparse, index, 0xFF);
+	}
+}
+
+void whisker_ss_sort(whisker_sparse_set *ss)
+{
+    uint64_t *dense_index = ss->sparse_index;
+    void *dense = ss->dense;
+    size_t n = warr_length(ss->dense);
+    size_t element_size = warr_header(ss->dense)->element_size;
+    void* temp_dense = warr_header(ss->dense)->swap_buffer;
+
+	for (size_t i = 0; i < n - 1; i++) {
+    	for (size_t j = 0; j < n - i - 1; j++) {
+        	if (dense_index[j] > dense_index[j + 1]) {
+            	uint64_t temp_index = dense_index[j];
+            	uint64_t temp_index2 = dense_index[j + 1];
+
+            	dense_index[j] = dense_index[j + 1];
+            	dense_index[j + 1] = temp_index;
+
+            	whisker_ss_set_dense_index(ss, temp_index, j + 1);
+            	whisker_ss_set_dense_index(ss, temp_index2, j);
+
+            	memcpy(temp_dense, (char *)dense + j * element_size, element_size);
+            	memcpy((char *)dense + j * element_size, (char *)dense + (j + 1) * element_size, element_size);
+            	memcpy((char *)dense + (j + 1) * element_size, temp_dense, element_size);
+        	}
+    	}
 	}
 }
