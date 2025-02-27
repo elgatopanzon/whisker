@@ -6,7 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_memory.h"
-#include "whisker_block_array.h"
+/* #include "whisker_block_array.h" */
 #include "whisker_array.h"
 #include "whisker_trie.h"
 
@@ -28,10 +28,11 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	}
 
 	// allocate sparse block array
-	E_WHISKER_BLOCK_ARR arr_err = whisker_block_arr_create_f(sizeof(uint64_t), WHISKER_SPARSE_SET_BLOCK_SIZE, &ss_new->sparse);
-	if (arr_err != E_WHISKER_BLOCK_ARR_OK)
+	E_WHISKER_ARR arr_err = whisker_arr_create_f(sizeof(uint64_t), 0, (void**)&ss_new->sparse);
+	if (arr_err != E_WHISKER_ARR_OK)
 	{
 		free(ss_new);
+
 		return E_WHISKER_SS_ARR;
 	}
 
@@ -39,7 +40,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	if (arr_err2 != E_WHISKER_ARR_OK)
 	{
 		free(ss_new);
-		wbarr_free(ss_new->sparse);
+		warr_free(ss_new->sparse);
 
 		return E_WHISKER_SS_ARR;
 	}
@@ -48,7 +49,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	if (arr_err3 != E_WHISKER_ARR_OK)
 	{
 		free(ss_new);
-		wbarr_free(ss_new->sparse);
+		warr_free(ss_new->sparse);
 		warr_free(ss_new->dense);
 
 		return E_WHISKER_SS_ARR;
@@ -58,13 +59,15 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	if (trie_err != E_WHISKER_TRIE_OK)
 	{
 		free(ss_new);
-		wbarr_free(ss_new->sparse);
+		warr_free(ss_new->sparse);
 		warr_free(ss_new->dense);
 		warr_free(ss_new->sparse_index);
 	}
 
 	ss_new->length = 0;
+	ss_new->sparse_length = 0;
 	ss_new->element_size = element_size;
+	ss_new->swap_buffer = warr_header(ss_new->dense)->swap_buffer;
 
 	*ss = ss_new;
 
@@ -74,7 +77,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 // free a sparse set
 void whisker_ss_free(whisker_sparse_set *ss)
 {
-	wbarr_free(ss->sparse);
+	warr_free(ss->sparse);
 	warr_free(ss->dense);
 	warr_free(ss->sparse_index);
 	wtrie_free_node(ss->sparse_trie, true);
@@ -129,7 +132,7 @@ void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index, bool create) {
 
     if (dense_index == UINT64_MAX) {
         if (!create) return NULL;
-        whisker_ss_set(ss, index, warr_header(ss->dense)->swap_buffer);
+        whisker_ss_set(ss, index, ss->swap_buffer);
     	dense_index = whisker_ss_get_dense_index(ss, index);
     }
 
@@ -190,12 +193,28 @@ E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, 
             whisker_trie_set_value(&ss->sparse_trie, &index, sizeof(index), dense_index_value);
         }
     } else {
-        E_WHISKER_BLOCK_ARR set_err = wbarr_set(ss->sparse, index, &dense_index);
-        if (set_err != E_WHISKER_BLOCK_ARR_OK) {
-            return E_WHISKER_SS_ARR;
-        }
+    	whisker_ss_init_dense_index(ss, index);
+    	ss->sparse[index] = dense_index;
     }
     return E_WHISKER_SS_OK;
+}
+
+E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
+{
+	if (ss->sparse_length < index + 1)
+	{
+		E_WHISKER_ARR err = warr_resize(&ss->sparse, index + 1);
+		if (err != E_WHISKER_ARR_OK)
+		{
+			return E_WHISKER_SS_MEM;
+		}
+
+		memset(ss->sparse + ss->sparse_length, 0xFF, (index + 1 - ss->sparse_length) * sizeof(ss->sparse[0]));
+
+		ss->sparse_length = index + 1;
+	}
+
+	return E_WHISKER_SS_OK;
 }
 
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
@@ -205,7 +224,10 @@ uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
         whisker_trie_search_value_f(ss->sparse_trie, &index, sizeof(index), (void**)&dense_index);
         return dense_index ? *dense_index : UINT64_MAX;
     }
-    return *(uint64_t*)wbarr_get_and_fill(ss->sparse, index, 0xFF);
+
+    whisker_ss_init_dense_index(ss, index);
+
+    return ss->sparse[index];
 }
 
 void whisker_ss_sort(whisker_sparse_set *ss)
@@ -214,7 +236,7 @@ void whisker_ss_sort(whisker_sparse_set *ss)
     void *dense = ss->dense;
     size_t n = ss->length;
     size_t element_size = ss->element_size;
-    void* temp_dense = warr_header(ss->dense)->swap_buffer;
+    void* temp_dense = ss->swap_buffer;
 
 	for (size_t i = 0; i < n - 1; i++) {
     	for (size_t j = 0; j < n - i - 1; j++) {

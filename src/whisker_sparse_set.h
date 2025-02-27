@@ -6,7 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_array.h"
-#include "whisker_block_array.h"
+// #include "whisker_block_array.h"
 #include "whisker_trie.h"
 
 #ifndef WHISKER_SPARSE_SET_H
@@ -27,8 +27,10 @@ extern const char* E_WHISKER_SS_STR[];
 
 typedef struct whisker_sparse_set
 {
-	whisker_block_array *sparse;
+	uint64_t *sparse;
+	size_t sparse_length;
 	void *dense;
+	void *swap_buffer;
 	uint64_t *sparse_index;
 	whisker_trie *sparse_trie;
 	size_t length;
@@ -58,6 +60,7 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index);
 bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index);
 
 E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index);
+E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index);
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index);
 
 void whisker_ss_sort(whisker_sparse_set *ss);
