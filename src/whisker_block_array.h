@@ -24,6 +24,7 @@ typedef struct whisker_block_array
 	size_t block_count;
 	size_t type_size;
 	void **blocks;
+	size_t blocks_length;
 } whisker_block_array;
 
 // management functions

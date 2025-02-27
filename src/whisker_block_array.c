@@ -37,6 +37,7 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_f(size_t type_size, size_t block_si
 	arr->block_size = block_size;
 	arr->type_size = type_size;
 	arr->blocks = arrs;
+	arr->blocks_length = 0;
 
 	*block_arr = arr;
 
@@ -55,7 +56,7 @@ void whisker_block_arr_free_blocks(whisker_block_array *block_arr)
 {
 	if (block_arr->blocks != NULL)
 	{
-		for (int i = 0; i < warr_length(block_arr->blocks); ++i)
+		for (int i = 0; i < block_arr->blocks_length; ++i)
 		{
 			if (block_arr->blocks[i] != NULL)
 			{
@@ -72,13 +73,15 @@ void whisker_block_arr_free_blocks(whisker_block_array *block_arr)
 E_WHISKER_BLOCK_ARR whisker_block_arr_create_block(whisker_block_array *block_array, size_t block_id)
 {
 	// resize block pointer array if block id exceeds current length
-	if (warr_length(block_array->blocks) < block_id + 1)
+	if (block_array->blocks_length < block_id + 1)
 	{
 		E_WHISKER_ARR resize_err = warr_resize(&block_array->blocks, block_id + 1);
 		if (resize_err != E_WHISKER_ARR_OK)
 		{
 			return E_WHISKER_BLOCK_ARR_MEM;
 		}
+
+		block_array->blocks_length = block_id + 1;
 	}
 
 	// allocate the block if it's currently NULL
@@ -120,7 +123,7 @@ inline void* whisker_block_arr_get(whisker_block_array *block_arr, size_t index)
 void* whisker_block_arr_get_and_fill(whisker_block_array *block_arr, size_t index, char fill_with)
 {
 	size_t block_id = whisker_block_arr_get_block_id(block_arr->block_size, index);
-	bool block_exists = (warr_length(block_arr->blocks) >= block_id + 1 && block_arr->blocks[block_id] != NULL);
+	bool block_exists = (block_arr->blocks_length >= block_id + 1 && block_arr->blocks[block_id] != NULL);
 
 	void* value = whisker_block_arr_get(block_arr, index);
 
