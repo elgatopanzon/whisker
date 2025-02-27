@@ -31,6 +31,8 @@ typedef struct whisker_sparse_set
 	void *dense;
 	uint64_t *sparse_index;
 	whisker_trie *sparse_trie;
+	size_t length;
+	size_t element_size;
 } whisker_sparse_set;
 
 #define whisker_ss_create_t(ss, t) whisker_ss_create_f(ss, sizeof(t))
