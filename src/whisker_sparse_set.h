@@ -55,7 +55,7 @@ void whisker_ss_free(whisker_sparse_set *ss);
 
 // operation functions
 E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value);
-void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index, bool create);
+void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index);
 E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index);
 bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index);
 

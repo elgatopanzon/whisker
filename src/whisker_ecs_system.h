@@ -29,7 +29,7 @@ typedef struct whisker_ecs_system_update
 struct whisker_ecs_system
 {
 	whisker_ecs_entity_id entity_id;
-	void (*system_ptr)(struct whisker_ecs_system_update);
+	void (*system_ptr)(struct whisker_ecs_system*);
 	int8_t thread_id;
 	double last_update;
 	double delta_time;

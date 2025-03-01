@@ -146,54 +146,49 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 
 E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_entities *entities, whisker_ecs_components *components, whisker_ecs_entity_id entity_id)
 {
-	system->system_ptr((whisker_ecs_system_update) {
-		.entities = entities,
-		.components = components,
-		.system = system,
-		.entity_id = entity_id,
-		});
+	system->system_ptr(system);
 
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_sync_system_archetype_entities(whisker_ecs_systems *systems, whisker_ecs_entities *entities)
-{
-	// check for changed entity archetypes
-	whisker_ecs_entity_archetype_change change;
-	while (warr_pop(&entities->archetype_changes, &change) == E_WHISKER_ARR_OK) 
-	{
-		/* debug_printf("ecs:sys:syncing changes: e=%zu a=%zu t=%d\n", change.entity_id.id, change.archetype_id.id, change.change_type); */
-
-		bool entity_alive = entities->entities[change.entity_id.index].alive;
-
-		for (int si = 0; si < warr_length(systems->systems); ++si)
-		{
-			whisker_ecs_system *system = &systems->systems[si];
-
-			/* debug_printf("ecs:sys:syncing changes: archetype %zu in system %zu (alive: %d)\n", change.archetype_id.id, system->entity_id.id, entity_alive); */
-
-			// determine if we need to set it or unset it in the system's
-			// archetype
-			// -1 = nothing
-			// 0 = unset
-			// 1 = set
-			int action = (!entity_alive || !whisker_ecs_a_match(system->read_archetype, entities->entities[change.entity_id.index].archetype)) ? 0 : 1;
-
-			/* debug_printf("ecs:sys:syncing archetype changes: entity %zu archetype %zu in system %zu (action: %d)\n", change.entity_id.id, change.archetype_id.id, system->entity_id.id, action); */
-
-			if (action == 0)
-			{
-				whisker_ecs_a_remove(&system->archetype_entities, change.entity_id);
-			}
-			else if (action == 1)
-			{
-				whisker_ecs_a_set(&system->archetype_entities, change.entity_id);
-			}
-		}
-	}
-	
-	return E_WHISKER_ECS_SYS_OK;
-}
+/* E_WHISKER_ECS_SYS whisker_ecs_s_sync_system_archetype_entities(whisker_ecs_systems *systems, whisker_ecs_entities *entities) */
+/* { */
+/* 	// check for changed entity archetypes */
+/* 	whisker_ecs_entity_archetype_change change; */
+/* 	while (warr_pop(&entities->archetype_changes, &change) == E_WHISKER_ARR_OK)  */
+/* 	{ */
+/* 		#<{(| debug_printf("ecs:sys:syncing changes: e=%zu a=%zu t=%d\n", change.entity_id.id, change.archetype_id.id, change.change_type); |)}># */
+/*  */
+/* 		bool entity_alive = entities->entities[change.entity_id.index].alive; */
+/*  */
+/* 		for (int si = 0; si < warr_length(systems->systems); ++si) */
+/* 		{ */
+/* 			whisker_ecs_system *system = &systems->systems[si]; */
+/*  */
+/* 			#<{(| debug_printf("ecs:sys:syncing changes: archetype %zu in system %zu (alive: %d)\n", change.archetype_id.id, system->entity_id.id, entity_alive); |)}># */
+/*  */
+/* 			// determine if we need to set it or unset it in the system's */
+/* 			// archetype */
+/* 			// -1 = nothing */
+/* 			// 0 = unset */
+/* 			// 1 = set */
+/* 			int action = (!entity_alive || !whisker_ecs_a_match(system->read_archetype, entities->entities[change.entity_id.index].archetype)) ? 0 : 1; */
+/*  */
+/* 			#<{(| debug_printf("ecs:sys:syncing archetype changes: entity %zu archetype %zu in system %zu (action: %d)\n", change.entity_id.id, change.archetype_id.id, system->entity_id.id, action); |)}># */
+/*  */
+/* 			if (action == 0) */
+/* 			{ */
+/* 				whisker_ecs_a_remove(&system->archetype_entities, change.entity_id); */
+/* 			} */
+/* 			else if (action == 1) */
+/* 			{ */
+/* 				whisker_ecs_a_set(&system->archetype_entities, change.entity_id); */
+/* 			} */
+/* 		} */
+/* 	} */
+/* 	 */
+/* 	return E_WHISKER_ECS_SYS_OK; */
+/* } */
 
 whisker_ecs_entity_id *whisker_ecs_s_get_custom_archetype(whisker_ecs_system *system, int index)
 {
@@ -301,7 +296,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_component_cache(whisker_ecs_system *system,
 void *whisker_ecs_s_get_component(whisker_ecs_system *system, size_t index, size_t size, whisker_ecs_entity_id entity_id, bool read_or_write)
 {
 	// note: this will crash if the array for this index hasn't been initialised
-	return wss_get(system->components_cache->components[index], entity_id.index, true);
+	return wss_get(system->components_cache->components[index], entity_id.index);
 }
 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name) {

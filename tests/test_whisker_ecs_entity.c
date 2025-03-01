@@ -22,7 +22,7 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 	// verify empty arrays
 	// note: starts with 1, since it contains entity 0
 	ck_assert_int_eq(1, warr_length(entities->entities));
-	ck_assert_int_eq(0, warr_length(entities->dead_entities));
+	ck_assert_int_eq(0, warr_length(entities->destroyed_entities));
 	ck_assert_int_eq(0, warr_length(entities->entity_names));
 
 	// free
@@ -37,9 +37,9 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	whisker_ecs_e_create_entities(&entities);
 
 	// create some entities
-	wecs_e_id e1; whisker_ecs_e_create_(entities, &e1);
-	wecs_e_id e2; whisker_ecs_e_create_(entities, &e2);
-	wecs_e_id e3; whisker_ecs_e_create_(entities, &e3);
+	wecs_id e1; whisker_ecs_e_create_(entities, &e1);
+	wecs_id e2; whisker_ecs_e_create_(entities, &e2);
+	wecs_id e3; whisker_ecs_e_create_(entities, &e3);
 
 	// validate entity count
 	// note: since we added 3 and 0 already exists, the length is 4
@@ -74,7 +74,7 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	ck_assert_uint_eq(1, whisker_ecs_e(entities, e3)->id.version);
 
 	// create a new entity (it should recycle 1 with version 1 first)
-	wecs_e_id e4; whisker_ecs_e_create_(entities, &e4);
+	wecs_id e4; whisker_ecs_e_create_(entities, &e4);
 	ck_assert_uint_eq(1, e4.index);
 	ck_assert_uint_eq(1, e4.version);
 
@@ -89,9 +89,9 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	whisker_ecs_e_create_entities(&entities);
 
 	// create some named entities
-	wecs_e_id e1; whisker_ecs_e_create_named_(entities, "e1", &e1);
-	wecs_e_id e2; whisker_ecs_e_create_named_(entities, "e2", &e2);
-	wecs_e_id e3; whisker_ecs_e_create_named_(entities, "e3", &e3);
+	wecs_id e1; whisker_ecs_e_create_named_(entities, "e1", &e1);
+	wecs_id e2; whisker_ecs_e_create_named_(entities, "e2", &e2);
+	wecs_id e3; whisker_ecs_e_create_named_(entities, "e3", &e3);
 
 	// get entity struct by name
 	wecs_entity *e1_fetched = wecs_e_named(entities, "e1");
@@ -109,7 +109,7 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	ck_assert_str_eq("e3", e3_fetched->name);
 
 	// create an entity with the same name, to get the existing entity
-	wecs_e_id e4; whisker_ecs_e_create_named_(entities, "e3", &e4);
+	wecs_id e4; whisker_ecs_e_create_named_(entities, "e3", &e4);
 	ck_assert_uint_eq(3, e4.index);
 
 	// destroy an entity, validate the key no longer works
@@ -161,8 +161,7 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	ck_assert_int_eq(3, warr_length(a3));
 
 	// verify the entity IDs created
-	// note: this is now updated since it's sorted
-	int expected_2[] = {1, 3, 4};
+	int expected_2[] = {3, 4, 1};
 	for (int i = 0; i < 3; ++i)
 	{
 		ck_assert_uint_eq(expected_2[i], a3[i].index);

@@ -135,7 +135,7 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 	/* components->components[component_id.index] = component_array; */
 
 	// return component pointer
-	return wss_get(component_array, entity_id.index, true);
+	return wss_get(component_array, entity_id.index);
 	/* return component_array + (entity_id.index * component_size); */
 }
 
