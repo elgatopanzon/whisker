@@ -13,6 +13,10 @@
 
 #include "whisker_ecs.h"
 
+/************
+*  arrays  *
+************/
+
 /*************************************
 *  entities struct management  *
 *************************************/
@@ -26,34 +30,31 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 	}
 
 	// create arrays and dict
-	if (warr_create(whisker_ecs_entity, 0, &e->entities) != E_WHISKER_ARR_OK)
+	if (whisker_arr_create_whisker_ecs_entity(&e->entities, 0) != E_WHISKER_ARR_OK)
 	{
 		free(e);
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
-	e->entities_length = warr_length(e->entities);
 
-	if (warr_create(whisker_ecs_entity_index, 0, &e->destroyed_entities) != E_WHISKER_ARR_OK)
+	if (whisker_arr_create_whisker_ecs_entity_index(&e->destroyed_entities, 0) != E_WHISKER_ARR_OK)
 	{
-		warr_free(e->entities);
+		whisker_arr_free_whisker_ecs_entity(e->entities);
 		free(e);
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
-	e->destroyed_entities_length = warr_length(e->destroyed_entities);
 
-	if (warr_create(whisker_ecs_entity_deferred_action, 0, &e->deferred_actions) != E_WHISKER_ARR_OK)
+	if (whisker_arr_create_whisker_ecs_entity_deferred_action(&e->deferred_actions, 0) != E_WHISKER_ARR_OK)
 	{
-		warr_free(e->entities);
-		warr_free(e->destroyed_entities);
+		whisker_arr_free_whisker_ecs_entity(e->entities);
+		whisker_arr_free_whisker_ecs_entity_index(e->destroyed_entities);
 		free(e);
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
-	e->deferred_actions_length = warr_length(e->deferred_actions);
 
 	if (wdict_create(&e->entity_names, char*, 0) != E_WHISKER_DICT_OK)
 	{
-		warr_free(e->entities);
-		warr_free(e->destroyed_entities);
+		whisker_arr_free_whisker_ecs_entity(e->entities);
+		whisker_arr_free_whisker_ecs_entity_index(e->destroyed_entities);
 		free(e);
 		return E_WHISKER_ECS_ENTITY_DICT;
 	}
@@ -73,18 +74,18 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 {
 	// free entity name wstrs
-	for (int i = 0; i < warr_length(entities->entities); ++i)
+	for (int i = 0; i < entities->entities->length; ++i)
 	{
-		if (entities->entities[i].name != NULL)
+		if (entities->entities->arr[i].name != NULL)
 		{
-			wstr_free(entities->entities[i].name);
+			wstr_free(entities->entities->arr[i].name);
 		}
 	}
 
-	warr_free(entities->entities);
-	warr_free(entities->destroyed_entities);
+	whisker_arr_free_whisker_ecs_entity(entities->entities);
+	whisker_arr_free_whisker_ecs_entity_index(entities->destroyed_entities);
 	wdict_free(entities->entity_names);
-	warr_free(entities->deferred_actions);
+	whisker_arr_free_whisker_ecs_entity_deferred_action(entities->deferred_actions);
 
 	free(entities);
 }
@@ -112,8 +113,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisk
 		whisker_ecs_entity_index recycled_index;
 		err_create = whisker_ecs_e_pop_recycled_(entities, &recycled_index);
 
-		new_id = entities->entities[recycled_index].id;
-		entities->entities[recycled_index].destroyed = false;
+		new_id = entities->entities->arr[recycled_index].id;
+		entities->entities->arr[recycled_index].destroyed = false;
 	}
 	else
 	{
@@ -133,9 +134,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisk
 // pop a recycled entity from the destroyed_entities stack
 E_WHISKER_ECS_ENTITY whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities, whisker_ecs_entity_index *entity_index)
 {
-	if (warr_pop_front(&entities->destroyed_entities, entity_index) != E_WHISKER_ARR_OK)
+	if (whisker_arr_pop_whisker_ecs_entity_index(entities->destroyed_entities, entity_index) != E_WHISKER_ARR_OK)
 		return E_WHISKER_ECS_ENTITY_ARR;
-	entities->destroyed_entities_length--;
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
@@ -147,16 +147,17 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 
 	// TODO: check for max entities reached if there's a limit set later
 	
-	if (warr_increment_size(&entities->entities) != E_WHISKER_ARR_OK)
+	if (whisker_arr_increment_size_whisker_ecs_entity(entities->entities) != E_WHISKER_ARR_OK)
 	{
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
-	entities->entities_length++;
 
-	entities->entities[entity_count].id.index = entity_count;
-	entities->entities[entity_count].destroyed = false;
+	entities->entities->arr[entity_count].id.index = entity_count;
+	entities->entities->arr[entity_count].id.version = 0;
+	entities->entities->arr[entity_count].destroyed = false;
+	entities->entities->arr[entity_count].name = NULL;
 
-	*entity_id = entities->entities[entity_count].id;
+	*entity_id = entities->entities->arr[entity_count].id;
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
@@ -235,9 +236,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	}
 
 	// push to dead entities stack
-	if (warr_push(&entities->destroyed_entities, &e->id.index) != E_WHISKER_ARR_OK)
+	if (whisker_arr_push_whisker_ecs_entity_index(entities->destroyed_entities, e->id.index) != E_WHISKER_ARR_OK)
 		return E_WHISKER_ECS_ENTITY_ARR;
-	entities->destroyed_entities_length++;
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
@@ -258,7 +258,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 
 E_WHISKER_ECS_ENTITY whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
 {
-	if (warr_push(&entities->deferred_actions, &action) == E_WHISKER_ARR_OK) 
+	if (whisker_arr_push_whisker_ecs_entity_deferred_action(entities->deferred_actions, action) == E_WHISKER_ARR_OK) 
 	{
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
@@ -271,12 +271,11 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_add_deffered_action(whisker_ecs_entities *ent
 E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
 {
 	whisker_ecs_entity_deferred_action action;
-	while (warr_pop(&entities->deferred_actions, &action) == E_WHISKER_ARR_OK) 
+	while (whisker_arr_pop_whisker_ecs_entity_deferred_action(entities->deferred_actions, &action) == E_WHISKER_ARR_OK) 
 	{
-		entities->deferred_actions_length--;
 		switch (action.action) {
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
-				entities->entities[action.id.index].destroyed = false;		
+				entities->entities->arr[action.id.index].destroyed = false;		
 				break;
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
 				whisker_ecs_e_destroy(entities, action.id);
@@ -300,7 +299,7 @@ whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_en
 		return NULL;
 	}
 
-	return &entities->entities[entity_id.index];
+	return &entities->entities->arr[entity_id.index];
 }
 
 // convert a numeric ID to an entity ID
@@ -333,7 +332,7 @@ bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_i
 // get the current count of entities in existence including alive and destroyed
 size_t whisker_ecs_e_count(whisker_ecs_entities *entities)
 {
-	return warr_length(entities->entities);
+	return entities->entities->length;
 }
 
 // get current count of alive entities
@@ -345,16 +344,16 @@ size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities)
 // get current count of destroyed entities
 size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities)
 {
-	return warr_length(entities->destroyed_entities);
+	return entities->destroyed_entities->length;
 }
 
 // convert a string of named entities in the format "name1,name2,name3" to an
 // array of entities, creating them if they don't already exist
-whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
+whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
 {
 	// entity list derived from string entity names
-	whisker_ecs_entity_id *entities_new;
-	warr_create(whisker_ecs_entity_id, 0, &entities_new);
+	whisker_arr_whisker_ecs_entity_id *entities_new;
+	whisker_arr_create_whisker_ecs_entity_id(&entities_new, 0);
 
 	char* entity_names; wstr(entity_names_str, &entity_names);
 	size_t names_length = wstr_length(entity_names);
@@ -385,7 +384,7 @@ whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *e
 			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 
 			// add the entity id to the final list, and reset name array
-			warr_push(&entities_new, &e);
+			whisker_arr_push_whisker_ecs_entity_id(entities_new, e);
 
 			search_index = i + 1;
 			if (mutated)
@@ -409,7 +408,7 @@ int whisker_ecs_e_compare_entity_ids_(const void *id_a, const void *id_b)
 }
 
 // sort an array of entities in ascending order
-void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities)
+void whisker_ecs_e_sort_entity_array(whisker_arr_whisker_ecs_entity_id *entities)
 {
-	qsort(entities, warr_length(entities), sizeof(whisker_ecs_entity_id), whisker_ecs_e_compare_entity_ids_);
+	qsort(entities->arr, entities->length, sizeof(whisker_ecs_entity_id), whisker_ecs_e_compare_entity_ids_);
 }

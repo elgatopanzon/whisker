@@ -86,17 +86,8 @@ E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *compon
 
 // get the component array for the provided component ID (create if doesn't
 // exist)
-E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_sparse_set **component_array)
+E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_sparse_set **component_array)
 {
-	if (warr_length(components->components) < component_id.index + 1 || components->components[component_id.index] == NULL)
-	{
-		E_WHISKER_ECS_COMP create_err = whisker_ecs_c_create_component_array(components, component_id, component_size);
-		if (create_err != E_WHISKER_ECS_COMP_OK)
-		{
-			return create_err;
-		}
-	}
-
 	*component_array = components->components[component_id.index];
 
 	return E_WHISKER_ECS_COMP_OK;
@@ -106,7 +97,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *com
 E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
 {
 	whisker_sparse_set* component_array;
-	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, 0, &component_array);
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
 	if (err != E_WHISKER_ECS_COMP_OK)
 	{
 		return err;
@@ -120,53 +111,45 @@ E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *co
 /************************************
 *  component management functions  *
 ************************************/
-void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id)
+void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	// get component array
 	whisker_sparse_set* component_array;
-	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, component_size, &component_array);
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
 	if (err != E_WHISKER_ECS_COMP_OK)
 	{
 		return NULL;
 	}
 
-	// grow component array if needed
-	/* whisker_ecs_c_grow_component_array_(&component_array, entity_id.index + 1); */
-	/* components->components[component_id.index] = component_array; */
-
 	// return component pointer
 	return wss_get(component_array, entity_id.index);
-	/* return component_array + (entity_id.index * component_size); */
-}
-
-E_WHISKER_ECS_COMP whisker_ecs_c_grow_component_array_(whisker_sparse_set **component_array, size_t capacity)
-{
-	/* if (warr_length(*component_array) >= capacity) */
-	/* { */
-	/* 	return E_WHISKER_ECS_COMP_OK; */
-	/* } */
-    /*  */
-	/* if (warr_resize(component_array, capacity) != E_WHISKER_ARR_OK) */
-	/* { */
-	/* 	return E_WHISKER_ECS_COMP_ARR; */
-	/* } */
-    /*  */
-	return E_WHISKER_ECS_COMP_OK;
 }
 
 E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
 {
-	void* component_ptr = whisker_ecs_c_get_component(components, component_id, component_size, entity_id);
-	if (component_ptr == NULL)
+	// grow array of sparse sets if required
+	whisker_ecs_c_grow_components_(components, component_id.index + 1);
+
+	// create a sparse set for the component if its null
+	if (warr_length(components->components) < component_id.index + 1 || components->components[component_id.index] == NULL)
 	{
-		return E_WHISKER_ECS_COMP_UNKNOWN;
+		E_WHISKER_ECS_COMP create_err = whisker_ecs_c_create_component_array(components, component_id, component_size);
+		if (create_err != E_WHISKER_ECS_COMP_OK)
+		{
+			return create_err;
+		}
 	}
 
-	memcpy(component_ptr, component, component_size);
+	// get the component array
+	whisker_sparse_set* component_array;
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
+	if (err != E_WHISKER_ECS_COMP_OK)
+	{
+		return err;
+	}
+
+	// set the component
+	wss_set(component_array, entity_id.index, component);
 
 	return E_WHISKER_ECS_COMP_OK;
 }
-
-/***********************
-*  utility functions  *
-***********************/

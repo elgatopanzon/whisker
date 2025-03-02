@@ -32,10 +32,20 @@ START_TEST(test_whisker_ecs_component_get_component_array)
 	whisker_ecs_components *c;
 	whisker_ecs_c_create_components(&c);
 
-	// create component array for aritrary IDs
-	whisker_sparse_set *uint_component_array;
-	whisker_ecs_entity_id uint_id = {.id = 123};
-	whisker_ecs_c_get_component_array(c, uint_id, sizeof(uint64_t), &uint_component_array);
+	// set a component and trigger creation of component sparse set
+	whisker_ecs_entity_id component_id = {.id = 123};
+	whisker_ecs_entity_id entity_id = {.id = 111};
+	uint64_t component = 5454;
+
+	// set the component
+	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), entity_id, &component);
+
+	// get the component sparse set
+	whisker_sparse_set *component_array;
+	whisker_ecs_c_get_component_array(c, component_id, &component_array);
+
+	// verify length
+	ck_assert_uint_eq(1, component_array->sparse_index->length);
 
 	// free
 	whisker_ecs_c_free_components(c);
@@ -50,39 +60,16 @@ START_TEST(test_whisker_ecs_component_get_and_set)
 	whisker_ecs_entity_id component_id = {.id = 3};
 
 	whisker_ecs_entity_id e1 = {.id = 0};
-	whisker_ecs_entity_id e2 = {.id = 1};
-	whisker_ecs_entity_id e3 = {.id = 2};
-
-	// get component (should return default value)
-	uint64_t *uint_e1 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1);
-	*uint_e1 = 1;
-	uint64_t *uint_e2 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e2);
-	*uint_e2 = 2;
-	uint64_t *uint_e3 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e3);
-	*uint_e3 = 3;
-
-	/* ck_assert_ptr_eq(&ca[e1.index], whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1)); */
-
-	/* ck_assert_ptr_eq(&ca[e3.index], uint_e3); */
-
-	ck_assert_uint_eq(1, *uint_e1);
-	ck_assert_uint_eq(1, *(uint64_t*)whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1));
-
-	// note: not having pointer stability caused them to change
-	uint_e2 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e2);
-	uint_e3 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e3);
-	ck_assert_uint_eq(2, *uint_e2);
-	ck_assert_uint_eq(3, *uint_e3);
 
 	// set using component set
 	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10});
 
 	// check array
-	uint_e1 = whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1);
+	int64_t *uint_e1 = whisker_ecs_c_get_component(c, component_id, e1);
 	ck_assert_uint_eq(10, *uint_e1);
 
 	// check edirectly
-	ck_assert_uint_eq(10, *(uint64_t*)whisker_ecs_c_get_component(c, component_id, sizeof(uint64_t), e1));
+	ck_assert_uint_eq(10, *(uint64_t*)whisker_ecs_c_get_component(c, component_id, e1));
 
 	// free
 	whisker_ecs_c_free_components(c);

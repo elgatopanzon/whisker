@@ -5,6 +5,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_ecs_entity_types.h"
 #include "whisker_ecs_entity.h"
 
 #ifndef WHISKER_ECS_ARCHETYPE_H
@@ -21,7 +22,7 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_free(whisker_ecs_entity_id *archetype);
 // utility function
 int whisker_ecs_a_has_id(whisker_ecs_entity_id *archetype, whisker_ecs_entity_id archetype_id);
 bool whisker_ecs_a_match(whisker_ecs_entity_id *archetype_a, whisker_ecs_entity_id *archetype_b);
-whisker_ecs_entity_id* whisker_ecs_a_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
+whisker_arr_whisker_ecs_entity_id* whisker_ecs_a_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
 
 #endif /* WHISKER_ECS_ARCHETYPE_H */
 

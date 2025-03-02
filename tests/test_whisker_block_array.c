@@ -7,6 +7,7 @@
 #include "whisker_std.h"
 
 #include "whisker_block_array.h"
+#include "generics/whisker_generic_block_array.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +95,42 @@ START_TEST(test_whisker_block_arr_nested)
 }
 END_TEST
 
+START_TEST(test_whisker_block_arr_generic_create)
+{
+	// create a block array
+	whisker_block_arr_w_T *b_arr;
+	whisker_block_arr_create_w_T(&b_arr, 128);
+
+	ck_assert_int_eq(0, b_arr->blocks->length);
+
+	// free
+	whisker_block_arr_free_w_T(b_arr);
+}
+END_TEST
+
+START_TEST(test_whisker_block_arr_generic_set_and_get)
+{
+	// create a block array
+	whisker_block_arr_w_T *b_arr;
+	whisker_block_arr_create_w_T(&b_arr, 128);
+
+	ck_assert_int_eq(0, b_arr->blocks->length);
+
+	// set a value within some block ranges
+	whisker_block_arr_set_w_T(b_arr, 120, true);
+	whisker_block_arr_set_w_T(b_arr, 200, false);
+	whisker_block_arr_set_w_T(b_arr, 300, true);
+
+	// get one of the values
+	ck_assert_int_eq(1, whisker_block_arr_get_w_T(b_arr, 120));
+	ck_assert_int_eq(0, whisker_block_arr_get_w_T(b_arr, 200));
+	ck_assert_int_eq(1, whisker_block_arr_get_w_T(b_arr, 300));
+
+	// free
+	whisker_block_arr_free_w_T(b_arr);
+}
+END_TEST
+
 Suite* whisker_block_arr_suite(void)
 {
 	Suite *s;
@@ -108,6 +145,8 @@ Suite* whisker_block_arr_suite(void)
 	tcase_add_test(tc_core, test_whisker_block_arr_create);
 	tcase_add_test(tc_core, test_whisker_block_arr_get_and_set);
 	tcase_add_test(tc_core, test_whisker_block_arr_nested);
+	tcase_add_test(tc_core, test_whisker_block_arr_generic_create);
+	tcase_add_test(tc_core, test_whisker_block_arr_generic_set_and_get);
 
 	suite_add_tcase(s, tc_core);
 

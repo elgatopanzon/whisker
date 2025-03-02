@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_array.h"
+#include "generics/whisker_generic_array_uint64_t.h"
 // #include "whisker_block_array.h"
 #include "whisker_trie.h"
 
@@ -27,13 +28,11 @@ extern const char* E_WHISKER_SS_STR[];
 
 typedef struct whisker_sparse_set
 {
-	uint64_t *sparse;
-	size_t sparse_length;
+	whisker_arr_uint64_t *sparse;
+	whisker_arr_uint64_t *sparse_index;
+	whisker_trie *sparse_trie;
 	void *dense;
 	void *swap_buffer;
-	uint64_t *sparse_index;
-	whisker_trie *sparse_trie;
-	size_t length;
 	size_t element_size;
 } whisker_sparse_set;
 

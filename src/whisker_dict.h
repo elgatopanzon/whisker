@@ -42,6 +42,7 @@ typedef struct whisker_dict_header
 	whisker_trie* trie;
 
 	// cache array of the keys
+	whisker_array_header keys_header;
 	void** keys;
 
 	// this makes the struct array compatible

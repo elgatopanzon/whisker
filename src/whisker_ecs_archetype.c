@@ -20,7 +20,7 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_set(whisker_ecs_entity_id **archetype, whisker_
 	{
 		warr_push(&*archetype, &archetype_id);
 
-		whisker_ecs_e_sort_entity_array(*archetype);
+		/* whisker_ecs_e_sort_entity_array(*archetype); */
 
 		return E_WHISKER_ECS_ARCH_MATCH;
 	}
@@ -36,7 +36,7 @@ E_WHISKER_ECS_ARCH whisker_ecs_a_remove(whisker_ecs_entity_id **archetype, whisk
 		whisker_arr_swap((void**) &*archetype, idx, warr_length(*archetype) - 1);
 		whisker_arr_pop(&*archetype, &archetype_id);
 
-		whisker_ecs_e_sort_entity_array(*archetype);
+		/* whisker_ecs_e_sort_entity_array(*archetype); */
 
 		return E_WHISKER_ECS_ARCH_MATCH;
 	}
@@ -77,7 +77,7 @@ bool whisker_ecs_a_match(whisker_ecs_entity_id *archetype_a, whisker_ecs_entity_
     return i == a_length;
 }
 
-whisker_ecs_entity_id* whisker_ecs_a_from_named_entities(whisker_ecs_entities *entities, char* entity_names)
+whisker_arr_whisker_ecs_entity_id* whisker_ecs_a_from_named_entities(whisker_ecs_entities *entities, char* entity_names)
 {
 	return whisker_ecs_e_from_named_entities(entities, entity_names);
 }

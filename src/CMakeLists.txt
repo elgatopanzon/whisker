@@ -1,5 +1,10 @@
 # populate a list with all whisker library .c files
-file(GLOB WHISKER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/whisker*.c")
+function(recurse_files dir pattern result)
+    file(GLOB_RECURSE temp_files "${dir}/${pattern}")
+    set(${result} ${temp_files} PARENT_SCOPE)
+endfunction()
+
+recurse_files(${CMAKE_CURRENT_SOURCE_DIR} "whisker*.c" WHISKER_SOURCES)
 
 # create whisker library from whisker sources
 add_library(whisker OBJECT
@@ -10,6 +15,10 @@ add_library(whisker OBJECT
 target_include_directories(whisker
     PUBLIC
         ${PROJECT_SOURCE_DIR}/src
+)
+target_include_directories(whisker
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/src/generics
 )
 #
 # set_property(TARGET whisker

@@ -7,6 +7,7 @@
 #include "whisker_std.h"
 #include "whisker_block_array.h"
 #include "whisker_ecs_entity.h"
+#include "whisker_ecs_entity_types.h"
 #include "whisker_ecs_archetype.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"

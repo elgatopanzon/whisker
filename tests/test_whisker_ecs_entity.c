@@ -21,8 +21,8 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 
 	// verify empty arrays
 	// note: starts with 1, since it contains entity 0
-	ck_assert_int_eq(1, warr_length(entities->entities));
-	ck_assert_int_eq(0, warr_length(entities->destroyed_entities));
+	ck_assert_int_eq(1, entities->entities->length);
+	ck_assert_int_eq(0, entities->destroyed_entities->length);
 	ck_assert_int_eq(0, warr_length(entities->entity_names));
 
 	// free
@@ -43,13 +43,16 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 
 	// validate entity count
 	// note: since we added 3 and 0 already exists, the length is 4
-	ck_assert_uint_eq(4, warr_length(entities->entities));
+	ck_assert_uint_eq(4, entities->entities->length);
 	ck_assert_uint_eq(4, wecs_e_count(entities));
 	
 	// validate returned indexes
 	ck_assert_uint_eq(1, e1.index);
 	ck_assert_uint_eq(2, e2.index);
 	ck_assert_uint_eq(3, e3.index);
+	ck_assert_uint_eq(0, e1.version);
+	ck_assert_uint_eq(0, e2.version);
+	ck_assert_uint_eq(0, e3.version);
 
 	// validate indexes with obtained entity pointers
 	ck_assert_uint_eq(1, whisker_ecs_e(entities, e1)->id.index);
@@ -73,9 +76,9 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	ck_assert_uint_eq(0, e3.version);
 	ck_assert_uint_eq(1, whisker_ecs_e(entities, e3)->id.version);
 
-	// create a new entity (it should recycle 1 with version 1 first)
+	// create a new entity (it should recycle 3 with version 1 first)
 	wecs_id e4; whisker_ecs_e_create_(entities, &e4);
-	ck_assert_uint_eq(1, e4.index);
+	ck_assert_uint_eq(3, e4.index);
 	ck_assert_uint_eq(1, e4.version);
 
 	// free entities
@@ -130,24 +133,24 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	whisker_ecs_e_create_entities(&en);
 
 	// create archetype from named entities
-	whisker_ecs_entity_id *a1 = whisker_ecs_e_from_named_entities(en, "test1,test2");
-	ck_assert_int_eq(2, warr_length(a1));
+	whisker_arr_whisker_ecs_entity_id *a1 = whisker_ecs_e_from_named_entities(en, "test1,test2");
+	ck_assert_int_eq(2, a1->length);
 
 	// verify the entity IDs created
 	int expected[] = {1, 2};
 	for (int i = 0; i < 2; ++i)
 	{
-		ck_assert_uint_eq(expected[i], a1[i].index);
+		ck_assert_uint_eq(expected[i], a1->arr[i].index);
 	}
 
 	// create the archetype from same named entities
-	whisker_ecs_entity_id *a2 = whisker_ecs_e_from_named_entities(en, "test1,test2");
-	ck_assert_int_eq(2, warr_length(a2));
+	whisker_arr_whisker_ecs_entity_id *a2 = whisker_ecs_e_from_named_entities(en, "test1,test2");
+	ck_assert_int_eq(2, a2->length);
 
 	// verify the entity ids are the same
 	for (int i = 0; i < 2; ++i)
 	{
-		ck_assert_uint_eq(expected[i], a2[i].index);
+		ck_assert_uint_eq(expected[i], a2->arr[i].index);
 	}
 
 	// create some new named entities
@@ -157,21 +160,21 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	whisker_ecs_e_create_named_(en, "test4", &e4);
 
 	// create new archetype from the named entities
-	whisker_ecs_entity_id *a3 = whisker_ecs_e_from_named_entities(en, "test3,test4,test1");
-	ck_assert_int_eq(3, warr_length(a3));
+	whisker_arr_whisker_ecs_entity_id *a3 = whisker_ecs_e_from_named_entities(en, "test3,test4,test1");
+	ck_assert_int_eq(3, a3->length);
 
 	// verify the entity IDs created
 	int expected_2[] = {3, 4, 1};
 	for (int i = 0; i < 3; ++i)
 	{
-		ck_assert_uint_eq(expected_2[i], a3[i].index);
+		ck_assert_uint_eq(expected_2[i], a3->arr[i].index);
 	}
 
 	// free
 	whisker_ecs_e_free_entities(en);
-	warr_free(a1);
-	warr_free(a2);
-	warr_free(a3);
+	whisker_arr_free_whisker_ecs_entity_id(a1);
+	whisker_arr_free_whisker_ecs_entity_id(a2);
+	whisker_arr_free_whisker_ecs_entity_id(a3);
 }
 END_TEST
 
