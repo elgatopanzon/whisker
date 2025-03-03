@@ -22,6 +22,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems)
 
 	if (warr_create(whisker_ecs_system, 0, &s->systems) != E_WHISKER_ARR_OK)
 		return E_WHISKER_ECS_SYS_ARR;
+	s->systems_length = 0;
 
 	*systems = s;
 
@@ -30,7 +31,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems)
 
 void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 {
-	for (int i = 0; i < warr_length(systems->systems); ++i)
+	for (int i = 0; i < systems->systems_length; ++i)
 	{
 		whisker_ecs_s_free_system(&systems->systems[i]);
 	}
@@ -65,8 +66,9 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 
 	// add system to main systems list
 	warr_push(&systems->systems, &system);
+	systems->systems_length++;
 
-	return &systems->systems[warr_length(systems->systems) - 1];
+	return &systems->systems[systems->systems_length - 1];
 }
 
 void whisker_ecs_s_free_system(whisker_ecs_system *system)
@@ -116,7 +118,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
 	// matches, excluding updates for those which don't match
-	size_t systems_count = warr_length(systems->systems);
+	size_t systems_count = systems->systems_length;
 
 	for (size_t si = 0; si < systems_count; ++si)
 	{
@@ -313,20 +315,26 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 	itor->cursor = UINT64_MAX;
 	itor->count = 0;
 	itor->entity_id = whisker_ecs_e_id(UINT64_MAX);
-	whisker_arr_reset_void_(itor->component_arrays, false);
 
 	// find the master iterator by finding the smallest set
 	for (int i = 0; i < itor->component_ids->length; ++i)
 	{
 		whisker_sparse_set *component_array;
-		whisker_ecs_c_get_component_array(system->components, itor->component_ids->arr[i], &component_array);
-
-		if (component_array == NULL)
+		if (itor->component_arrays->arr[i] == NULL)
 		{
-			break;
-		}
+			whisker_ecs_c_get_component_array(system->components, itor->component_ids->arr[i], &component_array);
+			if (component_array == NULL)
+			{
+				itor->master_index = UINT64_MAX;
+				break;
+			}
 
-		whisker_arr_push_void_(itor->component_arrays, component_array);
+			itor->component_arrays->arr[i] = component_array;
+		}
+		else
+		{
+			component_array = itor->component_arrays->arr[i];
+		}
 
 		if (component_array->sparse_index->length < itor->count || itor->count == 0)
 		{
@@ -338,6 +346,36 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 	/* debug_printf("ecs:sys:itor master selected: %zu count %zu components %zu\n", itor->master_index, itor->count, itor->component_ids->length); */
 
 	return itor;
+}
+
+E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components)
+{
+	// convert read and write component names to component sparse sets
+	char *combined_components;
+	combined_components = malloc(strlen(read_components) + strlen(write_components) + 2);
+	strcpy(combined_components, read_components);
+	if (strlen(write_components) > 0)
+	{
+		strcat(combined_components, ",");
+		strcat(combined_components, write_components);
+	}
+
+	/* debug_printf("ecs:sys:itor init: read: %s write: %s\n", read_components, write_components); */
+	/* debug_printf("ecs:sys:itor init: combined: %s\n", combined_components); */
+
+	// convert component names to entities
+	if (itor->component_ids == NULL)
+	{
+		itor->component_ids = whisker_ecs_e_from_named_entities(system->entities, combined_components);
+		whisker_arr_resize_void_(itor->read, itor->component_ids->length, true);
+		whisker_arr_resize_void_(itor->write, itor->component_ids->length, true);
+		whisker_arr_resize_void_(itor->component_arrays, itor->component_ids->length, true);
+	}
+
+	// free combined string
+	free(combined_components);
+
+	return E_WHISKER_ECS_SYS_OK;
 }
 
 bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *itor)
@@ -444,31 +482,3 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 	return cursor_state == 0;
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components)
-{
-	// convert read and write component names to component sparse sets
-	char *combined_components;
-	combined_components = malloc(strlen(read_components) + strlen(write_components) + 2);
-	strcpy(combined_components, read_components);
-	if (strlen(write_components) > 0)
-	{
-		strcat(combined_components, ",");
-		strcat(combined_components, write_components);
-	}
-
-	/* debug_printf("ecs:sys:itor init: read: %s write: %s\n", read_components, write_components); */
-	/* debug_printf("ecs:sys:itor init: combined: %s\n", combined_components); */
-
-	// convert component names to entities
-	if (itor->component_ids == NULL)
-	{
-		itor->component_ids = whisker_ecs_e_from_named_entities(system->entities, combined_components);
-		whisker_arr_resize_void_(itor->read, itor->component_ids->length, true);
-		whisker_arr_resize_void_(itor->write, itor->component_ids->length, true);
-	}
-
-	// free combined string
-	free(combined_components);
-
-	return E_WHISKER_ECS_SYS_OK;
-}

@@ -18,13 +18,6 @@
 #ifndef WHISKER_ECS_SYSTEM_H
 #define WHISKER_ECS_SYSTEM_H
 
-typedef struct whisker_ecs_system whisker_ecs_system;
-
-typedef struct whisker_ecs_systems
-{
-	whisker_ecs_system *systems;	
-} whisker_ecs_systems;
-
 // system management functions
 E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems);
 void whisker_ecs_s_free_systems(whisker_ecs_systems *systems);

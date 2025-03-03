@@ -71,7 +71,7 @@ typedef struct whisker_ecs_iterator
 
 
 // component acting as a system container
-struct whisker_ecs_system
+typedef struct whisker_ecs_system
 {
 	whisker_ecs_entity_id entity_id;
 	void (*system_ptr)(struct whisker_ecs_system*);
@@ -86,7 +86,15 @@ struct whisker_ecs_system
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
 	whisker_sparse_set *iterators;
-};
+} whisker_ecs_system;
+
+typedef struct whisker_ecs_systems
+{
+	whisker_ecs_system *systems;	
+	size_t systems_length;
+} whisker_ecs_systems;
+
+
 
 #endif /* WHISKER_ECS_TYPES_H */
 
