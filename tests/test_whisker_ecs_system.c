@@ -79,27 +79,34 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_entity_id comp3 = whisker_ecs_e_create_named(e, "comp3");
 	whisker_ecs_entity_id comp4 = whisker_ecs_e_create_named(e, "comp4");
 	whisker_ecs_entity_id comp5 = whisker_ecs_e_create_named(e, "comp5");
+	whisker_ecs_entity_id comp6 = whisker_ecs_e_create_named(e, "comp6");
 
 	int val1 = 4345;
 	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(12), &val1);
 	int val2 = 98798;
 	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(54), &val2);
+	int val3 = 321;
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(88), &val3);
 
 	// request an iterator with the created components
-	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5");
+	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
 	whisker_sparse_set *comp2_ss;
-	whisker_ecs_c_get_component_array(c, itor->component_ids->arr[1], &comp2_ss);
+	whisker_ecs_c_get_component_array(c, itor->component_ids_rw->arr[1], &comp2_ss);
 	whisker_sparse_set *comp5_ss;
-	whisker_ecs_c_get_component_array(c, itor->component_ids->arr[4], &comp5_ss);
+	whisker_ecs_c_get_component_array(c, itor->component_ids_rw->arr[4], &comp5_ss);
+	whisker_sparse_set *comp6_ss;
+	whisker_ecs_c_get_component_array(c, itor->component_ids_opt->arr[0], &comp6_ss);
 
 	// validate values
 	int val1_obtained = *(int*)wss_get(comp2_ss, 12);
 	int val2_obtained = *(int*)wss_get(comp5_ss, 54);
+	int val3_obtained = *(int*)wss_get(comp6_ss, 88);
 
 	ck_assert_int_eq(4345, val1_obtained);
 	ck_assert_int_eq(98798, val2_obtained);
+	ck_assert_int_eq(321, val3_obtained);
 
 	// set some more components and do a demo iteration
 	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
@@ -107,12 +114,14 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
 	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
 	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
 
 	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 	/* whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }); */
 	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 
 	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
 	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
@@ -135,7 +144,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(20), &(int){ 123 });
 
 	// get the iterator again
-	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5");
+	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	whisker_ecs_entity_id expected_entities[] = {10,15,19};
 	while (whisker_ecs_s_iterate(sys, itor)) 
@@ -146,7 +155,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	printf("itor test: iteration ended\n");
 
 	// test iterator reset
-	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5");
+	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	while (whisker_ecs_s_iterate(sys, itor)) 
 	{
@@ -154,7 +163,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	}
 
 	// get another iterator with a single component
-	itor = whisker_ecs_s_get_iterator(sys, 1, "comp1", "");
+	itor = whisker_ecs_s_get_iterator(sys, 1, "comp1", "", "");
 
 	whisker_ecs_entity_id expected_entities_smaller[] = {10,11,15,16,19};
 	while (whisker_ecs_s_iterate(sys, itor)) 

@@ -100,10 +100,22 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 			{
 				whisker_arr_free_void_(itor.write);
 			}
-
-			if (itor.component_ids != NULL)
+			if (itor.opt != NULL)
 			{
-				whisker_arr_free_whisker_ecs_entity_id(itor.component_ids);
+				whisker_arr_free_void_(itor.opt);
+			}
+
+			if (itor.component_ids_rw != NULL)
+			{
+				whisker_arr_free_whisker_ecs_entity_id(itor.component_ids_rw);
+			}
+			if (itor.component_ids_w != NULL)
+			{
+				whisker_arr_free_whisker_ecs_entity_id(itor.component_ids_w);
+			}
+			if (itor.component_ids_opt != NULL)
+			{
+				whisker_arr_free_whisker_ecs_entity_id(itor.component_ids_opt);
 			}
 			if (itor.component_arrays != NULL)
 			{
@@ -285,6 +297,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 	// create sparse sets for component pointers
 	whisker_arr_create_void_(&itor_new->read, 0);
 	whisker_arr_create_void_(&itor_new->write, 0);
+	whisker_arr_create_void_(&itor_new->opt, 0);
 
 	whisker_arr_create_void_(&itor_new->component_arrays, 0);
 
@@ -293,7 +306,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components)
+whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components, char *optional_components)
 {
 	whisker_ecs_iterator *itor;
 
@@ -305,7 +318,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 
 		free(itor);
 		itor = wss_get(system->iterators, itor_index);
-		whisker_ecs_s_init_iterator(system, itor, read_components, write_components);
+		whisker_ecs_s_init_iterator(system, itor, read_components, write_components, optional_components);
 	}
 
 	itor = wss_get(system->iterators, itor_index);
@@ -317,12 +330,12 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 	itor->entity_id = whisker_ecs_e_id(UINT64_MAX);
 
 	// find the master iterator by finding the smallest set
-	for (int i = 0; i < itor->component_ids->length; ++i)
+	for (int i = 0; i < itor->component_ids_rw->length; ++i)
 	{
 		whisker_sparse_set *component_array;
 		if (itor->component_arrays->arr[i] == NULL)
 		{
-			whisker_ecs_c_get_component_array(system->components, itor->component_ids->arr[i], &component_array);
+			whisker_ecs_c_get_component_array(system->components, itor->component_ids_rw->arr[i], &component_array);
 			if (component_array == NULL)
 			{
 				itor->master_index = UINT64_MAX;
@@ -345,10 +358,27 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 
 	/* debug_printf("ecs:sys:itor master selected: %zu count %zu components %zu\n", itor->master_index, itor->count, itor->component_ids->length); */
 
+	// try to cache optional components when they are NULL
+	for (int i = 0; i < itor->component_ids_opt->length; ++i)
+	{
+		whisker_sparse_set *component_array;
+		size_t array_offset = itor->component_ids_rw->length + i;
+		if (itor->component_arrays->arr[array_offset] == NULL)
+		{
+			whisker_ecs_c_get_component_array(system->components, itor->component_ids_opt->arr[i], &component_array);
+			if (component_array == NULL)
+			{
+				continue;
+			}
+
+			itor->component_arrays->arr[array_offset] = component_array;
+		}
+	}
+
 	return itor;
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components)
+E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
 	// convert read and write component names to component sparse sets
 	char *combined_components;
@@ -363,13 +393,29 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	/* debug_printf("ecs:sys:itor init: read: %s write: %s\n", read_components, write_components); */
 	/* debug_printf("ecs:sys:itor init: combined: %s\n", combined_components); */
 
-	// convert component names to entities
-	if (itor->component_ids == NULL)
+	// rw components include read and write component IDs
+	if (itor->component_ids_rw == NULL)
 	{
-		itor->component_ids = whisker_ecs_e_from_named_entities(system->entities, combined_components);
-		whisker_arr_resize_void_(itor->read, itor->component_ids->length, true);
-		whisker_arr_resize_void_(itor->write, itor->component_ids->length, true);
-		whisker_arr_resize_void_(itor->component_arrays, itor->component_ids->length, true);
+		itor->component_ids_rw = whisker_ecs_e_from_named_entities(system->entities, combined_components);
+		whisker_arr_resize_void_(itor->read, itor->component_ids_rw->length, true);
+		whisker_arr_resize_void_(itor->write, itor->component_ids_rw->length, true);
+		whisker_arr_resize_void_(itor->component_arrays, itor->component_ids_rw->length, true);
+	}
+
+	// w components only includes write component IDs
+	// note: these do not resize the main component arrays
+	if (itor->component_ids_w == NULL)
+	{
+		itor->component_ids_w = whisker_ecs_e_from_named_entities(system->entities, write_components);
+	}
+
+	// opt components only include optional component IDs
+	// note: these belong at the end of the component arrays
+	if (itor->component_ids_opt == NULL)
+	{
+		itor->component_ids_opt = whisker_ecs_e_from_named_entities(system->entities, optional_components);
+		whisker_arr_resize_void_(itor->opt, itor->component_ids_opt->length, true);
+		whisker_arr_resize_void_(itor->component_arrays, itor->component_ids_rw->length + itor->component_ids_opt->length, true);
 	}
 
 	// free combined string
@@ -410,65 +456,56 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 	/* 	debug_printf("\n"); */
 	/* } */
 
-	// find and set the current cursor's components
 	int cursor_state = 0;
-	for (int ci = 0; ci < itor->component_arrays->length; ++ci)
+	for (size_t ci = 0; ci < itor->component_arrays->length; ++ci)
 	{
-		// continue loop if ci matches master index since we don't need to check
-		if (ci == itor->master_index)
-		{
-			/* debug_printf("ecs:sys:itor [%zu/%zu] component %d skipping (is master)\n", itor->cursor, itor->count - 1, ci); */
-			continue;
-		}
+    	if (ci == itor->master_index) continue;
 
-		// reset current cursor state
-		cursor_state = -1;
+    	cursor_state = -1;
+    	whisker_sparse_set *set = itor->component_arrays->arr[ci];
+    	bool optional = (ci + 1 > itor->component_ids_rw->length);
 
-		// get current set for component
-		whisker_sparse_set *set = itor->component_arrays->arr[ci];
-		/* debug_printf("ecs:sys:itor [%zu/%zu] component %d entity: ", itor->cursor, itor->count - 1, ci); */
-		/* for (int i = 0; i < set->sparse_index->length; ++i) */
-		/* { */
-		/* 	debug_printf("%zu ", set->sparse_index->arr[i]); */
-		/* } */
-		/* debug_printf("\n"); */
+		// optional only: allow NULL set
+    	if (set == NULL && optional)
+    	{
+        	cursor_state = 0;
+        	continue;
+    	}
 
-		// look for the next matching entity
-		// note: it's possible we need a need check for coming to the end of a
-		// list to also set the state invalid
-		for (int i = itor->cursor; i < set->sparse_index->length; ++i)
-		{
-			whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(master_set->sparse_index->arr[i]);
+		// begin cursor iteration
+    	for (size_t i = itor->cursor; i < set->sparse_index->length; ++i)
+    	{
+        	whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(master_set->sparse_index->arr[i]);
 
-			// check if cursor entity matches, if so set the component data
-			if (cursor_entity.index == master_entity.index)
-			{
-				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu == master entity %zu\n", itor->cursor, itor->count - 1, ci, cursor_entity.id, master_entity.id); */
+			// reached end of valid entities
+        	if (cursor_entity.index > master_entity.index)
+        	{
+            	cursor_state = optional ? 0 : 1;
+            	break;
+        	}
 
-				itor->read->arr[ci] = set->dense + (i * set->element_size);
-				itor->write->arr[ci] = set->dense + (i * set->element_size);
+        	if (system->entities->entities->length > cursor_entity.index + 1 && system->entities->entities->arr[cursor_entity.index].destroyed) continue;
 
-				// set cursor state to 0 to indicate success
-				cursor_state = 0;
+			// matched entity at cursor
+        	if (cursor_entity.index == master_entity.index)
+        	{
+            	size_t offset = i * set->element_size;
+            	if (!optional)
+            	{
+                	itor->read->arr[ci] = set->dense + offset;
+                	itor->write->arr[ci] = set->dense + offset;
+            	}
+            	else
+            	{
+                	itor->opt->arr[ci - itor->component_ids_rw->length] = set->dense + offset;
+            	}
 
-				break;
-			}
+            	cursor_state = 0;
+            	break;
+        	}
+    	}
 
-			// if the cursor entity is > than master, then we can early out
-			if (cursor_entity.index > master_entity.index)
-			{
-				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu > master entity %zu\n", itor->cursor, itor->count, ci, cursor_entity.id, master_entity.id); */
-				cursor_state = 1;
-				break;
-			}
-		}
-
-		// if the state is anything other than 0, then end the loop early
-		if (cursor_state != 0)
-		{
-			break;
-		}
-
+    	if (cursor_state != 0) break;
 	}
 
 	/* debug_printf("ecs:sys:itor cursor %zu state %d\n", itor->cursor, cursor_state); */

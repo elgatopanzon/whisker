@@ -35,9 +35,9 @@ int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* com
 
 // system iterator functions
 E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor);
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components);
+whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components, char *optional_components);
 bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *itor);
-E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components);
+E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components);
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 
