@@ -11,6 +11,7 @@
 #include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_index.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_deferred_action.h"
+#include "generics/whisker_generic_array_void_.h"
 
 #ifndef WHISKER_ECS_TYPES_H
 #define WHISKER_ECS_TYPES_H
@@ -47,6 +48,27 @@ typedef struct whisker_ecs_components
 //  system types  //
 ////////////////////
 
+typedef struct whisker_ecs_iterator
+{
+	// the master index points to the sparse set we're currently iterating
+	size_t master_index;
+
+	// current cursor position in the master iterator
+	size_t cursor;
+	size_t count;
+	whisker_ecs_entity_id entity_id;
+
+	// array of component name IDs
+	whisker_arr_whisker_ecs_entity_id *component_ids;
+	whisker_arr_void_ *component_arrays;
+
+	// read/write arrays for the components of the current iteration step
+	whisker_sparse_set *read;
+	whisker_sparse_set *write;
+
+} whisker_ecs_iterator;
+
+
 // component acting as a system container
 struct whisker_ecs_system
 {
@@ -62,6 +84,7 @@ struct whisker_ecs_system
 
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
+	whisker_sparse_set *iterators;
 };
 
 #endif /* WHISKER_ECS_TYPES_H */

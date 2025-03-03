@@ -88,6 +88,9 @@ E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *compon
 // exist)
 E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_sparse_set **component_array)
 {
+	// grow components if needed
+	whisker_ecs_c_grow_components_(components, component_id.index + 1);
+
 	*component_array = components->components[component_id.index];
 
 	return E_WHISKER_ECS_COMP_OK;
