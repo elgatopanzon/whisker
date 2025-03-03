@@ -92,11 +92,11 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)system->iterators->dense)[i];
 			if (itor.read != NULL)
 			{
-				whisker_ss_free(itor.read);
+				whisker_arr_free_void_(itor.read);
 			}
 			if (itor.write != NULL)
 			{
-				whisker_ss_free(itor.write);
+				whisker_arr_free_void_(itor.write);
 			}
 
 			if (itor.component_ids != NULL)
@@ -281,8 +281,8 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 	}
 
 	// create sparse sets for component pointers
-	whisker_ss_create_t(&itor_new->read, void *);
-	whisker_ss_create_t(&itor_new->write, void *);
+	whisker_arr_create_void_(&itor_new->read, 0);
+	whisker_arr_create_void_(&itor_new->write, 0);
 
 	whisker_arr_create_void_(&itor_new->component_arrays, 0);
 
@@ -355,8 +355,8 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 	whisker_sparse_set *master_set = itor->component_arrays->arr[itor->master_index];
 	whisker_ecs_entity_id master_entity = whisker_ecs_e_id(master_set->sparse_index->arr[itor->cursor]);
 	itor->entity_id = master_entity;
-	wss_set(itor->read, itor->master_index, &master_set->dense[itor->cursor]);
-	wss_set(itor->write, itor->master_index, &master_set->dense[itor->cursor]);
+	itor->read->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size);
+	itor->write->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size);
 
 	/* debug_printf("ecs:sys:itor master: index %zu entity %zu cursor [%zu/%zu]\n", itor->master_index, master_entity.id, itor->cursor, itor->count - 1); */
     /*  */
@@ -407,8 +407,8 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 			{
 				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu == master entity %zu\n", itor->cursor, itor->count - 1, ci, cursor_entity.id, master_entity.id); */
 
-				wss_set(itor->read, ci, &set->dense[i]);
-				wss_set(itor->write, ci, &set->dense[i]);
+				itor->read->arr[ci] = set->dense + (i * set->element_size);
+				itor->write->arr[ci] = set->dense + (i * set->element_size);
 
 				// set cursor state to 0 to indicate success
 				cursor_state = 0;
@@ -463,6 +463,8 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	if (itor->component_ids == NULL)
 	{
 		itor->component_ids = whisker_ecs_e_from_named_entities(system->entities, combined_components);
+		whisker_arr_resize_void_(itor->read, itor->component_ids->length, true);
+		whisker_arr_resize_void_(itor->write, itor->component_ids->length, true);
 	}
 
 	// free combined string

@@ -63,8 +63,8 @@ typedef struct whisker_ecs_iterator
 	whisker_arr_void_ *component_arrays;
 
 	// read/write arrays for the components of the current iteration step
-	whisker_sparse_set *read;
-	whisker_sparse_set *write;
+	whisker_arr_void_ *read;
+	whisker_arr_void_ *write;
 
 } whisker_ecs_iterator;
 
