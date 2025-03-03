@@ -26,6 +26,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 		free(c);
 		return E_WHISKER_ECS_COMP_ARR;
 	}
+	c->components_length = 0;
 
 	*components = c;
 
@@ -34,7 +35,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 
 void whisker_ecs_c_free_components(whisker_ecs_components *components)
 {
-	for (int i = 0; i < warr_length(components->components); i++) {
+	for (int i = 0; i < components->components_length; i++) {
 		if (components->components[i] != NULL)
 		{
 			wss_free(components->components[i]);
@@ -71,7 +72,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *
 // resize the components array to the specified size
 E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t capacity)
 {
-	if (warr_length(components->components) >= capacity)
+	if (components->components_length >= capacity)
 	{
 		return E_WHISKER_ECS_COMP_OK;
 	}
@@ -80,6 +81,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *compon
 	{
 		return E_WHISKER_ECS_COMP_ARR;
 	}
+	components->components_length = capacity;
 
 	return E_WHISKER_ECS_COMP_OK;
 }
@@ -134,7 +136,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *component
 	whisker_ecs_c_grow_components_(components, component_id.index + 1);
 
 	// create a sparse set for the component if its null
-	if (warr_length(components->components) < component_id.index + 1 || components->components[component_id.index] == NULL)
+	if (components->components_length < component_id.index + 1 || components->components[component_id.index] == NULL)
 	{
 		E_WHISKER_ECS_COMP create_err = whisker_ecs_c_create_component_array(components, component_id, component_size);
 		if (create_err != E_WHISKER_ECS_COMP_OK)
