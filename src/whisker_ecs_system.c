@@ -89,17 +89,23 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	{
 		for (int i = 0; i < system->iterators->sparse_index->length; ++i)
 		{
-			whisker_ecs_iterator *itor = &system->iterators->dense[i];
-			whisker_ss_free(itor->read);
-			whisker_ss_free(itor->write);
-
-			if (itor->component_ids != NULL)
+			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)system->iterators->dense)[i];
+			if (itor.read != NULL)
 			{
-				whisker_arr_free_whisker_ecs_entity_id(itor->component_ids);
+				whisker_ss_free(itor.read);
 			}
-			if (itor->component_arrays != NULL)
+			if (itor.write != NULL)
 			{
-				whisker_arr_free_void_(itor->component_arrays);
+				whisker_ss_free(itor.write);
+			}
+
+			if (itor.component_ids != NULL)
+			{
+				whisker_arr_free_whisker_ecs_entity_id(itor.component_ids);
+			}
+			if (itor.component_arrays != NULL)
+			{
+				whisker_arr_free_void_(itor.component_arrays);
 			}
 		}
 
@@ -444,8 +450,11 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	char *combined_components;
 	combined_components = malloc(strlen(read_components) + strlen(write_components) + 2);
 	strcpy(combined_components, read_components);
-	strcat(combined_components, ",");
-	strcat(combined_components, write_components);
+	if (strlen(write_components) > 0)
+	{
+		strcat(combined_components, ",");
+		strcat(combined_components, write_components);
+	}
 
 	/* debug_printf("ecs:sys:itor init: read: %s write: %s\n", read_components, write_components); */
 	/* debug_printf("ecs:sys:itor init: combined: %s\n", combined_components); */

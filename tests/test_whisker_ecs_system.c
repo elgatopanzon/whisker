@@ -153,6 +153,16 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 		ck_assert_uint_eq(expected_entities[itor->cursor].index, itor->entity_id.index);
 	}
 
+	// get another iterator with a single component
+	itor = whisker_ecs_s_get_iterator(sys, 1, "comp1", "");
+
+	whisker_ecs_entity_id expected_entities_smaller[] = {10,11,15,16,19};
+	while (whisker_ecs_s_iterate(sys, itor)) 
+	{
+		printf("itor single test: entity %zu\n", itor->entity_id);
+		ck_assert_uint_eq(expected_entities_smaller[itor->cursor].index, itor->entity_id.index);
+	}
+	printf("itor single test: iteration ended\n");
 
 	whisker_ecs_e_free_entities(e);
 	whisker_ecs_c_free_components(c);
