@@ -235,28 +235,34 @@ void whisker_ss_sort(whisker_sparse_set *ss)
     size_t n = ss->sparse_index->length;
     size_t element_size = ss->element_size;
     void* temp_dense = ss->swap_buffer;
-	// return if size is 0
+
     if (n == 0)
     {
-    	return;
+        return;
     }
 
-	for (size_t i = 0; i < n - 1; i++) {
-    	for (size_t j = 0; j < n - i - 1; j++) {
-        	if (dense_index[j] > dense_index[j + 1]) {
-            	uint64_t temp_index = dense_index[j];
-            	uint64_t temp_index2 = dense_index[j + 1];
+    for (size_t i = 0; i < n - 1; i++) {
+        bool swapped = false;
+        for (size_t j = 0; j < n - i - 1; j++) {
+            if (dense_index[j] > dense_index[j + 1]) {
+                uint64_t temp_index = dense_index[j];
+                uint64_t temp_index2 = dense_index[j + 1];
 
-            	dense_index[j] = dense_index[j + 1];
-            	dense_index[j + 1] = temp_index;
+                dense_index[j] = dense_index[j + 1];
+                dense_index[j + 1] = temp_index;
 
-            	whisker_ss_set_dense_index(ss, temp_index, j + 1);
-            	whisker_ss_set_dense_index(ss, temp_index2, j);
+    			ss->sparse->arr[temp_index] = j + 1;
+    			ss->sparse->arr[temp_index2] = j;
 
-            	memcpy(temp_dense, (char *)dense + j * element_size, element_size);
-            	memcpy((char *)dense + j * element_size, (char *)dense + (j + 1) * element_size, element_size);
-            	memcpy((char *)dense + (j + 1) * element_size, temp_dense, element_size);
-        	}
-    	}
-	}
+                memcpy(temp_dense, (char *)dense + j * element_size, element_size);
+                memcpy((char *)dense + j * element_size, (char *)dense + (j + 1) * element_size, element_size);
+                memcpy((char *)dense + (j + 1) * element_size, temp_dense, element_size);
+
+                swapped = true;
+            }
+        }
+        if (!swapped) {
+            break;
+        }
+    }
 }

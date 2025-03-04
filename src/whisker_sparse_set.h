@@ -14,7 +14,7 @@
 #define WHISKER_SPARSE_SET_H
 
 #define WHISKER_SPARSE_SET_BLOCK_SIZE 2048
-#define WHISKER_SPARSE_SET_AUTOSORT true
+#define WHISKER_SPARSE_SET_AUTOSORT false
 
 // errors
 typedef enum E_WHISKER_SS  
