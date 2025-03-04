@@ -115,10 +115,31 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 
 				if (whisker_ecs_c_has_component(ecs->components, component_id, action->id))
 				{
-					whisker_ecs_c_remove_component(ecs->components, component_id, action->id);
+					whisker_ecs_c_remove_component(ecs->components, component_id, action->id, false);
+
+					if (!wss_contains(ecs->components->changed_components, component_id.id))
+					{
+						wss_set(ecs->components->changed_components, component_id.id, &component_id);
+					}
 				}
 			}
 		}
+	}
+
+	// process and sort changed components
+	while (ecs->components->changed_components->sparse_index->length > 0) 
+	{
+		for (int i = 0; i < ecs->components->changed_components->sparse_index->length; ++i)
+		{
+			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index->arr[i]};
+
+			whisker_ecs_c_sort_component_array(ecs->components, component_id);
+
+			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
+		}
+
+		ecs->components->changed_components->sparse_index->length = 0;
+    	warr_header(ecs->components->changed_components->dense)->length = 0;
 	}
 	
 	// process entity actions
@@ -207,11 +228,16 @@ void *whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_comp
 void *whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
-	E_WHISKER_ECS_COMP err = whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value);
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
 
 	if (err != E_WHISKER_ECS_COMP_OK)
 	{
 		return NULL;
+	}
+
+	if (!wss_contains(components->changed_components, component_id.id))
+	{
+		wss_set(components->changed_components, component_id.id, &component_id);
 	}
 
 	return whisker_ecs_get_component(entities, components, component_name, entity_id);
@@ -221,7 +247,12 @@ bool whisker_ecs_remove_component(whisker_ecs_entities *entities, whisker_ecs_co
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 
-	return whisker_ecs_c_remove_component(components, component_id, entity_id) == E_WHISKER_ECS_COMP_OK;
+	if (!wss_contains(components->changed_components, component_id.id))
+	{
+		wss_set(components->changed_components, component_id.id, &component_id);
+	}
+
+	return whisker_ecs_c_remove_component(components, component_id, entity_id, false) == E_WHISKER_ECS_COMP_OK;
 }
 
 

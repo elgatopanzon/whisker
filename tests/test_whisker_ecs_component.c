@@ -38,7 +38,7 @@ START_TEST(test_whisker_ecs_component_get_component_array)
 	uint64_t component = 5454;
 
 	// set the component
-	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), entity_id, &component);
+	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), entity_id, &component, true);
 
 	// get the component sparse set
 	whisker_sparse_set *component_array;
@@ -62,7 +62,7 @@ START_TEST(test_whisker_ecs_component_get_and_set)
 	whisker_ecs_entity_id e1 = {.id = 0};
 
 	// set using component set
-	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10});
+	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10}, true);
 
 	// check array
 	int64_t *uint_e1 = whisker_ecs_c_get_component(c, component_id, e1);

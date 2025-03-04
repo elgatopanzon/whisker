@@ -28,6 +28,8 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 	}
 	c->components_length = 0;
 
+	wss_create_t(&c->changed_components, whisker_ecs_entity_id);
+
 	*components = c;
 
 	return E_WHISKER_ECS_COMP_OK;
@@ -42,6 +44,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 		}
 	}
 	warr_free(components->components);
+	wss_free(components->changed_components);
 
 	free(components);
 }
@@ -113,6 +116,20 @@ E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *co
 	return E_WHISKER_ECS_COMP_OK;
 }
 
+E_WHISKER_ECS_COMP whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
+{
+	whisker_sparse_set* component_array;
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
+	if (err != E_WHISKER_ECS_COMP_OK)
+	{
+		return err;
+	}
+
+	whisker_ss_sort(component_array);
+
+	return E_WHISKER_ECS_COMP_OK;
+}
+
 /************************************
 *  component management functions  *
 ************************************/
@@ -130,7 +147,7 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 	return wss_get(component_array, entity_id.index);
 }
 
-E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
+E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component, bool sort)
 {
 	// grow array of sparse sets if required
 	whisker_ecs_c_grow_components_(components, component_id.index + 1);
@@ -153,8 +170,15 @@ E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *component
 		return err;
 	}
 
+	bool sort_required = (!wss_contains(component_array, entity_id.index) && sort);
+
 	// set the component
 	wss_set(component_array, entity_id.index, component);
+
+	if (sort_required)
+	{
+		whisker_ecs_c_sort_component_array(components, component_id);
+	}
 
 	return E_WHISKER_ECS_COMP_OK;
 }
@@ -173,7 +197,7 @@ bool whisker_ecs_c_has_component(whisker_ecs_components *components, whisker_ecs
 	return component_array != NULL && wss_contains(component_array, entity_id.index);
 }
 
-E_WHISKER_ECS_COMP whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+E_WHISKER_ECS_COMP whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, bool sort)
 {
 	// get component array
 	whisker_sparse_set* component_array;
@@ -188,6 +212,11 @@ E_WHISKER_ECS_COMP whisker_ecs_c_remove_component(whisker_ecs_components *compon
 	if (remove_err != E_WHISKER_SS_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;
+	}
+
+	if (sort)
+	{
+		whisker_ecs_c_sort_component_array(components, component_id);
 	}
 
 	return E_WHISKER_ECS_COMP_OK;
