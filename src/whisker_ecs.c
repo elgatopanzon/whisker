@@ -142,7 +142,7 @@ whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *e
 	whisker_ecs_entity_id e = whisker_ecs_create_entity(entities);
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities->arr[e.index].destroyed = false;
+	entities->entities->arr[e.index].destroyed = true;
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 
 	return e;
@@ -153,7 +153,7 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 	whisker_ecs_entity_id e = whisker_ecs_create_entity(entities);
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities->arr[e.index].destroyed = false;
+	entities->entities->arr[e.index].destroyed = true;
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 
 	return e;

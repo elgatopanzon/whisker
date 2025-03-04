@@ -262,7 +262,6 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_add_deffered_action(whisker_ecs_entities *ent
 	{
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
-	entities->deferred_actions++;
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
