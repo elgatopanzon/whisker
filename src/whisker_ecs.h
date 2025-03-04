@@ -48,7 +48,7 @@ bool whisker_ecs_has_component(whisker_ecs_entities *entities, whisker_ecs_compo
 
 // macros
 #define whisker_ecs_set(en, cm, n, t, e, v) whisker_ecs_set_component(en, cm, #n, sizeof(t), e, v)
-#define whisker_ecs_get(en, cm, n, t, e) (t*) whisker_ecs_get_component(en, cm, #n, sizeof(t), e)
+#define whisker_ecs_get(en, cm, n, e) whisker_ecs_get_component(en, cm, #n, e)
 #define whisker_ecs_remove(en, cm, n, t, e) (t*) whisker_ecs_get_component(en, cm, #n, e)
 
 #define whisker_ecs_set_tag(en, cm, n, e) whisker_ecs_set_component(en, cm, #n, sizeof(bool), e, &(bool){0})
