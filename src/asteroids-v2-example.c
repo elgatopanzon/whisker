@@ -176,9 +176,10 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system *system)
 
 		double time = GetTime();
 
-		bool can_spawn = (time > *system_asteroid_spawn_time + ASTEROID_SPAWN_RATE);
+		double time_diff = (*system_asteroid_spawn_time + ASTEROID_SPAWN_RATE) - time;
+		int spawn_count = -time_diff / ASTEROID_SPAWN_RATE;
 
-		if (can_spawn)
+		for (int i = 0; i < spawn_count; ++i)
 		{
 			asteroids_spawn_asteroid();
 			*system_asteroid_spawn_time = time;
@@ -449,19 +450,23 @@ void asteroids_system_collision(whisker_ecs_system *system)
 
 			/* debug_printf("checking entity %zu (%fx%f) for collision with %zu (%fx%f)\n", itor_outer->entity_id, itor_inner->entity_id, pos_2d->x, pos_2d->y, colliding_position->x, colliding_position->y); */
 
-	    	float distance = Vector2Distance(*pos_2d, *colliding_position);
-	    	if (distance <= (*radius + *colliding_radius_size))
-	    	{
-				/* DrawCircle(pos_2d->x, pos_2d->y, *radius, Fade(GREEN, 0.6f)); */
-				/* DrawCircle(colliding_position->x, colliding_position->y, *colliding_radius_size, Fade(BLUE, 0.6f)); */
+			float distance = Vector2Distance(*pos_2d, *colliding_position);
+			if (distance <= (*radius + *colliding_radius_size))
+			{
+    			float overlap = (*radius + *colliding_radius_size) - distance;
+    			Vector2 direction = Vector2Normalize(Vector2Subtract(*pos_2d, *colliding_position));
+    			Vector2 correction = Vector2Scale(direction, overlap / 2);
 
-				whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(system->entities);
+    			*pos_2d = Vector2Add(*pos_2d, correction);
+    			*colliding_position = Vector2Subtract(*colliding_position, correction);
 
-				asteroids_component_collision col = {};
-				col.entity_a = itor_outer->entity_id;
-				col.entity_b = itor_inner->entity_id;
-				whisker_ecs_set(system->entities, system->components, collision, asteroids_component_collision, collision_e, &col);
-	    	}
+    			whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(system->entities);
+
+    			asteroids_component_collision col = {};
+    			col.entity_a = itor_outer->entity_id;
+    			col.entity_b = itor_inner->entity_id;
+    			whisker_ecs_set(system->entities, system->components, collision, asteroids_component_collision, collision_e, &col);
+			}
 		}
 	}
 }
