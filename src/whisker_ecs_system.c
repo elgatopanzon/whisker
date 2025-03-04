@@ -1,3 +1,4 @@
+
 /**
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_ecs_system
@@ -459,8 +460,6 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 	int cursor_state = 0;
 	for (size_t ci = 0; ci < itor->component_arrays->length; ++ci)
 	{
-    	if (ci == itor->master_index) continue;
-
     	cursor_state = -1;
     	whisker_sparse_set *set = itor->component_arrays->arr[ci];
     	bool optional = (ci + 1 > itor->component_ids_rw->length);
@@ -478,7 +477,7 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 		// begin cursor iteration
     	for (size_t i = itor->cursor; i < set->sparse_index->length; ++i)
     	{
-        	whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(master_set->sparse_index->arr[i]);
+        	whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(set->sparse_index->arr[i]);
 
 			// reached end of valid entities
         	if (cursor_entity.index > master_entity.index)
