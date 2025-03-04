@@ -235,6 +235,11 @@ void whisker_ss_sort(whisker_sparse_set *ss)
     size_t n = ss->sparse_index->length;
     size_t element_size = ss->element_size;
     void* temp_dense = ss->swap_buffer;
+	// return if size is 0
+    if (n == 0)
+    {
+    	return;
+    }
 
 	for (size_t i = 0; i < n - 1; i++) {
     	for (size_t j = 0; j < n - i - 1; j++) {
