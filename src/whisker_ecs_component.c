@@ -158,3 +158,37 @@ E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *component
 
 	return E_WHISKER_ECS_COMP_OK;
 }
+
+bool whisker_ecs_c_has_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+{
+	// get component array
+	whisker_sparse_set* component_array;
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
+	if (err != E_WHISKER_ECS_COMP_OK)
+	{
+		return false;
+	}
+
+	// return component pointer
+	return component_array != NULL && wss_contains(component_array, entity_id.index);
+}
+
+E_WHISKER_ECS_COMP whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+{
+	// get component array
+	whisker_sparse_set* component_array;
+	E_WHISKER_ECS_COMP err = whisker_ecs_c_get_component_array(components, component_id, &component_array);
+	if (err != E_WHISKER_ECS_COMP_OK)
+	{
+		return err;
+	}
+
+	// return component pointer
+	E_WHISKER_SS remove_err = wss_remove(component_array, entity_id.index);
+	if (remove_err != E_WHISKER_SS_OK)
+	{
+		return E_WHISKER_ECS_COMP_ARR;
+	}
+
+	return E_WHISKER_ECS_COMP_OK;
+}
