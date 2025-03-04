@@ -1,4 +1,3 @@
-
 /**
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_ecs_system
@@ -428,7 +427,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *itor)
 {
 	// if the master index is invalid then there is nothing to iterate
-	bool iteration_active = (itor->master_index != UINT64_MAX);
+	bool iteration_active = (itor->master_index != UINT64_MAX && itor->count > 0);
 	if (!iteration_active)
 	{
 		return iteration_active;
@@ -457,57 +456,65 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 	/* 	debug_printf("\n"); */
 	/* } */
 
+	// find and set the current cursor's components
 	int cursor_state = 0;
-	for (size_t ci = 0; ci < itor->component_arrays->length; ++ci)
+	for (int ci = 0; ci < itor->component_ids_rw->length; ++ci)
 	{
-    	cursor_state = -1;
-    	whisker_sparse_set *set = itor->component_arrays->arr[ci];
-    	bool optional = (ci + 1 > itor->component_ids_rw->length);
+		// continue loop if ci matches master index since we don't need to check
+		if (ci == itor->master_index)
+		{
+			/* debug_printf("ecs:sys:itor [%zu/%zu] component %d skipping (is master)\n", itor->cursor, itor->count - 1, ci); */
+			continue;
+		}
 
-		// optional only: allow NULL set
-    	if (optional)
-    	{
-        	cursor_state = 0;
-    	}
-    	if (set == NULL && optional)
-    	{
-        	continue;
-    	}
+		// reset current cursor state
+		cursor_state = -1;
 
-		// begin cursor iteration
-    	for (size_t i = itor->cursor; i < set->sparse_index->length; ++i)
-    	{
-        	whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(set->sparse_index->arr[i]);
+		// get current set for component
+		whisker_sparse_set *set = itor->component_arrays->arr[ci];
+		/* debug_printf("ecs:sys:itor [%zu/%zu] component %d entity: ", itor->cursor, itor->count - 1, ci); */
+		/* for (int i = 0; i < set->sparse_index->length; ++i) */
+		/* { */
+		/* 	debug_printf("%zu ", set->sparse_index->arr[i]); */
+		/* } */
+		/* debug_printf("\n"); */
 
-			// reached end of valid entities
-        	if (cursor_entity.index > master_entity.index)
-        	{
-            	cursor_state = optional ? 0 : 1;
-            	break;
-        	}
+		// look for the next matching entity
+		// note: it's possible we need a need check for coming to the end of a
+		// list to also set the state invalid
+		for (int i = itor->cursor; i < set->sparse_index->length; ++i)
+		{
+			whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(set->sparse_index->arr[i]);
 
-        	if (system->entities->entities->length > cursor_entity.index + 1 && system->entities->entities->arr[cursor_entity.index].destroyed) continue;
+			// check if cursor entity matches, if so set the component data
+			if (cursor_entity.index == master_entity.index)
+			{
+				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu == master entity %zu\n", itor->cursor, itor->count - 1, ci, cursor_entity.id, master_entity.id); */
 
-			// matched entity at cursor
-        	if (cursor_entity.index == master_entity.index)
-        	{
-            	size_t offset = i * set->element_size;
-            	if (!optional)
-            	{
-                	itor->read->arr[ci] = set->dense + offset;
-                	itor->write->arr[ci] = set->dense + offset;
-            	}
-            	else
-            	{
-                	itor->opt->arr[ci - itor->component_ids_rw->length] = set->dense + offset;
-            	}
+				itor->read->arr[ci] = set->dense + (i * set->element_size);
+				itor->write->arr[ci] = set->dense + (i * set->element_size);
 
-            	cursor_state = 0;
-            	break;
-        	}
-    	}
+				// set cursor state to 0 to indicate success
+				cursor_state = 0;
 
-    	if (cursor_state != 0) break;
+				break;
+			}
+
+			// if the cursor entity is > than master, then we can early out
+			if (cursor_entity.index > master_entity.index)
+			{
+				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu > master entity %zu\n", itor->cursor, itor->count, ci, cursor_entity.id, master_entity.id); */
+				cursor_state = 1;
+				break;
+			}
+		}
+
+		// if the state is anything other than 0, then end the loop early
+		if (cursor_state != 0)
+		{
+			break;
+		}
+
 	}
 
 	/* debug_printf("ecs:sys:itor cursor %zu state %d\n", itor->cursor, cursor_state); */
@@ -520,4 +527,3 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 
 	return cursor_state == 0;
 }
-
