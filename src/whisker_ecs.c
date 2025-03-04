@@ -102,6 +102,26 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	}
 
 	// process deferred actions
+	// for each deferred deleted entity remove all its components
+	for (size_t i = 0; i < ecs->entities->deferred_actions->length; ++i)
+	{
+		whisker_ecs_entity_deferred_action *action = &ecs->entities->deferred_actions->arr[i];
+
+		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
+		{
+			for (int ci = 0; ci < ecs->components->components_length; ++ci)
+			{
+				whisker_ecs_entity_id component_id = whisker_ecs_e_id(ci);
+
+				if (whisker_ecs_c_has_component(ecs->components, component_id, action->id))
+				{
+					whisker_ecs_c_remove_component(ecs->components, component_id, action->id);
+				}
+			}
+		}
+	}
+	
+	// process entity actions
 	whisker_ecs_e_process_deferred(ecs->entities);
 
 	return E_WHISKER_ECS_OK;
@@ -161,6 +181,7 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 
 bool whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
+	entities->entities->arr[entity_id.index].destroyed = true;
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
 
 	return false;
@@ -196,17 +217,16 @@ void *whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_comp
 	return whisker_ecs_get_component(entities, components, component_name, entity_id);
 }
 
-// TODO: remove components
 bool whisker_ecs_remove_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 
-	return false;
+	return whisker_ecs_c_remove_component(components, component_id, entity_id) == E_WHISKER_ECS_COMP_OK;
 }
 
 
 bool whisker_ecs_has_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
-	return whisker_ecs_c_get_component(components, component_id, entity_id) != NULL;
+	return whisker_ecs_c_has_component(components, component_id, entity_id);
 }
