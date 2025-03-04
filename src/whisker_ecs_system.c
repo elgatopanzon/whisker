@@ -466,9 +466,12 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
     	bool optional = (ci + 1 > itor->component_ids_rw->length);
 
 		// optional only: allow NULL set
-    	if (set == NULL && optional)
+    	if (optional)
     	{
         	cursor_state = 0;
+    	}
+    	if (set == NULL && optional)
+    	{
         	continue;
     	}
 
