@@ -18,7 +18,7 @@ const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (fl
 #define DRAW_FPS false
 #define DRAW_FPS_AVG_SAMPLES 20
 #define DRAW_FRAMETIME true
-#define DRAW_FRAMETIME_AVG_SAMPLES 5000
+#define DRAW_FRAMETIME_AVG_SAMPLES 300
 
 whisker_ecs *asteroids_ecs;
 
