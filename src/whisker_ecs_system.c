@@ -437,10 +437,9 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 
 	// set the master components
 	whisker_sparse_set *master_set = itor->component_arrays->arr[itor->master_index];
-	whisker_ecs_entity_id master_entity = whisker_ecs_e_id(master_set->sparse_index->arr[itor->cursor]);
-	itor->entity_id = master_entity;
-	itor->read->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size);
-	itor->write->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size);
+	itor->entity_id.id = master_set->sparse_index->arr[itor->cursor];
+	/* itor->read->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size); */
+	/* itor->write->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size); */
 
 	/* debug_printf("ecs:sys:itor master: index %zu entity %zu cursor [%zu/%zu]\n", itor->master_index, master_entity.id, itor->cursor, itor->count - 1); */
     /*  */
@@ -458,20 +457,29 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 
 	// find and set the current cursor's components
 	int cursor_state = 0;
-	for (int ci = 0; ci < itor->component_ids_rw->length; ++ci)
+	size_t rw_length = itor->component_ids_rw->length;
+	for (int ci = 0; ci < rw_length; ++ci)
 	{
-		// continue loop if ci matches master index since we don't need to check
-		if (ci == itor->master_index)
+		// get current set for component
+		whisker_sparse_set *set = itor->component_arrays->arr[ci];
+		whisker_ecs_entity_id_raw cursor_entity = set->sparse_index->arr[itor->cursor];
+
+		// check if cursor entity matches, if so set the component data
+		if (cursor_entity == itor->entity_id.id)
 		{
-			/* debug_printf("ecs:sys:itor [%zu/%zu] component %d skipping (is master)\n", itor->cursor, itor->count - 1, ci); */
+			/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu == master entity %zu\n", itor->cursor, itor->count - 1, ci, cursor_entity.id, master_entity.id); */
+
+			itor->read->arr[ci] = set->dense + (itor->cursor * set->element_size);
+			itor->write->arr[ci] = set->dense + (itor->cursor * set->element_size);
+
+			cursor_state = 0;
+
 			continue;
 		}
 
 		// reset current cursor state
 		cursor_state = -1;
 
-		// get current set for component
-		whisker_sparse_set *set = itor->component_arrays->arr[ci];
 		/* debug_printf("ecs:sys:itor [%zu/%zu] component %d entity: ", itor->cursor, itor->count - 1, ci); */
 		/* for (int i = 0; i < set->sparse_index->length; ++i) */
 		/* { */
@@ -482,12 +490,13 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 		// look for the next matching entity
 		// note: it's possible we need a need check for coming to the end of a
 		// list to also set the state invalid
-		for (int i = itor->cursor; i < set->sparse_index->length; ++i)
+		size_t set_length = set->sparse_index->length;
+		for (int i = itor->cursor; i < set_length; ++i)
 		{
-			whisker_ecs_entity_id cursor_entity = whisker_ecs_e_id(set->sparse_index->arr[i]);
+			cursor_entity = set->sparse_index->arr[i];
 
 			// check if cursor entity matches, if so set the component data
-			if (cursor_entity.index == master_entity.index)
+			if (cursor_entity == itor->entity_id.id)
 			{
 				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu == master entity %zu\n", itor->cursor, itor->count - 1, ci, cursor_entity.id, master_entity.id); */
 
@@ -501,7 +510,7 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 			}
 
 			// if the cursor entity is > than master, then we can early out
-			if (cursor_entity.index > master_entity.index)
+			if (cursor_entity > itor->entity_id.id)
 			{
 				/* debug_printf("ecs:sys:itor [%zu/%zu] component %d cursor entity %zu > master entity %zu\n", itor->cursor, itor->count, ci, cursor_entity.id, master_entity.id); */
 				cursor_state = 1;

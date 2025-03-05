@@ -79,7 +79,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	whisker_ecs_e_create_named_(ecs->entities, system_name, &e);
 
 	// set component of its type on itself
-	whisker_ecs_set_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
 
 	// register the system with the system scheduler
 	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
@@ -219,15 +219,39 @@ whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs_entities *entities, c
 	return e;
 }
 
-void *whisker_ecs_get_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
+	return whisker_ecs_get_component(components, component_id, entity_id);
+}
+
+void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
+{
+	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
+	return whisker_ecs_set_component(components, component_id, component_size, entity_id, value);
+}
+
+bool whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+{
+	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
+
+	return whisker_ecs_remove_component(components, component_id, entity_id) == E_WHISKER_ECS_COMP_OK;
+}
+
+
+bool whisker_ecs_has_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+{
+	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
+	return whisker_ecs_has_component(components, component_id, entity_id);
+}
+
+void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+{
 	return whisker_ecs_c_get_component(components, component_id, entity_id);
 }
 
-void *whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
+void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 	E_WHISKER_ECS_COMP err = whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
 
 	if (err != E_WHISKER_ECS_COMP_OK)
@@ -240,13 +264,11 @@ void *whisker_ecs_set_component(whisker_ecs_entities *entities, whisker_ecs_comp
 		wss_set(components->changed_components, component_id.id, &component_id);
 	}
 
-	return whisker_ecs_get_component(entities, components, component_name, entity_id);
+	return whisker_ecs_get_component(components, component_id, entity_id);
 }
 
-bool whisker_ecs_remove_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+bool whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
-
 	if (!wss_contains(components->changed_components, component_id.id))
 	{
 		wss_set(components->changed_components, component_id.id, &component_id);
@@ -255,9 +277,8 @@ bool whisker_ecs_remove_component(whisker_ecs_entities *entities, whisker_ecs_co
 	return whisker_ecs_c_remove_component(components, component_id, entity_id, false) == E_WHISKER_ECS_COMP_OK;
 }
 
-
-bool whisker_ecs_has_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 	return whisker_ecs_c_has_component(components, component_id, entity_id);
 }
+
