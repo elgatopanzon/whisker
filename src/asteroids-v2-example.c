@@ -177,7 +177,7 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system *system)
 		double time = GetTime();
 
 		double time_diff = (*system_asteroid_spawn_time + ASTEROID_SPAWN_RATE) - time;
-		int spawn_count = -time_diff / ASTEROID_SPAWN_RATE;
+		int spawn_count = (-time_diff / ASTEROID_SPAWN_RATE + 1);
 
 		for (int i = 0; i < spawn_count; ++i)
 		{
@@ -892,6 +892,19 @@ void asteroids_system_draw_game_over(whisker_ecs_system *system)
 	}
 }
 
+#define NEARBLACK CLITERAL(Color){15, 15, 15, 266} 
+void asteroids_system_raylib_start_drawing(whisker_ecs_system *system)
+{
+	BeginDrawing();
+
+	ClearBackground(NEARBLACK);
+}
+
+void asteroids_system_raylib_end_drawing(whisker_ecs_system *system)
+{
+	EndDrawing();
+}
+
 void asteroids_game_init()
 {
 	asteroids_game_state = ASTEROIDS_GAME_STATE_PLAYING;
@@ -915,6 +928,7 @@ void asteroids_game_init()
 	/* // register systems */
 	whisker_ecs_system *spawn_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_spawn, "system_asteroid_spawn");
 	whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, system_asteroid_spawn_time, double, spawn_sys->entity_id, &(double){GetTime()});
+
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller");
@@ -933,21 +947,21 @@ void asteroids_game_init()
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_death_on_life_depleted, "system_player_death_on_life_depleted");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_to_recover, "system_player_hit_to_recover");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_entity_deferred_destroy, "system_entity_deferred_destroy");
-	/* #<{(|  |)}># */
-	/* #<{(| // draw |)}># */
+
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_start_drawing, "system_raylib_start_drawing");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_asteroid, "system_draw_asteroid");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "system_draw_player");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_projectile, "system_draw_projectile");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_hud, "system_draw_hud");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_game_over, "system_draw_game_over");
-	/* #<{(|  |)}># */
-    /*  */
+
 	if (DRAW_FRAMETIME)
 	{
-	/* 	system_asteroids_draw_frame_time_init(asteroids_ecs); */
 		whisker_ecs_system *frametime_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "system_draw_frame_time");
 		whisker_ecs_set(asteroids_ecs->entities, asteroids_ecs->components, frametime, asteroids_component_frametime, frametime_sys->entity_id, &(asteroids_component_frametime){});
 	}
+
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_end_drawing, "system_raylib_end_drawing");
 }
 
 void asteroids_game_end()
@@ -958,7 +972,7 @@ void asteroids_game_end()
 
 void asteroids_game_update()
 {
-	if (asteroids_game_state == ASTEROIDS_GAME_STATE_END && IsKeyPressed(KEY_R)) 
+	if (asteroids_game_state == ASTEROIDS_GAME_STATE_END) 
 	{
 		asteroids_game_init();
 	}
@@ -966,27 +980,9 @@ void asteroids_game_update()
 	return;
 }
 
-#define NEARBLACK CLITERAL(Color){15, 15, 15, 266} 
 void asteroids_game_draw_frame()
 {
-	BeginDrawing();
-
-	ClearBackground(NEARBLACK);
-
-	// draw game
-	/* draw_asteroid(GetFrameTime()); */
 	whisker_ecs_update(asteroids_ecs, GetFrameTime());
-	
-	if (asteroids_game_state == ASTEROIDS_GAME_STATE_END) 
-	{
-		// game end
-	}
-	else
-	{
-		// game running
-	}
-
-	EndDrawing();
 }
 
 void asteroids_create_player_entity()
