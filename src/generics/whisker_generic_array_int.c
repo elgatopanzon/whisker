@@ -110,3 +110,17 @@ E_WHISKER_ARR whisker_arr_compact_int(whisker_arr_int *arr)
 {
 	return whisker_arr_resize_int(arr, arr->length, false);
 }
+
+/***********************
+*  utility functions  *
+***********************/
+
+size_t whisker_arr_contains_value_int(whisker_arr_int *arr, int value) {
+    for (size_t i = 0; i < arr->length; ++i)
+    {
+        if (memcmp(&arr->arr[i], &value, sizeof(value)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_uint64_t(whisker_arr_uint64_t *arr, size_t index_
 void whisker_arr_reset_uint64_t(whisker_arr_uint64_t *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_uint64_t(whisker_arr_uint64_t *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_uint64_t(whisker_arr_uint64_t *arr, uint64_t value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

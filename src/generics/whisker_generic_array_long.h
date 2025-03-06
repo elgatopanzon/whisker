@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_long(whisker_arr_long *arr, size_t index_a, size_
 void whisker_arr_reset_long(whisker_arr_long *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_long(whisker_arr_long *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_long(whisker_arr_long *arr, long value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

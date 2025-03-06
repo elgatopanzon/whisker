@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_whisker_ecs_entity_id(whisker_arr_whisker_ecs_ent
 void whisker_arr_reset_whisker_ecs_entity_id(whisker_arr_whisker_ecs_entity_id *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_whisker_ecs_entity_id(whisker_arr_whisker_ecs_entity_id *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_whisker_ecs_entity_id(whisker_arr_whisker_ecs_entity_id *arr, whisker_ecs_entity_id value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

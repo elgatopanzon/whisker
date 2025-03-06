@@ -110,3 +110,17 @@ E_WHISKER_ARR whisker_arr_compact_long_double(whisker_arr_long_double *arr)
 {
 	return whisker_arr_resize_long_double(arr, arr->length, false);
 }
+
+/***********************
+*  utility functions  *
+***********************/
+
+size_t whisker_arr_contains_value_long_double(whisker_arr_long_double *arr, long double value) {
+    for (size_t i = 0; i < arr->length; ++i)
+    {
+        if (memcmp(&arr->arr[i], &value, sizeof(value)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

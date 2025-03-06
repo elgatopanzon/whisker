@@ -110,3 +110,17 @@ E_WHISKER_ARR whisker_arr_compact_long_long(whisker_arr_long_long *arr)
 {
 	return whisker_arr_resize_long_long(arr, arr->length, false);
 }
+
+/***********************
+*  utility functions  *
+***********************/
+
+size_t whisker_arr_contains_value_long_long(whisker_arr_long_long *arr, long long value) {
+    for (size_t i = 0; i < arr->length; ++i)
+    {
+        if (memcmp(&arr->arr[i], &value, sizeof(value)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

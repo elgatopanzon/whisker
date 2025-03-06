@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_double(whisker_arr_double *arr, size_t index_a, s
 void whisker_arr_reset_double(whisker_arr_double *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_double(whisker_arr_double *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_double(whisker_arr_double *arr, double value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

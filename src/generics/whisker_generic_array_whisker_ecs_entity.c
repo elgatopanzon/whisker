@@ -110,3 +110,17 @@ E_WHISKER_ARR whisker_arr_compact_whisker_ecs_entity(whisker_arr_whisker_ecs_ent
 {
 	return whisker_arr_resize_whisker_ecs_entity(arr, arr->length, false);
 }
+
+/***********************
+*  utility functions  *
+***********************/
+
+size_t whisker_arr_contains_value_whisker_ecs_entity(whisker_arr_whisker_ecs_entity *arr, whisker_ecs_entity value) {
+    for (size_t i = 0; i < arr->length; ++i)
+    {
+        if (memcmp(&arr->arr[i], &value, sizeof(value)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

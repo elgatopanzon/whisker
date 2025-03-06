@@ -110,3 +110,17 @@ E_WHISKER_ARR whisker_arr_compact_unsigned_short(whisker_arr_unsigned_short *arr
 {
 	return whisker_arr_resize_unsigned_short(arr, arr->length, false);
 }
+
+/***********************
+*  utility functions  *
+***********************/
+
+size_t whisker_arr_contains_value_unsigned_short(whisker_arr_unsigned_short *arr, unsigned short value) {
+    for (size_t i = 0; i < arr->length; ++i)
+    {
+        if (memcmp(&arr->arr[i], &value, sizeof(value)) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_whisker_ecs_entity_deferred_action(whisker_arr_wh
 void whisker_arr_reset_whisker_ecs_entity_deferred_action(whisker_arr_whisker_ecs_entity_deferred_action *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_whisker_ecs_entity_deferred_action(whisker_arr_whisker_ecs_entity_deferred_action *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_whisker_ecs_entity_deferred_action(whisker_arr_whisker_ecs_entity_deferred_action *arr, whisker_ecs_entity_deferred_action value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

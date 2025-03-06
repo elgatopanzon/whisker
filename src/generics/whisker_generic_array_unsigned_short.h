@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_unsigned_short(whisker_arr_unsigned_short *arr, s
 void whisker_arr_reset_unsigned_short(whisker_arr_unsigned_short *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_unsigned_short(whisker_arr_unsigned_short *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_unsigned_short(whisker_arr_unsigned_short *arr, unsigned short value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

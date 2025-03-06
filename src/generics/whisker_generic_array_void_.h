@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_void_(whisker_arr_void_ *arr, size_t index_a, siz
 void whisker_arr_reset_void_(whisker_arr_void_ *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_void_(whisker_arr_void_ *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_void_(whisker_arr_void_ *arr, void* value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 

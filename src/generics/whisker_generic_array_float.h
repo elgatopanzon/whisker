@@ -32,5 +32,8 @@ E_WHISKER_ARR whisker_arr_swap_float(whisker_arr_float *arr, size_t index_a, siz
 void whisker_arr_reset_float(whisker_arr_float *arr, bool compact);
 E_WHISKER_ARR whisker_arr_compact_float(whisker_arr_float *arr);
 
+// utility functions
+size_t whisker_arr_contains_value_float(whisker_arr_float *arr, float value);
+
 #endif /* WHISKER_GENERIC_ARRAY_H */
 
