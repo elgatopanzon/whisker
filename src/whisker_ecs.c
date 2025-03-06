@@ -51,6 +51,25 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 	new->components = c;
 	new->systems = s;
 
+
+	// create and register a dummy system to use by the system scheduler
+	whisker_ecs_system system = {
+		.entity_id = 0,
+		.process_phase_id = 0,
+		.system_ptr = NULL,
+		.thread_id = 0,
+		.last_update = 0,
+		.delta_time = 0,
+		.entities = e,
+		.components = c,
+	};
+	whisker_ecs_system *sys = whisker_ecs_s_register_system(s, c, system);
+	if (sys != NULL)
+	{
+		// note: for now the first system will be ID 0
+		s->system_id = 0;
+	}
+
 	*ecs = new;
 
 	return E_WHISKER_ECS_OK;
@@ -77,11 +96,13 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	// get the entity for the process phase
 	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->entities, process_phase_name);
 	// set the component on the system
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), phase_e, &(bool){0});
 
 	// create an entity for this system with it's name
 	whisker_ecs_entity_id e;
 	whisker_ecs_e_create_named_(ecs->entities, system_name, &e);
+
+	// add process phase component to system
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
 
 	// set component of its type on itself
 	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
@@ -94,6 +115,9 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 		.components = ecs->components,
 		.entities = ecs->entities,
 	});
+
+	// add the system index component to the system entity
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
 
 	return system;
 }

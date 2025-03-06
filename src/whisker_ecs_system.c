@@ -138,20 +138,16 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
-	// matches, excluding updates for those which don't match
-	size_t systems_count = systems->systems_length;
+	whisker_ecs_system *system = &systems->systems[systems->system_id];
 
 	for (int i = 0; i < systems->process_phases->length; ++i)
 	{
-		for (size_t si = 0; si < systems_count; ++si)
-		{
-			whisker_ecs_system *system = &systems->systems[si];
+		whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(system, systems->process_phases->arr[i].index, "w_ecs_system_idx", entities->entities->arr[systems->process_phases->arr[i].index].name, "");
 
-			// skip system if the process phase doesn't match
-			if (system->process_phase_id.id != systems->process_phases->arr[i].id)
-			{
-				continue;
-			}
+		while (whisker_ecs_s_iterate(system, system_itor)) 
+		{
+			int *system_idx = system_itor->read->arr[0];
+			whisker_ecs_system *system = &systems->systems[*system_idx];
 
 			system->delta_time = delta_time;
 
