@@ -940,43 +940,55 @@ void asteroids_game_init()
 		asteroids_spawn_asteroid();
 	}
 
+	// register process phases
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_startup");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_load");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_update");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_update");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_update");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_render");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_render");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_render");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final_render");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final");
+
 	/* // register systems */
-	whisker_ecs_system *spawn_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_spawn, "system_asteroid_spawn");
+	whisker_ecs_system *spawn_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_spawn, "system_asteroid_spawn", "phase_pre_load");
 	whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, system_asteroid_spawn_time, double, spawn_sys->entity_id, &(double){GetTime()});
 
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_movement_direction, "system_movement_direction");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision_cull, "system_collision_cull");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_hit_asteroid, "system_asteroid_hit_asteroid");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_asteroid, "system_player_hit_asteroid");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_nudge, "system_player_hit_nudge");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_cooldown, "system_player_hit_cooldown");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_death_on_life_depleted, "system_player_death_on_life_depleted");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_to_recover, "system_player_hit_to_recover");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_entity_deferred_destroy, "system_entity_deferred_destroy");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller", "phase_pre_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d", "phase_on_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity", "phase_on_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_movement_direction, "system_movement_direction", "phase_on_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", "phase_on_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision", "phase_on_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision_cull, "system_collision_cull", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_hit_asteroid, "system_asteroid_hit_asteroid", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_asteroid, "system_player_hit_asteroid", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_nudge, "system_player_hit_nudge", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_cooldown, "system_player_hit_cooldown", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_death_on_life_depleted, "system_player_death_on_life_depleted", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_to_recover, "system_player_hit_to_recover", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_entity_deferred_destroy, "system_entity_deferred_destroy", "phase_post_update");
 
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_start_drawing, "system_raylib_start_drawing");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_asteroid, "system_draw_asteroid");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "system_draw_player");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_projectile, "system_draw_projectile");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_hud, "system_draw_hud");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_game_over, "system_draw_game_over");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_start_drawing, "system_raylib_start_drawing", "phase_pre_render");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_asteroid, "system_draw_asteroid", "phase_on_render");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "system_draw_player", "phase_on_render");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_projectile, "system_draw_projectile", "phase_on_render");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_hud, "system_draw_hud", "phase_post_render");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_game_over, "system_draw_game_over", "phase_post_render");
 
 	if (DRAW_FRAMETIME)
 	{
-		whisker_ecs_system *frametime_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "system_draw_frame_time");
+		whisker_ecs_system *frametime_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "system_draw_frame_time", "phase_post_render");
 		whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, frametime, asteroids_component_frametime, frametime_sys->entity_id, &(asteroids_component_frametime){});
 	}
 
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_end_drawing, "system_raylib_end_drawing");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_end_drawing, "system_raylib_end_drawing", "phase_final_render");
 }
 
 void asteroids_game_end()

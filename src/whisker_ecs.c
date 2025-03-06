@@ -70,9 +70,14 @@ void whisker_ecs_free(whisker_ecs *ecs)
 /**********************
 *  system functions  *
 **********************/
-whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system*), char *system_name)
+whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system*), char *system_name, char *process_phase_name)
 {
-	debug_printf("ecs:registering system: %s\n", system_name);
+	debug_printf("ecs:registering system: %s process phase %s\n", system_name, process_phase_name);
+
+	// get the entity for the process phase
+	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->entities, process_phase_name);
+	// set the component on the system
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), phase_e, &(bool){0});
 
 	// create an entity for this system with it's name
 	whisker_ecs_entity_id e;
@@ -84,6 +89,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	// register the system with the system scheduler
 	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
 		.entity_id = e,
+		.process_phase_id = phase_e,
 		.system_ptr = system_ptr,
 		.components = ecs->components,
 		.entities = ecs->entities,
@@ -148,6 +154,15 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	return E_WHISKER_ECS_OK;
 }
 
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name)
+{
+	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
+
+	// add component ID to system's process phase list
+	whisker_ecs_s_register_process_phase(ecs->systems, component_id);
+
+	return component_id;
+}
 
 /*******************************
 *  entity shortcut functions  *

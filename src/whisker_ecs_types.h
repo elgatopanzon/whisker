@@ -80,6 +80,7 @@ typedef struct whisker_ecs_iterator
 typedef struct whisker_ecs_system
 {
 	whisker_ecs_entity_id entity_id;
+	whisker_ecs_entity_id process_phase_id;
 	void (*system_ptr)(struct whisker_ecs_system*);
 	int8_t thread_id;
 	double last_update;
@@ -98,6 +99,7 @@ typedef struct whisker_ecs_systems
 {
 	whisker_ecs_system *systems;	
 	size_t systems_length;
+	whisker_arr_whisker_ecs_entity_id *process_phases;
 } whisker_ecs_systems;
 
 
