@@ -111,54 +111,71 @@ int whisker_time_step_step_get_update_count(whisker_time_step *time_step)
 }
 
 // advance time step on whisker_time_step struct
-void whisker_time_step_do_step(whisker_time_step *time_step) {
-    time_step->update_time_current = whisker_time_get_precise_time();
-    time_step->delta_time_real = time_step->update_time_current - time_step->update_time_prev;
-    time_step->update_time_prev = time_step->update_time_current;
-    time_step->tick_count += time_step->delta_time_real;
+void whisker_time_step_do_step(whisker_time_step *time_step)
+{
+	// update delta time
+	time_step->update_time_current = whisker_time_get_precise_time();
+	time_step->delta_time_real = time_step->update_time_current - time_step->update_time_prev;
+	time_step->update_time_prev = time_step->update_time_current;
 
-    int uncapped = time_step->uncapped;
-    int64_t delta_time_real = time_step->delta_time_real;
-    int64_t update_time_target = time_step->update_time_target;
-    int64_t delta_snap_max_error = time_step->delta_snap_max_error;
-    int64_t delta_accumulation = time_step->delta_accumulation;
-    int64_t delta_average_residual = time_step->delta_average_residual;
+	// update tick count
+	time_step->tick_count += time_step->delta_time_real;
 
-    int64_t clamped_delta_time_real = uncapped ? delta_time_real : 
-        (delta_time_real > update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT ? WHISKER_TIME_DELTA_SNAP_FREQ_COUNT : 
-        (delta_time_real < 0 ? 0 : delta_time_real));
+	if (!time_step->uncapped)
+	{
+		// clamp values in odd circumstances
+		if (time_step->delta_time_real > time_step->update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT)
+		{
+			time_step->delta_time_real = WHISKER_TIME_DELTA_SNAP_FREQ_COUNT;
+		}
+		if (time_step->delta_time_real < 0)
+		{
+			time_step->delta_time_real = 0;
+		}
 
-    int64_t snapped_delta_time_real = clamped_delta_time_real;
-    for (int i = 0; i < WHISKER_TIME_DELTA_SNAP_FREQ_COUNT && !uncapped; ++i) {
-        int64_t diff = llabs((int64_t)(clamped_delta_time_real - time_step->delta_snap_frequencies[i]));
-        snapped_delta_time_real = (diff < delta_snap_max_error) ? time_step->delta_snap_frequencies[i] : snapped_delta_time_real;
-    }
+		// snap delta time to nearest frequency
+		for (int i = 0; i < WHISKER_TIME_DELTA_SNAP_FREQ_COUNT; ++i)
+		{
+			if (llabs((int64_t)(time_step->delta_time_real - time_step->delta_snap_frequencies[i])) < time_step->delta_snap_max_error)
+			{
+				time_step->delta_time_real = time_step->delta_snap_frequencies[i];
+				break;
+			}
+		}
 
-    for (int i = 0; i < WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT - 1 && !uncapped; ++i) {
-        time_step->delta_averages[i] = time_step->delta_averages[i + 1];
-    }
-    time_step->delta_averages[WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT - 1] = snapped_delta_time_real;
+		// update the delta time averages and set delta time
+		for (int i = 0; i < WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT - 1; ++i)
+		{
+			time_step->delta_averages[i] = time_step->delta_averages[i+1];
+		}
+		time_step->delta_averages[WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT - 1] = time_step->delta_time_real;
 
-    int64_t delta_average_sum = 0;
-    for (int i = 0; i < WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT && !uncapped; ++i) {
-        delta_average_sum += time_step->delta_averages[i];
-    }
+		// calculate the delta time average
+		int64_t delta_average_sum = 0;
+		for (int i = 0; i < WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT; ++i)
+		{
+			delta_average_sum += time_step->delta_averages[i];
+		}
+		time_step->delta_time_real = delta_average_sum / WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
 
-    int64_t delta_time_real_avg = uncapped ? snapped_delta_time_real : delta_average_sum / WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
-    delta_average_residual += uncapped ? 0 : delta_average_sum % WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
-    delta_time_real_avg += uncapped ? 0 : delta_average_residual / WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
-    delta_average_residual %= WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
+		// adjust delta time and update average residual
+		time_step->delta_average_residual += delta_average_sum % WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
+		time_step->delta_time_real += time_step->delta_average_residual / WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
+		time_step->delta_average_residual %= WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
 
-    delta_accumulation += uncapped ? 0 : delta_time_real_avg;
-    int64_t final_delta_time_real = uncapped ? delta_time_real_avg : 
-        (delta_accumulation > update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT ? update_time_target : delta_time_real_avg);
-    delta_accumulation = uncapped ? delta_accumulation : 
-        (delta_accumulation > update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT ? 0 : delta_accumulation);
+		// add the delta time to the delta accumulation
+		time_step->delta_accumulation += time_step->delta_time_real;
 
-    time_step->delta_time_real = final_delta_time_real;
-    time_step->delta_accumulation = delta_accumulation;
-    time_step->delta_average_residual = delta_average_residual;
-    time_step->delta_time_variable = ((double)final_delta_time_real) / WHISKER_TIME_RESOLUTION;
+		// prevent update accumulation spiral of death
+		if (time_step->delta_accumulation > time_step->update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT)
+		{
+			time_step->delta_accumulation = 0;
+			time_step->delta_time_real = time_step->update_time_target;
+		}
+	}
+
+	// set variable delta time
+	time_step->delta_time_variable = ((double)time_step->delta_time_real) / WHISKER_TIME_RESOLUTION;
 }
 
 // set the desired update rate in seconds
