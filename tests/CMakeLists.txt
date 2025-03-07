@@ -46,11 +46,6 @@ target_link_libraries(test_whisker_ecs_entity PRIVATE
 	Check::check whisker)
 add_test(NAME test_whisker_ecs_entity COMMAND test_whisker_ecs_entity)
 
-add_executable(test_whisker_ecs_archetype test_whisker_ecs_archetype.c)
-target_link_libraries(test_whisker_ecs_archetype PRIVATE
-	Check::check whisker)
-add_test(NAME test_whisker_ecs_archetype COMMAND test_whisker_ecs_archetype)
-
 add_executable(test_whisker_ecs_component test_whisker_ecs_component.c)
 target_link_libraries(test_whisker_ecs_component PRIVATE
 	Check::check whisker)

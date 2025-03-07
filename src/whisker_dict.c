@@ -49,7 +49,11 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 
 	// create Trie to hold keys and values pointers into the dict array
 	whisker_trie* trie;
-	whisker_trie_create_node(&trie);
+	E_WHISKER_TRIE trie_err = whisker_trie_create_node(&trie);
+	if (trie_err != E_WHISKER_TRIE_OK)
+	{
+		return E_WHISKER_DICT_MEM;
+	}
 
 	// set dict header values
 	whisker_dict_header* header = block->header;
@@ -96,7 +100,11 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, void *key, size_t key_size, void*
 	// attempt to resize the underlying block and values
 	// could trigger realloc
 	size_t length = whisker_arr_length(*dict);
-	whisker_dict_resize_(dict, length + 1);
+	E_WHISKER_DICT resize_err = whisker_dict_resize_(dict, length + 1);
+	if (resize_err != E_WHISKER_DICT_OK)
+	{
+		return resize_err;
+	}
 
 	// push value to the end
 	whisker_dict_header* header = whisker_dict_get_header(*dict);

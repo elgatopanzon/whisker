@@ -10,6 +10,7 @@
 #include "whisker_generic_array.h"
 #include "whisker_generic_array_double.h"
 
+// create an instance of a managed array with type double
 E_WHISKER_ARR whisker_arr_create_double(whisker_arr_double **arr, size_t length)
 {
 	whisker_arr_double *a;
@@ -22,6 +23,7 @@ E_WHISKER_ARR whisker_arr_create_double(whisker_arr_double **arr, size_t length)
 	return E_WHISKER_ARR_OK;
 }
 
+// init an instance of a managed array with type double
 E_WHISKER_ARR whisker_arr_init_double(whisker_arr_double *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
@@ -31,12 +33,14 @@ E_WHISKER_ARR whisker_arr_init_double(whisker_arr_double *arr)
 	return E_WHISKER_ARR_OK;
 }
 
+// deallocate an instance of a managed array with type double
 void whisker_arr_free_double(whisker_arr_double *arr)
 {
 	if (arr->arr != NULL) { free(arr->arr); }
 	free(arr);
 }
 
+// resize a managed array of type double
 E_WHISKER_ARR whisker_arr_resize_double(whisker_arr_double *arr, size_t length, bool soft_resize)
 {
 	if (length == 0 && arr->alloc_size > 0 && !soft_resize) {
@@ -62,17 +66,20 @@ E_WHISKER_ARR whisker_arr_resize_double(whisker_arr_double *arr, size_t length, 
 	return E_WHISKER_ARR_OK;
 }
 
+// increase the size by +1
 E_WHISKER_ARR whisker_arr_increment_size_double(whisker_arr_double *arr)
 {
 	return whisker_arr_resize_double(arr, arr->length + 1, true);
 }
 
+// decrease the size by +1
 E_WHISKER_ARR whisker_arr_decrement_size_double(whisker_arr_double *arr)
 {
 	if (arr->length == 0) { return E_WHISKER_ARR_OUT_OF_BOUNDS; }
 	return whisker_arr_resize_double(arr, arr->length - 1, true);
 }
 
+// push a double value into the array, resizing and re-allocating if required
 E_WHISKER_ARR whisker_arr_push_double(whisker_arr_double *arr, double value)
 {
 	E_WHISKER_ARR err = whisker_arr_increment_size_double(arr);
@@ -81,6 +88,8 @@ E_WHISKER_ARR whisker_arr_push_double(whisker_arr_double *arr, double value)
 	return E_WHISKER_ARR_OK;
 }
 
+// pop the last double value from the array, decreasing the managed length
+// note: does not decrease the allocation size
 E_WHISKER_ARR whisker_arr_pop_double(whisker_arr_double *arr, double *out)
 {
 	E_WHISKER_ARR err = whisker_arr_decrement_size_double(arr);
@@ -90,6 +99,7 @@ E_WHISKER_ARR whisker_arr_pop_double(whisker_arr_double *arr, double *out)
 	return E_WHISKER_ARR_OK;
 }
 
+// swap 2 double values with the given indexes using the swap buffer
 E_WHISKER_ARR whisker_arr_swap_double(whisker_arr_double *arr, size_t index_a, size_t index_b)
 {
 	if (index_a < 0 || index_a > arr->length - 1 || index_b < 0 || index_b > arr->length - 1) { return E_WHISKER_ARR_OUT_OF_BOUNDS; }
@@ -100,12 +110,15 @@ E_WHISKER_ARR whisker_arr_swap_double(whisker_arr_double *arr, size_t index_a, s
 	return E_WHISKER_ARR_OK;
 }
 
+// reset the managed length to 0
+// note: optionally compact down to 0 (free the allocation)
 void whisker_arr_reset_double(whisker_arr_double *arr, bool compact)
 {
 	arr->length = 0;
 	if (compact) { whisker_arr_resize_double(arr, 0, false); }
 }
 
+// compact and resize the allocation to fit the managed size
 E_WHISKER_ARR whisker_arr_compact_double(whisker_arr_double *arr)
 {
 	return whisker_arr_resize_double(arr, arr->length, false);
@@ -115,6 +128,8 @@ E_WHISKER_ARR whisker_arr_compact_double(whisker_arr_double *arr)
 *  utility functions  *
 ***********************/
 
+// get the index of the double value, -1 if it doesn't exist
+// note: does a memcmp to find the values
 size_t whisker_arr_contains_value_double(whisker_arr_double *arr, double value) {
     for (size_t i = 0; i < arr->length; ++i)
     {

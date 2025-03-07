@@ -306,95 +306,6 @@ void asteroids_system_screen_wrap(whisker_ecs_system *system)
 	}
 }
 
-void asteroids_system_draw_frame_time(whisker_ecs_system *system)
-{
-	size_t asteroid_count = whisker_ecs_s_get_iterator(system, 0, "t_ast", "", "")->count;
-
-	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(system, 1, "system_draw_frame_time", "frametime", "");
-
-	while (whisker_ecs_s_iterate(system, itor)) 
-	{
-		float current_frametime = system->delta_time * 1000;
-		asteroids_component_frametime *frametime = itor->write->arr[1];
-
-		// update frametime samples
-		/* if (GetTime() - 0.1 > frametime->time || frametime->time == 0) */
-		/* { */
-			/* frametime->time = GetTime(); */
-		    frametime->samples[frametime->index] = current_frametime;
-		    frametime->index = (frametime->index + 1) % DRAW_FRAMETIME_AVG_SAMPLES;
-		/* } */
-
-		if (frametime->index > frametime->max_index)
-		{
-		    frametime->max_index = frametime->index;
-		}
-
-		// calculate average frametime
-		float sum = 0.0;
-		for (int i = 0; i < frametime->max_index + 1; i++) {
-		    sum += frametime->samples[i];
-		}
-		float average_frametime = (sum / frametime->max_index);
-
-		if (GetTime() - 2.5 > frametime->time || frametime->time == 0)
-		{
-			frametime->time = GetTime();
-		    frametime->max = current_frametime;
-		    frametime->min = current_frametime;
-		}
-
-		if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
-		{
-		    frametime->max = current_frametime;
-		}
-		if ((current_frametime < frametime->min || frametime->min <= 0) && frametime->max_index >= 10)
-		{
-		    frametime->min = current_frametime;
-		}
-
-		const int frametime_string_count = 4;
-		const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
-		const char* process_frametime = TextFormat("phase %2.2f ms/f", system->process_phase_time_step->delta_time_variable * 1000);
-
-		const int font_size = 32;
-		DrawText(frametime_string, 20, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
-		DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
-
-		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
-		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8), font_size, RED);
-
-		size_t entity_count = whisker_ecs_e_count(system->entities);
-		size_t entity_count_alive = whisker_ecs_e_alive_count(system->entities);
-
-
-		// TODO: convert to another iterator
-		/* for (size_t si = 0; si < entity_count; ++si) */
-		/* { */
-		/* 	if (system->entities->entities->arr[si].destroyed) */
-		/* 	{ */
-		/* 		continue; */
-		/* 	} */
-		/* 	whisker_ecs_entity_id se = system->entities->entities->arr[si].id; */
-        /*  */
-		/* 	if (WECS_HAS_TAG_E(t_ast, 2, se)) */
-		/* 	{ */
-		/* 		asteroid_count++; */
-		/* 	} */
-		/* } */
-
-		const char* s1 = TextFormat("AC %d", asteroid_count);
-		const char* s2 = TextFormat("EA %d", entity_count_alive);
-		const char* s3 = TextFormat("ET %d", entity_count);
-		DrawText(s1, 20, asteroids_screen_height - ((font_size + 8) * 4) + 4, font_size, BLACK);
-		DrawText(s1, 16, asteroids_screen_height - ((font_size + 8) * 4), font_size, RED);
-		DrawText(s2, 20, asteroids_screen_height - ((font_size + 8) * 3) + 4, font_size, BLACK);
-		DrawText(s2, 16, asteroids_screen_height - ((font_size + 8) * 3), font_size, RED);
-		DrawText(s3, 20, asteroids_screen_height - ((font_size + 8) * 2) + 4, font_size, BLACK);
-		DrawText(s3, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, RED);
-	}
-}
-
 void asteroids_system_player_death_on_life_depleted(whisker_ecs_system *system)
 {
 	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(system, 0, "t_player,life", "p_state", "");
@@ -918,6 +829,75 @@ void asteroids_system_draw_game_over(whisker_ecs_system *system)
 			DrawText(press_r, asteroids_screen_width / 2 - MeasureText(press_r, 20) / 2, asteroids_screen_height * 0.75f, 20, WHITE);
 			DrawText(time_text, asteroids_screen_width / 2 - MeasureText(time_text, 20) / 2, asteroids_screen_height / 2 + 40, 20, WHITE);
 		}
+	}
+}
+
+void asteroids_system_draw_frame_time(whisker_ecs_system *system)
+{
+	size_t asteroid_count = whisker_ecs_s_get_iterator(system, 0, "t_ast", "", "")->count;
+
+	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(system, 1, "system_draw_frame_time", "frametime", "");
+
+	while (whisker_ecs_s_iterate(system, itor)) 
+	{
+		float current_frametime = system->delta_time * 1000;
+		asteroids_component_frametime *frametime = itor->write->arr[1];
+
+		// update frametime samples
+		frametime->samples[frametime->index] = current_frametime;
+		frametime->index = (frametime->index + 1) % DRAW_FRAMETIME_AVG_SAMPLES;
+
+		if (frametime->index > frametime->max_index)
+		{
+		    frametime->max_index = frametime->index;
+		}
+
+		// calculate average frametime
+		float sum = 0.0;
+		for (int i = 0; i < frametime->max_index + 1; i++) {
+		    sum += frametime->samples[i];
+		}
+		float average_frametime = (sum / frametime->max_index);
+
+		if (GetTime() - 2.5 > frametime->time || frametime->time == 0)
+		{
+			frametime->time = GetTime();
+		    frametime->max = current_frametime;
+		    frametime->min = current_frametime;
+		}
+
+		if ((current_frametime > frametime->max || frametime->max <= 0) && frametime->max_index >= 10)
+		{
+		    frametime->max = current_frametime;
+		}
+		if ((current_frametime < frametime->min || frametime->min <= 0) && frametime->max_index >= 10)
+		{
+		    frametime->min = current_frametime;
+		}
+
+		const int frametime_string_count = 4;
+		const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
+		const char* process_frametime = TextFormat("phase %2.2f ms/f", system->process_phase_time_step->delta_time_variable * 1000);
+
+		const int font_size = 32;
+		DrawText(frametime_string, 20, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
+		DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
+
+		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
+		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8), font_size, RED);
+
+		size_t entity_count = whisker_ecs_e_count(system->entities);
+		size_t entity_count_alive = whisker_ecs_e_alive_count(system->entities);
+
+		const char* s1 = TextFormat("AC %d", asteroid_count);
+		const char* s2 = TextFormat("EA %d", entity_count_alive);
+		const char* s3 = TextFormat("ET %d", entity_count);
+		DrawText(s1, 20, asteroids_screen_height - ((font_size + 8) * 4) + 4, font_size, BLACK);
+		DrawText(s1, 16, asteroids_screen_height - ((font_size + 8) * 4), font_size, RED);
+		DrawText(s2, 20, asteroids_screen_height - ((font_size + 8) * 3) + 4, font_size, BLACK);
+		DrawText(s2, 16, asteroids_screen_height - ((font_size + 8) * 3), font_size, RED);
+		DrawText(s3, 20, asteroids_screen_height - ((font_size + 8) * 2) + 4, font_size, BLACK);
+		DrawText(s3, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, RED);
 	}
 }
 

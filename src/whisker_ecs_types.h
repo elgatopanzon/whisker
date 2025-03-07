@@ -89,10 +89,6 @@ typedef struct whisker_ecs_system
 	double delta_time;
 	whisker_time_step *process_phase_time_step;
 
-	whisker_ecs_components *components_cache;
-	whisker_ecs_entity_id *components_cache_entities;
-	int *component_name_index;
-
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
 	whisker_sparse_set *iterators;

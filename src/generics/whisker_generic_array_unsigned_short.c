@@ -10,6 +10,7 @@
 #include "whisker_generic_array.h"
 #include "whisker_generic_array_unsigned_short.h"
 
+// create an instance of a managed array with type unsigned short
 E_WHISKER_ARR whisker_arr_create_unsigned_short(whisker_arr_unsigned_short **arr, size_t length)
 {
 	whisker_arr_unsigned_short *a;
@@ -22,6 +23,7 @@ E_WHISKER_ARR whisker_arr_create_unsigned_short(whisker_arr_unsigned_short **arr
 	return E_WHISKER_ARR_OK;
 }
 
+// init an instance of a managed array with type unsigned short
 E_WHISKER_ARR whisker_arr_init_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
@@ -31,12 +33,14 @@ E_WHISKER_ARR whisker_arr_init_unsigned_short(whisker_arr_unsigned_short *arr)
 	return E_WHISKER_ARR_OK;
 }
 
+// deallocate an instance of a managed array with type unsigned short
 void whisker_arr_free_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	if (arr->arr != NULL) { free(arr->arr); }
 	free(arr);
 }
 
+// resize a managed array of type unsigned short
 E_WHISKER_ARR whisker_arr_resize_unsigned_short(whisker_arr_unsigned_short *arr, size_t length, bool soft_resize)
 {
 	if (length == 0 && arr->alloc_size > 0 && !soft_resize) {
@@ -62,17 +66,20 @@ E_WHISKER_ARR whisker_arr_resize_unsigned_short(whisker_arr_unsigned_short *arr,
 	return E_WHISKER_ARR_OK;
 }
 
+// increase the size by +1
 E_WHISKER_ARR whisker_arr_increment_size_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	return whisker_arr_resize_unsigned_short(arr, arr->length + 1, true);
 }
 
+// decrease the size by +1
 E_WHISKER_ARR whisker_arr_decrement_size_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	if (arr->length == 0) { return E_WHISKER_ARR_OUT_OF_BOUNDS; }
 	return whisker_arr_resize_unsigned_short(arr, arr->length - 1, true);
 }
 
+// push a unsigned short value into the array, resizing and re-allocating if required
 E_WHISKER_ARR whisker_arr_push_unsigned_short(whisker_arr_unsigned_short *arr, unsigned short value)
 {
 	E_WHISKER_ARR err = whisker_arr_increment_size_unsigned_short(arr);
@@ -81,6 +88,8 @@ E_WHISKER_ARR whisker_arr_push_unsigned_short(whisker_arr_unsigned_short *arr, u
 	return E_WHISKER_ARR_OK;
 }
 
+// pop the last unsigned short value from the array, decreasing the managed length
+// note: does not decrease the allocation size
 E_WHISKER_ARR whisker_arr_pop_unsigned_short(whisker_arr_unsigned_short *arr, unsigned short *out)
 {
 	E_WHISKER_ARR err = whisker_arr_decrement_size_unsigned_short(arr);
@@ -90,6 +99,7 @@ E_WHISKER_ARR whisker_arr_pop_unsigned_short(whisker_arr_unsigned_short *arr, un
 	return E_WHISKER_ARR_OK;
 }
 
+// swap 2 unsigned short values with the given indexes using the swap buffer
 E_WHISKER_ARR whisker_arr_swap_unsigned_short(whisker_arr_unsigned_short *arr, size_t index_a, size_t index_b)
 {
 	if (index_a < 0 || index_a > arr->length - 1 || index_b < 0 || index_b > arr->length - 1) { return E_WHISKER_ARR_OUT_OF_BOUNDS; }
@@ -100,12 +110,15 @@ E_WHISKER_ARR whisker_arr_swap_unsigned_short(whisker_arr_unsigned_short *arr, s
 	return E_WHISKER_ARR_OK;
 }
 
+// reset the managed length to 0
+// note: optionally compact down to 0 (free the allocation)
 void whisker_arr_reset_unsigned_short(whisker_arr_unsigned_short *arr, bool compact)
 {
 	arr->length = 0;
 	if (compact) { whisker_arr_resize_unsigned_short(arr, 0, false); }
 }
 
+// compact and resize the allocation to fit the managed size
 E_WHISKER_ARR whisker_arr_compact_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	return whisker_arr_resize_unsigned_short(arr, arr->length, false);
@@ -115,6 +128,8 @@ E_WHISKER_ARR whisker_arr_compact_unsigned_short(whisker_arr_unsigned_short *arr
 *  utility functions  *
 ***********************/
 
+// get the index of the unsigned short value, -1 if it doesn't exist
+// note: does a memcmp to find the values
 size_t whisker_arr_contains_value_unsigned_short(whisker_arr_unsigned_short *arr, unsigned short value) {
     for (size_t i = 0; i < arr->length; ++i)
     {

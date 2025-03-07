@@ -62,7 +62,13 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 	// create empty entities up to the MIN
 	for (int i = 0; i < WHISKER_ECS_ENTITY_MIN; ++i)
 	{
-		whisker_ecs_e_create(e);
+		whisker_ecs_entity_id create_err = whisker_ecs_e_create(e);
+		if (create_err.id == 0)
+		{
+			// note: the ONLY occasion where entity ID 0 is a possible expected
+			// value
+			// TODO: handle this with whisker_error.h by checking for an error
+		}
 	}
 
 	*entities = e;
@@ -97,7 +103,12 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
 {
 	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_(entities, &e);
+	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_create_(entities, &e);
+	if (err != E_WHISKER_ECS_ENTITY_OK)
+	{
+		// TODO: some kind of panic
+		return (whisker_ecs_entity_id) { .id = 0 };
+	}
 
 	return e;
 }
@@ -264,9 +275,11 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 	return E_WHISKER_ECS_ENTITY_OK;
 }
 
+// add a deferred entity action to be processed at a later time
+// note: typically it would be the end of an update
 E_WHISKER_ECS_ENTITY whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
 {
-	if (whisker_arr_push_whisker_ecs_entity_deferred_action(entities->deferred_actions, action) == E_WHISKER_ARR_OK) 
+	if (whisker_arr_push_whisker_ecs_entity_deferred_action(entities->deferred_actions, action) != E_WHISKER_ARR_OK) 
 	{
 		return E_WHISKER_ECS_ENTITY_ARR;
 	}
@@ -285,7 +298,11 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entiti
 				entities->entities->arr[action.id.index].destroyed = false;		
 				break;
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
-				whisker_ecs_e_destroy(entities, action.id);
+				if (whisker_ecs_e_destroy(entities, action.id) != E_WHISKER_ECS_ENTITY_OK)
+				{
+					// TODO: panic here
+					break;
+				}
 				break;
 		}
 	}
@@ -360,7 +377,12 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 {
 	// entity list derived from string entity names
 	whisker_arr_whisker_ecs_entity_id *entities_new;
-	whisker_arr_create_whisker_ecs_entity_id(&entities_new, 0);
+	E_WHISKER_ARR arr_err = whisker_arr_create_whisker_ecs_entity_id(&entities_new, 0);
+	if (arr_err != E_WHISKER_ARR_OK)
+	{
+		// TODO: panic here
+		return NULL;
+	}
 
 	char* entity_names; wstr(entity_names_str, &entity_names);
 	size_t names_length = wstr_length(entity_names);
@@ -386,12 +408,22 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 		{
 			// create/get entity ID for name
 			whisker_ecs_entity_id e;
-			whisker_ecs_e_create_named_(entities, entity_names + search_index, &e);
+			E_WHISKER_ECS_ENTITY entity_err = whisker_ecs_e_create_named_(entities, entity_names + search_index, &e);
+			if (entity_err != E_WHISKER_ECS_ENTITY_OK)
+			{
+				// TODO: panic here
+				break;
+			}
 
 			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 
 			// add the entity id to the final list, and reset name array
-			whisker_arr_push_whisker_ecs_entity_id(entities_new, e);
+			arr_err = whisker_arr_push_whisker_ecs_entity_id(entities_new, e);
+			if (arr_err != E_WHISKER_ARR_OK)
+			{
+				// TODO: panic here
+				break;
+			}
 
 			search_index = i + 1;
 			if (mutated)

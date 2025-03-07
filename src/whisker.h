@@ -10,6 +10,8 @@
 #include "whisker_string.h"
 #include "whisker_trie.h"
 #include "whisker_dict.h"
+#include "whisker_sparse_set.h"
+#include "whisker_time.h"
 #include "whisker_ecs.h"
 
 #ifndef WHISKER_H

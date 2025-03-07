@@ -17,30 +17,6 @@ const char* E_WHISKER_ARR_STR[] = {
 	[E_WHISKER_ARR_MEM]="Memory error during operation",
 };
 
-/* whisker_arr_impl_typedef(bool, bool_); */
-/*  */
-/* whisker_arr_impl(char); */
-/* whisker_arr_impl_typedef(unsigned char, unsigned_char); */
-/* whisker_arr_impl(short); */
-/* whisker_arr_impl_typedef(unsigned short, unsigned_short); */
-/* whisker_arr_impl(int); */
-/* whisker_arr_impl_typedef(unsigned int, unsigned_int); */
-/* whisker_arr_impl(long); */
-/* whisker_arr_impl_typedef(unsigned long, unsigned_long); */
-/* whisker_arr_impl_typedef(long long, long_long); */
-/* whisker_arr_impl_typedef(unsigned long long, unsigned_long_long); */
-/*  */
-/* whisker_arr_impl(float); */
-/* whisker_arr_impl(double); */
-/* whisker_arr_impl_typedef(long double, long_double); */
-/*  */
-/* whisker_arr_impl_typedef(void *, void_ptr) */
-/*  */
-/* whisker_arr_impl(uint8_t); */
-/* whisker_arr_impl(uint16_t); */
-/* whisker_arr_impl(uint32_t); */
-/* whisker_arr_impl(uint64_t); */
-
 // create a block and use it to create the array
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 {
