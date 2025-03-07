@@ -241,7 +241,6 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 
 bool whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-	entities->entities->arr[entity_id.index].destroyed = true;
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
 
 	return false;
