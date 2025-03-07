@@ -1,8 +1,8 @@
 source_file_in,template_string_func,template_string_type,type_names
 src/generics/whisker_generic_array.h,w_T,wT,char|unsigned char|short|unsigned short|int|unsigned int|long|unsigned long|long long|unsigned long long|float|double|long double|uint8_t|uint16_t|uint32_t|uint64_t|void*
 src/generics/whisker_generic_array.c,w_T,wT,char|unsigned char|short|unsigned short|int|unsigned int|long|unsigned long|long long|unsigned long long|float|double|long double|uint8_t|uint16_t|uint32_t|uint64_t|void*
-src/generics/whisker_generic_array.h,w_T,wT,whisker_ecs_entity|whisker_ecs_entity_id|whisker_ecs_entity_index|whisker_ecs_entity_deferred_action
-src/generics/whisker_generic_array.c,w_T,wT,whisker_ecs_entity|whisker_ecs_entity_id|whisker_ecs_entity_index|whisker_ecs_entity_deferred_action
+src/generics/whisker_generic_array.h,w_T,wT,whisker_ecs_entity|whisker_ecs_entity_id|whisker_ecs_entity_index|whisker_ecs_entity_deferred_action|whisker_ecs_system_process_phase
+src/generics/whisker_generic_array.c,w_T,wT,whisker_ecs_entity|whisker_ecs_entity_id|whisker_ecs_entity_index|whisker_ecs_entity_deferred_action|whisker_ecs_system_process_phase
 src/generics/whisker_generic_block_array.h,w_T,wT,char|unsigned char|short|unsigned short|int|unsigned int|long|unsigned long|long long|unsigned long long|float|double|long double|uint8_t|uint16_t|uint32_t|uint64_t|void*
 src/generics/whisker_generic_block_array.c,w_T,wT,char|unsigned char|short|unsigned short|int|unsigned int|long|unsigned long|long long|unsigned long long|float|double|long double|uint8_t|uint16_t|uint32_t|uint64_t|void*
 src/generics/whisker_generic_block_array.h,w_T,wT,whisker_ecs_entity|whisker_ecs_entity_id|whisker_ecs_entity_index|whisker_ecs_entity_deferred_action

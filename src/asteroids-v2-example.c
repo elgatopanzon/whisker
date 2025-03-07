@@ -263,8 +263,7 @@ void asteroids_system_player_controller(whisker_ecs_system *system)
 		bool can_fire = (now > *fire_time + PROJECTILE_FIRE_RATE);
 
 		if (IsKeyDown(KEY_SPACE) && can_fire) {
-			Vector2 projectile_position = Vector2Add(*pos_2d, Vector2Scale(facing_direction, 50));
-			asteroids_add_projectile(projectile_position, *rot);
+			asteroids_add_projectile(Vector2Add(*pos_2d, Vector2Scale(facing_direction, 24)), *rot);
 			*fire_time = now;
 		}
 	}
@@ -942,16 +941,18 @@ void asteroids_game_init()
 	}
 
 	// register process phases
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_startup");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_load");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_update");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_update");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_update");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_render");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_render");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_render");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final_render");
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final");
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_startup", 60);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_load", 60);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_update", 480);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_update", 480);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_update", 480);
+
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_render", 0);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_render", 0);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_render", 0);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final_render", 0);
+
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_final", 0);
 
 	/* // register systems */
 	whisker_ecs_system *spawn_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_spawn, "system_asteroid_spawn", "phase_pre_load");

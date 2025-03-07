@@ -6,11 +6,13 @@
 
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
+#include "whisker_time.h"
 #include "whisker_ecs_types_base.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_index.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_deferred_action.h"
+#include "generics/whisker_generic_array_whisker_ecs_system_process_phase.h"
 #include "generics/whisker_generic_array_void_.h"
 
 #ifndef WHISKER_ECS_TYPES_H
@@ -99,7 +101,7 @@ typedef struct whisker_ecs_systems
 {
 	whisker_ecs_system *systems;	
 	size_t systems_length;
-	whisker_arr_whisker_ecs_entity_id *process_phases;
+	whisker_arr_whisker_ecs_system_process_phase *process_phases;
 	size_t system_id;
 } whisker_ecs_systems;
 

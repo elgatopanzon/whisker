@@ -26,7 +26,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems)
 	s->systems_length = 0;
 
 	// create array for process phase list
-	E_WHISKER_ARR err = whisker_arr_create_whisker_ecs_entity_id(&s->process_phases, 0);
+	E_WHISKER_ARR err = whisker_arr_create_whisker_ecs_system_process_phase(&s->process_phases, 0);
 	if (err != E_WHISKER_ARR_OK)
 	{
 		return E_WHISKER_ECS_SYS_ARR;
@@ -45,7 +45,7 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 	}
 
 	warr_free(systems->systems);
-	whisker_arr_free_whisker_ecs_entity_id(systems->process_phases);
+	whisker_arr_free_whisker_ecs_system_process_phase(systems->process_phases);
 
 	free(systems);
 }
@@ -72,6 +72,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	{
 		return NULL;
 	}
+
 
 	// add system to main systems list
 	warr_push(&systems->systems, &system);
@@ -140,18 +141,27 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 {
 	whisker_ecs_system *system = &systems->systems[systems->system_id];
 
+	// loop over each registered process phase
 	for (int i = 0; i < systems->process_phases->length; ++i)
 	{
-		whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(system, systems->process_phases->arr[i].index, "w_ecs_system_idx", entities->entities->arr[systems->process_phases->arr[i].index].name, "");
+		whisker_ecs_system_process_phase *process_phase = &systems->process_phases->arr[i];
 
-		while (whisker_ecs_s_iterate(system, system_itor)) 
+		// advance the process phase time step
+		int update_count = whisker_time_step_step_get_update_count(&process_phase->time_step);
+
+		// update all systems in the process phase by update count
+		for (int ui = 0; ui < update_count; ++ui)
 		{
-			int *system_idx = system_itor->read->arr[0];
-			whisker_ecs_system *system = &systems->systems[*system_idx];
+			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(system, process_phase->id.index, "w_ecs_system_idx", entities->entities->arr[process_phase->id.index].name, "");
 
-			system->delta_time = delta_time;
+			while (whisker_ecs_s_iterate(system, system_itor)) 
+			{
+				int *system_idx = system_itor->read->arr[0];
+				whisker_ecs_system *system = &systems->systems[*system_idx];
 
-			whisker_ecs_s_update_system(system);				
+				system->delta_time = process_phase->time_step.delta_time_fixed;
+				whisker_ecs_s_update_system(system);			
+			}
 		}
 	}
 
@@ -165,9 +175,14 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system)
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id)
+E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec)
 {
-	E_WHISKER_ARR err = whisker_arr_push_whisker_ecs_entity_id(systems->process_phases, component_id);
+	whisker_ecs_system_process_phase process_phase = {
+		.id = component_id,
+		.time_step = whisker_time_step_create((update_rate_sec > 0) ? update_rate_sec : 60, (update_rate_sec > 0) ? false : true),
+	};
+
+	E_WHISKER_ARR err = whisker_arr_push_whisker_ecs_system_process_phase(systems->process_phases, process_phase);
 	if (err != E_WHISKER_ARR_OK)
 	{
 		return E_WHISKER_ECS_SYS_ARR;
@@ -180,15 +195,16 @@ E_WHISKER_ECS_SYS whisker_ecs_s_deregister_process_phase(whisker_ecs_systems *sy
 {
 	size_t index = -1;
 
-	if ((index = whisker_arr_contains_value_whisker_ecs_entity_id(systems->process_phases, component_id)) > -1)
-	{
-    	for (int i = index; i < systems->process_phases->length - 1; i++)
-    	{
-        	systems->process_phases->arr[i] = systems->process_phases->arr[i + 1];
-    	}
-
-    	systems->process_phases->length--;
-	}
+	// TODO: re-write this to check new struct ID
+	/* if ((index = whisker_arr_contains_value_whisker_ecs_entity_id(systems->process_phases, component_id)) > -1) */
+	/* { */
+    /* 	for (int i = index; i < systems->process_phases->length - 1; i++) */
+    /* 	{ */
+    /*     	systems->process_phases->arr[i] = systems->process_phases->arr[i + 1]; */
+    /* 	} */
+    /*  */
+    /* 	systems->process_phases->length--; */
+	/* } */
 
 	return E_WHISKER_ECS_SYS_OK;
 }

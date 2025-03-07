@@ -178,12 +178,12 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	return E_WHISKER_ECS_OK;
 }
 
-whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name)
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
 
 	// add component ID to system's process phase list
-	whisker_ecs_s_register_process_phase(ecs->systems, component_id);
+	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
 
 	return component_id;
 }

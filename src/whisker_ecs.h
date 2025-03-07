@@ -29,7 +29,7 @@ void whisker_ecs_free(whisker_ecs *ecs);
 // system functions
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system*), char *system_name, char *process_phase_name);
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time);
-whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name);
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec);
 
 // entity shortcut functions
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities);

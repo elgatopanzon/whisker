@@ -10,6 +10,7 @@
 #include "generics/whisker_generic_array_void_.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
 #include "whisker_dict.h"
+#include "whisker_time.h"
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_component.h"
@@ -29,7 +30,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system);
 
 // system process phases functions
-E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id);
+E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec);
 E_WHISKER_ECS_SYS whisker_ecs_s_deregister_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id);
 E_WHISKER_ECS_SYS whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems);
 

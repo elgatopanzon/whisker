@@ -5,6 +5,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_time.h"
 
 #ifndef WHISKER_ECS_TYPES_BASE_H
 #define WHISKER_ECS_TYPES_BASE_H
@@ -78,6 +79,18 @@ typedef struct whisker_ecs_entity_deferred_action
 	WHISKER_ECS_ENTITY_DEFERRED_ACTION action;
 	
 } whisker_ecs_entity_deferred_action;
+
+
+////////////////////
+//  system types  //
+////////////////////
+
+typedef struct whisker_ecs_system_process_phase
+{
+	whisker_ecs_entity_id id;
+	whisker_time_step time_step;
+} whisker_ecs_system_process_phase;
+
 
 #endif /* WHISKER_ECS_TYPES_BASE_H */
 
