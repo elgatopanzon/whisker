@@ -263,7 +263,7 @@ void asteroids_system_player_controller(whisker_ecs_system *system)
 		bool can_fire = (now > *fire_time + PROJECTILE_FIRE_RATE);
 
 		if (IsKeyDown(KEY_SPACE) && can_fire) {
-			asteroids_add_projectile(Vector2Add(*pos_2d, Vector2Scale(facing_direction, 24)), *rot);
+			asteroids_add_projectile(Vector2Add(*pos_2d, Vector2Scale(facing_direction, 50)), *rot);
 			*fire_time = now;
 		}
 	}
