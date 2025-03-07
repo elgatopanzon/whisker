@@ -77,6 +77,22 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 	// system instance
 	s->system_id = 0;
 
+	// register default system process phases to allow bundled systems and
+	// modules and a standard default processing phase group set
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE);
+
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE, WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE);
+
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_RENDER, WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_RENDER, WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_RENDER, WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE);
+
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_PHASE_FINAL_RATE);
+
 	*ecs = new;
 
 	return E_WHISKER_ECS_OK;
