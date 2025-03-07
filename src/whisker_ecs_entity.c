@@ -248,10 +248,18 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisk
 {
 	// mark entity as destroyed
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-	e->destroyed = true;
+	if (!e->destroyed)
+	{
+		e->destroyed = true;
 
-	if (whisker_ecs_e_recycle(entities, entity_id) != E_WHISKER_ECS_ENTITY_OK)
-		return E_WHISKER_ECS_ENTITY_ARR;
+		if (whisker_ecs_e_recycle(entities, entity_id) != E_WHISKER_ECS_ENTITY_OK)
+			return E_WHISKER_ECS_ENTITY_ARR;
+	}
+	else
+	{
+		// TODO: better error than this
+		return E_WHISKER_ECS_ENTITY_UNKNOWN;
+	}
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
