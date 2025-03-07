@@ -228,7 +228,7 @@ void asteroids_system_player_controller(whisker_ecs_system *system)
 		Vector2 *vel_2d = itor->write->arr[5];
 		double *fire_time = itor->write->arr[6];
 
-		if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD && IsKeyPressed(KEY_R)) {
+		if (IsKeyPressed(KEY_R)) {
 			asteroids_game_state = ASTEROIDS_GAME_STATE_END;
 			return;
 		}
@@ -355,10 +355,14 @@ void asteroids_system_draw_frame_time(whisker_ecs_system *system)
 
 		const int frametime_string_count = 4;
 		const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
+		const char* process_frametime = TextFormat("phase %2.2f ms/f", system->process_phase_time_step->delta_time_variable * 1000);
 
 		const int font_size = 32;
 		DrawText(frametime_string, 20, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
-		DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, WHITE);
+		DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
+
+		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
+		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8), font_size, RED);
 
 		size_t entity_count = whisker_ecs_e_count(system->entities);
 		size_t entity_count_alive = whisker_ecs_e_alive_count(system->entities);
@@ -383,11 +387,11 @@ void asteroids_system_draw_frame_time(whisker_ecs_system *system)
 		const char* s2 = TextFormat("EA %d", entity_count_alive);
 		const char* s3 = TextFormat("ET %d", entity_count);
 		DrawText(s1, 20, asteroids_screen_height - ((font_size + 8) * 4) + 4, font_size, BLACK);
-		DrawText(s1, 16, asteroids_screen_height - ((font_size + 8) * 4), font_size, WHITE);
+		DrawText(s1, 16, asteroids_screen_height - ((font_size + 8) * 4), font_size, RED);
 		DrawText(s2, 20, asteroids_screen_height - ((font_size + 8) * 3) + 4, font_size, BLACK);
-		DrawText(s2, 16, asteroids_screen_height - ((font_size + 8) * 3), font_size, WHITE);
+		DrawText(s2, 16, asteroids_screen_height - ((font_size + 8) * 3), font_size, RED);
 		DrawText(s3, 20, asteroids_screen_height - ((font_size + 8) * 2) + 4, font_size, BLACK);
-		DrawText(s3, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, WHITE);
+		DrawText(s3, 16, asteroids_screen_height - ((font_size + 8) * 2), font_size, RED);
 	}
 }
 
@@ -756,6 +760,16 @@ void asteroids_system_draw_asteroid(whisker_ecs_system *system)
 		Vector2 *pos_2d = itor->read->arr[2];
 		ASTEROIDS_ASTEROID_SIZE *ast_size = itor->read->arr[3];
 
+		// skip offscreen asteroids from drawing
+		if (pos_2d->x < -(ASTEROID_OFF_SCREEN_PAD) ||
+			pos_2d->y < -(ASTEROID_OFF_SCREEN_PAD) ||
+			pos_2d->x > (asteroids_screen_width + ASTEROID_OFF_SCREEN_PAD) ||
+			pos_2d->y > (asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD)
+			)
+		{
+			continue;
+		}
+
 		/* debug_printf("drawing asteroid %zu size %d pos %fx%f\n", itor->entity_id, *ast_size, pos_2d->x, pos_2d->y); */
 
 		DrawPolyLines(*pos_2d, 3, 16 * (int)*ast_size, *rot, WHITE);
@@ -943,9 +957,9 @@ void asteroids_game_init()
 	// register process phases
 	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_startup", 60);
 	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_load", 60);
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_update", 480);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_update", 60);
 	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_update", 480);
-	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_update", 480);
+	whisker_ecs_register_process_phase(asteroids_ecs, "phase_post_update", 60);
 
 	whisker_ecs_register_process_phase(asteroids_ecs, "phase_pre_render", 0);
 	whisker_ecs_register_process_phase(asteroids_ecs, "phase_on_render", 0);
@@ -959,13 +973,14 @@ void asteroids_game_init()
 	whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, system_asteroid_spawn_time, double, spawn_sys->entity_id, &(double){GetTime()});
 
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller", "phase_pre_update");
+
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d", "phase_on_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity", "phase_on_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_movement_direction, "system_movement_direction", "phase_on_update");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", "phase_on_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision", "phase_on_update");
+
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", "phase_post_update");
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision_cull, "system_collision_cull", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score", "phase_post_update");
@@ -976,6 +991,7 @@ void asteroids_game_init()
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_death_on_life_depleted, "system_player_death_on_life_depleted", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_to_recover, "system_player_hit_to_recover", "phase_post_update");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_entity_deferred_destroy, "system_entity_deferred_destroy", "phase_post_update");
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision_cull, "system_collision_cull", "phase_post_update");
 
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_start_drawing, "system_raylib_start_drawing", "phase_pre_render");
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_asteroid, "system_draw_asteroid", "phase_on_render");
