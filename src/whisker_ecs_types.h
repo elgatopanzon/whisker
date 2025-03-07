@@ -87,6 +87,7 @@ typedef struct whisker_ecs_system
 	int8_t thread_id;
 	double last_update;
 	double delta_time;
+	whisker_time_step *process_phase_time_step;
 
 	whisker_ecs_components *components_cache;
 	whisker_ecs_entity_id *components_cache_entities;

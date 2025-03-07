@@ -149,6 +149,8 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 		// advance the process phase time step
 		int update_count = whisker_time_step_step_get_update_count(&process_phase->time_step);
 
+		/* printf("update count for phase: %d delta %.10f ms/f %s\n", update_count, process_phase->time_step.delta_time_variable * 1000, entities->entities->arr[process_phase->id.index].name); */
+
 		// update all systems in the process phase by update count
 		for (int ui = 0; ui < update_count; ++ui)
 		{
@@ -160,6 +162,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 				whisker_ecs_system *system = &systems->systems[*system_idx];
 
 				system->delta_time = process_phase->time_step.delta_time_fixed;
+				system->process_phase_time_step = &process_phase->time_step;
 				whisker_ecs_s_update_system(system);			
 			}
 		}
