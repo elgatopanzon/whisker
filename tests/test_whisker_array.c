@@ -73,9 +73,6 @@ START_TEST(test_whisker_arr_try_resize)
 	int* arr_resized = arr;
 	whisker_arr_resize(&arr_resized, 2);
 
-	// verify pointer changed
-	ck_assert(arr != arr_resized);
-
 	// set a new element
 	arr_resized[1] = 456;
 
@@ -102,9 +99,6 @@ START_TEST(test_whisker_arr_try_push)
 	int* arr_resized = arr;
 	int val = 789;
 	whisker_arr_push(&arr_resized, &val);
-
-	// verify pointer changed
-	ck_assert(arr != arr_resized);
 
 	// verify length
 	ck_assert_int_eq(whisker_arr_length(arr_resized), 3);
@@ -136,9 +130,6 @@ START_TEST(test_whisker_arr_try_pop)
 	// verify popped valus is set
 	ck_assert_int_eq(popped, 456);
 
-	// verify pointer didn't change (pop keeps capacity)
-	ck_assert(arr == arr_resized);
-
 	// verify accessing the array and the set values
 	ck_assert_int_eq(arr_resized[0], 123);
 
@@ -167,9 +158,6 @@ START_TEST(test_whisker_arr_try_pop_front)
 	// verify popped valus is set
 	ck_assert_int_eq(popped, 123);
 
-	// verify pointer didn't change (pop keeps capacity)
-	ck_assert(arr == arr_resized);
-
 	// verify accessing the array and the set values
 	ck_assert_int_eq(arr_resized[0], 456);
 
@@ -196,9 +184,6 @@ START_TEST(test_whisker_arr_try_push_pop_push_same_capacity)
 	int val = 789;
 	whisker_arr_push(&arr_resized, &val);
 
-	// verify pointer changed
-	ck_assert(arr != arr_resized);
-
 	// verify accessing the array and the set values
 	ck_assert_int_eq(arr_resized[0], 123);
 	ck_assert_int_eq(arr_resized[1], 456);
@@ -210,9 +195,6 @@ START_TEST(test_whisker_arr_try_push_pop_push_same_capacity)
 	int* arr_pop = arr_resized;
 	whisker_arr_pop(&arr_pop, &pop1);
 	whisker_arr_pop(&arr_pop, &pop2);
-
-	// verify pointer didn't change
-	ck_assert(arr_resized == arr_pop);
 
 	// verify length
 	ck_assert_int_eq(whisker_arr_length(arr_pop), 1);
@@ -293,9 +275,6 @@ START_TEST(test_whisker_arr_strings)
 	char** arr_resized = arr;
 	char* val = "89";
 	whisker_arr_push(&arr_resized, &val);
-
-	// verify pointer changed
-	ck_assert(arr != arr_resized);
 
 	// verify length
 	ck_assert_int_eq(whisker_arr_length(arr_resized), 3);

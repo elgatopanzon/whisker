@@ -23,7 +23,8 @@ START_TEST(test_whisker_ecs_create)
 	// note: contains entity id 0
 	ck_assert_int_eq(1, ecs->entities->entities->length);
 	ck_assert_int_eq(0, warr_length(ecs->components->components));
-	ck_assert_int_eq(0, warr_length(ecs->systems->systems));
+	// note: includes dummy system now
+	ck_assert_int_eq(1, warr_length(ecs->systems->systems));
 	
 	whisker_ecs_free(ecs);
 }

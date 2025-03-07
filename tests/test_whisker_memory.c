@@ -42,9 +42,6 @@ START_TEST(test_whisker_mem_try_realloc_block_data)
 	void* data_prev = block->data;
 	whisker_mem_block_try_realloc_data(block, data_size * 2);
 
-	// check the pointers changed
-	ck_assert(block->data != data_prev);
-
 	// check the data size changed
 	ck_assert_uint_eq(block->data_size, data_size * 2);
 

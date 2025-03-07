@@ -178,7 +178,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 	/* } */
     /*  */
 	/* // sort dense array by sparse index */
-	/* whisker_ss_sort(ss); */
+	whisker_ss_sort(ss);
 
 	// validate dense index order
 	int expected_sorted[] = {0,1,10,100};
