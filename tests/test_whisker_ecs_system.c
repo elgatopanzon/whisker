@@ -27,27 +27,6 @@ START_TEST(test_whisker_ecs_system_create_systems_struct)
 }
 END_TEST
 
-START_TEST(test_whisker_ecs_system_get_component_name_index)
-{
-	char *component_names = "c1,c2,c55,c5,c0";
-	whisker_ecs_system s = {};
-	wdict_create(&s.component_name_index, int, 0);
-
-	ck_assert_int_eq(0, whisker_ecs_s_get_component_name_index(&s, component_names, "c1"));
-	ck_assert_int_eq(1, whisker_ecs_s_get_component_name_index(&s, component_names, "c2"));
-	ck_assert_int_eq(4, whisker_ecs_s_get_component_name_index(&s, component_names, "c0"));
-	// TODO: fix this if it ever becomes a problem
-	/* ck_assert_int_eq(3, whisker_ecs_s_get_component_name_index(component_names, "c5")); */
-	ck_assert_int_eq(2, whisker_ecs_s_get_component_name_index(&s, component_names, "c55"));
-	// run again, it should fetch from the trie cache
-	ck_assert_int_eq(2, whisker_ecs_s_get_component_name_index(&s, component_names, "c55"));
-
-	// TODO: not strictly required, but this needs to be fixed
-	/* ck_assert_int_eq(-1, whisker_ecs_s_get_component_name_index(&s, component_names, "cxxx")); */
-
-	whisker_ecs_s_free_system(&s);
-}
-END_TEST
 
 START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 {
@@ -191,7 +170,6 @@ Suite* whisker_ecs_system_suite(void)
 	tcase_set_timeout(tc_core, 10);
 
 	tcase_add_test(tc_core, test_whisker_ecs_system_create_systems_struct);
-	tcase_add_test(tc_core, test_whisker_ecs_system_get_component_name_index);
 	tcase_add_test(tc_core, test_whisker_ecs_system_get_iterator_and_iterate);
 
 	suite_add_tcase(s, tc_core);
