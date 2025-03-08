@@ -51,7 +51,7 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_set_uint32_t(whisker_block_arr_uint32_t *b
 
 E_WHISKER_BLOCK_ARR whisker_block_arr_init_block_uint32_t(whisker_block_arr_uint32_t *barr, size_t block_id)
 {
-	if (barr->blocks->length < index + 1) {
+	if (barr->blocks->length < block_id + 1) {
 		E_WHISKER_ARR err = whisker_arr_resize_void_(barr->blocks, block_id + 1, true);
 		if (err != E_WHISKER_ARR_OK) { return E_WHISKER_BLOCK_ARR_MEM; }
 	}

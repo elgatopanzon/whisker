@@ -120,6 +120,7 @@ int main(int argc, char** argv)
 {
 	srand(time(0));
 	
+	/* SetConfigFlags(FLAG_VSYNC_HINT); */
 	InitWindow(asteroids_screen_width, asteroids_screen_height, "Asteroids");
 
 	// load textures
@@ -879,7 +880,7 @@ void asteroids_system_draw_frame_time(whisker_ecs_system *system)
 		const char* frametime_string = TextFormat("%2.2f %2.2f %2.2f ms/f", average_frametime, frametime->min, frametime->max);
 		const char* process_frametime = TextFormat("phase %2.2f ms/f", system->process_phase_time_step->delta_time_variable * 1000);
 
-		const int font_size = 32;
+		int font_size = 32;
 		DrawText(frametime_string, 20, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
 		DrawText(frametime_string, 16, asteroids_screen_height - (font_size + 8), font_size, RED);
 

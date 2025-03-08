@@ -13,15 +13,15 @@
 
 // windows implementation of clock_gettime()
 #if defined(_WIN32) || defined(_WIN64)
-int clock_gettime(int, struct timespec *spec)
-{  
-	__int64 wintime;
-	GetSystemTimeAsFileTime((FILETIME*)&wintime);
-	wintime      -=116444736000000000i64;  //1jan1601 to 1jan1970
-	spec->tv_sec  =wintime / 10000000i64;
-	spec->tv_nsec =wintime % 10000000i64 *100;
-	return 0;
-}
+/* int clock_gettime(int, struct timespec *spec) */
+/* {   */
+/* 	__int64 wintime; */
+/* 	GetSystemTimeAsFileTime((FILETIME*)&wintime); */
+/* 	wintime      -=116444736000000000i64;  //1jan1601 to 1jan1970 */
+/* 	spec->tv_sec  =wintime / 10000000i64; */
+/* 	spec->tv_nsec =wintime % 10000000i64 *100; */
+/* 	return 0; */
+/* } */
 #endif
 
 // get precise time in nanoseconds

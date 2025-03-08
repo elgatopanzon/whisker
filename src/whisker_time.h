@@ -20,9 +20,9 @@
 
 // platform specific time libraries
 #if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-struct timespec { long tv_sec; long tv_nsec; };
-int clock_gettime(int, struct timespec *spec);
+// #include <windows.h>
+// struct timespec { long tv_sec; long tv_nsec; };
+// int clock_gettime(int, struct timespec *spec);
 #else
 #include <sys/time.h>
 #endif
