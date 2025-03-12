@@ -36,6 +36,7 @@ typedef struct whisker_sparse_set
 	void *dense;
 	void *swap_buffer;
 	size_t element_size;
+	size_t *length;
 } whisker_sparse_set;
 
 #define whisker_ss_create_t(ss, t) whisker_ss_create_f(ss, sizeof(t))

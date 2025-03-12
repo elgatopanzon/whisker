@@ -67,6 +67,9 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	ss_new->element_size = element_size;
 	ss_new->swap_buffer = warr_header(ss_new->dense)->swap_buffer;
 
+	// link the length to the sparse_index->length
+	ss_new->length = &ss_new->sparse_index->length;
+
 	*ss = ss_new;
 
 	return E_WHISKER_SS_OK;
