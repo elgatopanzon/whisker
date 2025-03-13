@@ -71,12 +71,6 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 		}
 	}
 
-	// init pthread mutex
-	if (pthread_mutex_init(&e->thread_lock, NULL))
-	{
-		return E_WHISKER_ECS_ENTITY_UNKNOWN;
-	}
-
 	*entities = e;
 
 	return E_WHISKER_ECS_ENTITY_OK;
@@ -98,7 +92,6 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 	whisker_arr_free_whisker_ecs_entity_index(entities->destroyed_entities);
 	wdict_free(entities->entity_names);
 	whisker_arr_free_whisker_ecs_entity_deferred_action(entities->deferred_actions);
-	pthread_mutex_destroy(&entities->thread_lock);
 
 	free(entities);
 }
@@ -123,11 +116,6 @@ whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
 // creates and sets an entity, either new or recycled
 E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisker_ecs_entity_id *entity_id)
 {
-	if (pthread_mutex_lock(&entities->thread_lock))
-	{
-		return E_WHISKER_ECS_ENTITY_UNKNOWN;
-	}
-
 	whisker_ecs_entity_id new_id;
 
 	E_WHISKER_ECS_ENTITY err_create;
@@ -142,11 +130,6 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisk
 	else
 	{
 		err_create = whisker_ecs_e_create_new_(entities, &new_id);
-	}
-
-	if (pthread_mutex_unlock(&entities->thread_lock))
-	{
-		return E_WHISKER_ECS_ENTITY_UNKNOWN;
 	}
 
 	if (err_create != E_WHISKER_ECS_ENTITY_OK)

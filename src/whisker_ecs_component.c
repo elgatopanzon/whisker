@@ -36,12 +36,6 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 		return E_WHISKER_ECS_COMP_ARR;
 	}
 
-	// init pthread mutex
-	if (pthread_mutex_init(&c->thread_lock, NULL))
-	{
-		return E_WHISKER_ECS_COMP_UNKNOWN;
-	}
-
 	*components = c;
 
 	return E_WHISKER_ECS_COMP_OK;
@@ -58,7 +52,6 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 	}
 	warr_free(components->components);
 	wss_free(components->changed_components);
-	pthread_mutex_destroy(&components->thread_lock);
 
 	free(components);
 }

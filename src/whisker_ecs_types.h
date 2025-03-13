@@ -35,9 +35,6 @@ typedef struct whisker_ecs_entities
 
 	// stack of deferred actions to process
 	whisker_arr_whisker_ecs_entity_deferred_action *deferred_actions;
-
-	// mutex to lock access to entities
-	pthread_mutex_t thread_lock;
 } whisker_ecs_entities;
 
 
@@ -50,8 +47,6 @@ typedef struct whisker_ecs_components
 	whisker_sparse_set **components;
 	size_t components_length;
 	whisker_sparse_set *changed_components;
-	// mutex to lock access to components
-	pthread_mutex_t thread_lock;
 } whisker_ecs_components;
 
 
