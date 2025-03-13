@@ -12,8 +12,8 @@
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
 
-const int asteroids_screen_width = 2000;
-const int asteroids_screen_height = 2000;
+const int asteroids_screen_width = 800;
+const int asteroids_screen_height = 800;
 const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (float) asteroids_screen_height / 2};
 #define DRAW_FPS false
 #define DRAW_FPS_AVG_SAMPLES 20
@@ -52,7 +52,7 @@ typedef enum ASTEROIDS_PLAYER_STATE
 #define ASTEROID_VELOCITY_MAX 300
 #define ASTEROID_RANDOM_ANGLE 30 * DEG2RAD
 #define ASTEROID_OFF_SCREEN_PAD 128 
-#define ASTEROID_SPAWN_RATE 0.005f 
+#define ASTEROID_SPAWN_RATE 0.6f 
 #define ASTEROID_SPAWN_START 4
 #define ASTEROID_RADIUS 16 
 #define ASTEROID_SCORE 10 
