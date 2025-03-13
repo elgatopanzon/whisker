@@ -115,7 +115,7 @@ void whisker_ecs_free(whisker_ecs *ecs)
 **********************/
 // register a system function with a name and desired process phase group name to execute in
 // note: the process phase group has to be registered or it will not be scheduled for execution
-whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system*), char *system_name, char *process_phase_name)
+whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count)
 {
 	debug_printf("ecs:registering system: %s process phase %s\n", system_name, process_phase_name);
 
@@ -152,6 +152,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 		.entity_id = e,
 		.process_phase_id = phase_e,
 		.system_ptr = system_ptr,
+		.thread_count = thread_count,
 		.components = ecs->components,
 		.entities = ecs->entities,
 	});

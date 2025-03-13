@@ -4,6 +4,7 @@
  * @created     : Thursday Feb 13, 2025 17:59:56 CST
  */
 
+
 #include "whisker_std.h"
 #include "whisker_debug.h"
 #include "whisker_array.h"
@@ -33,6 +34,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems)
 		return E_WHISKER_ECS_SYS_ARR;
 	}
 
+
 	*systems = s;
 
 	return E_WHISKER_ECS_SYS_OK;
@@ -52,17 +54,63 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 	free(systems);
 }
 
+// create and init an instance of a system context
+E_WHISKER_ECS_SYS whisker_ecs_s_create_system_context(whisker_ecs_system_context **context, whisker_ecs_system *system)
+{
+	whisker_ecs_system_context *c = calloc(1, sizeof(*c));
+	if (c == NULL)
+	{
+		return E_WHISKER_ECS_SYS_MEM;
+	}
+
+	// create iterators sparse set
+	E_WHISKER_SS itors_err = whisker_ss_create_t(&c->iterators, whisker_ecs_iterator);
+	if (itors_err != E_WHISKER_SS_OK)
+	{
+		return E_WHISKER_ECS_SYS_MEM;
+	}
+
+	// set system pointers
+	c->components = system->components;
+	c->entities = system->entities;
+	c->process_phase_time_step = system->process_phase_time_step;
+	c->system_entity_id = system->entity_id;
+
+	c->delta_time = 0;
+	c->thread_id = 0;
+	c->thread_max = 0;
+
+	*context = c;
+
+	return E_WHISKER_ECS_SYS_OK;
+}
+
 // regiser a system in the systems container
 whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
 {
-	// create iterators sparse set
-	E_WHISKER_SS itors_err = whisker_ss_create_t(&system.iterators, whisker_ecs_iterator);
-	if (itors_err != E_WHISKER_SS_OK)
+	// create system context array
+	E_WHISKER_ARR err = whisker_arr_create_void_(&system.thread_contexts, 0);
+	if (err != E_WHISKER_ARR_OK)
 	{
 		return NULL;
 	}
 
-
+	// create contexts for the provided thread count
+	// set thread count to 1 when it's set to 0
+	if (system.thread_count == 0)
+	{
+		system.thread_count = 1;
+	}
+	debug_printf("sys: e %zu creating %zu thread contexts\n", system.entity_id, system.thread_count);
+	for (int i = 0; i < system.thread_count; ++i)
+	{
+		whisker_ecs_system_context *c;
+		whisker_ecs_s_create_system_context(&c, &system);
+		c->thread_id = i;
+		c->thread_max = system.thread_count;
+		whisker_arr_push_void_(system.thread_contexts, c);
+	}
+	
 	// add system to main systems list
 	E_WHISKER_ARR push_err = warr_push(&systems->systems, &system);
 	if (push_err != E_WHISKER_ARR_OK)
@@ -77,11 +125,22 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 // deallocate a system instance
 void whisker_ecs_s_free_system(whisker_ecs_system *system)
 {
-	if (system->iterators != NULL)
+	for (int i = 0; i < system->thread_contexts->length; ++i)
 	{
-		for (int i = 0; i < system->iterators->sparse_index->length; ++i)
+		whisker_ecs_s_free_system_context(system->thread_contexts->arr[i]);
+	}
+
+	whisker_arr_free_void_(system->thread_contexts);
+}
+
+// deallocate a system context instance
+void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
+{
+	if (context->iterators != NULL)
+	{
+		for (int i = 0; i < context->iterators->sparse_index->length; ++i)
 		{
-			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)system->iterators->dense)[i];
+			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)context->iterators->dense)[i];
 			if (itor.read != NULL)
 			{
 				whisker_arr_free_void_(itor.read);
@@ -113,14 +172,17 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 			}
 		}
 
-		whisker_ss_free(system->iterators);
+		whisker_ss_free(context->iterators);
 	}
+
+	free(context);
 }
 
 // run an update on the registered systems
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
-	whisker_ecs_system *system = &systems->systems[systems->system_id];
+	whisker_ecs_system *default_system = &systems->systems[systems->system_id];
+	whisker_ecs_system_context *default_context = default_system->thread_contexts->arr[0];
 
 	// loop over each registered process phase
 	for (int i = 0; i < systems->process_phases->length; ++i)
@@ -135,22 +197,45 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 		// update all systems in the process phase by update count
 		for (int ui = 0; ui < update_count; ++ui)
 		{
-			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(system, process_phase->id.index, "w_ecs_system_idx", entities->entities->arr[process_phase->id.index].name, "");
+			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities->arr[process_phase->id.index].name, "");
 
-			while (whisker_ecs_s_iterate(system, system_itor)) 
+			while (whisker_ecs_s_iterate(default_context, system_itor)) 
 			{
 				int *system_idx = system_itor->read->arr[0];
 				whisker_ecs_system *system = &systems->systems[*system_idx];
 
 				system->delta_time = process_phase->time_step.delta_time_fixed;
 				system->process_phase_time_step = &process_phase->time_step;
-				E_WHISKER_ECS_SYS update_err = whisker_ecs_s_update_system(system);			
-				if (update_err != E_WHISKER_ECS_SYS_OK)
+
+				if (system->thread_count > 1)
 				{
-					// TODO: panic here if a system failed to execute for any
-					// reason
-					// for now just continue the loop as normal
-					continue;
+					pthread_t threads[system->thread_count] = {};
+
+					for (int ti = 0; ti < system->thread_count; ++ti)
+					{
+						// set current system context values before update
+						whisker_ecs_system_context *context = system->thread_contexts->arr[ti];
+
+						context->process_phase_time_step = system->process_phase_time_step;
+						context->delta_time = system->delta_time;
+						context->system_ptr = system->system_ptr;
+						pthread_create(&threads[ti], NULL, whisker_ecs_s_update_system_thread, context);
+					}
+
+					for (int ti = 0; ti < system->thread_count; ++ti)
+					{
+						pthread_join(threads[ti], NULL);
+					}
+				}
+				else
+				{
+					// set current system context values before update
+					whisker_ecs_system_context *context = system->thread_contexts->arr[0];
+
+					context->process_phase_time_step = system->process_phase_time_step;
+					context->delta_time = system->delta_time;
+					context->system_ptr = system->system_ptr;
+					context->system_ptr(context);
 				}
 			}
 		}
@@ -159,10 +244,18 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-// update the provided system
-E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system)
+void* whisker_ecs_s_update_system_thread(void *context)
 {
-	system->system_ptr(system);
+	whisker_ecs_system_context *system_context = context;
+	system_context->system_ptr(system_context);
+
+	return NULL;
+}
+
+// update the provided system
+E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context)
+{
+	system->system_ptr(context);
 
 	return E_WHISKER_ECS_SYS_OK;
 }
@@ -246,12 +339,12 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 
 // get an iterator instance with the given itor_index
 // note: this will init the iterator if one does not exist at the index
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components, char *optional_components)
+whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
 {
 	whisker_ecs_iterator *itor;
 
 	// check if iterator index is set
-	if (!wss_contains(system->iterators, itor_index))
+	if (!wss_contains(context->iterators, itor_index))
 	{
 		E_WHISKER_ECS_SYS itor_err = whisker_ecs_s_create_iterator(&itor);
 		if (itor_err != E_WHISKER_ECS_SYS_OK)
@@ -259,7 +352,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 			// TODO: panic here
 			return NULL;
 		}
-		E_WHISKER_SS set_err = wss_set(system->iterators, itor_index, itor);
+		E_WHISKER_SS set_err = wss_set(context->iterators, itor_index, itor);
 		if (set_err != E_WHISKER_SS_OK)
 		{
 			// TODO: panic here
@@ -267,8 +360,8 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		}
 
 		free(itor);
-		itor = wss_get(system->iterators, itor_index);
-		itor_err = whisker_ecs_s_init_iterator(system, itor, read_components, write_components, optional_components);
+		itor = wss_get(context->iterators, itor_index);
+		itor_err = whisker_ecs_s_init_iterator(context, itor, read_components, write_components, optional_components);
 		if (itor_err != E_WHISKER_ECS_SYS_OK)
 		{
 			// TODO: panic here
@@ -276,7 +369,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		}
 	}
 
-	itor = wss_get(system->iterators, itor_index);
+	itor = wss_get(context->iterators, itor_index);
 	if (itor == NULL)
 	{
 		// TODO: panic here
@@ -286,6 +379,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 	// reset iterator state
 	itor->master_index = UINT64_MAX;
 	itor->cursor = UINT64_MAX;
+	itor->cursor_max = 0;
 	itor->count = 0;
 	itor->entity_id = whisker_ecs_e_id(UINT64_MAX);
 
@@ -295,7 +389,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		whisker_sparse_set *component_array;
 		if (itor->component_arrays->arr[i] == NULL)
 		{
-			whisker_ecs_c_get_component_array(system->components, itor->component_ids_rw->arr[i], &component_array);
+			whisker_ecs_c_get_component_array(context->components, itor->component_ids_rw->arr[i], &component_array);
 			if (component_array == NULL)
 			{
 				itor->master_index = UINT64_MAX;
@@ -312,6 +406,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		if (component_array->sparse_index->length < itor->count || itor->count == 0)
 		{
 			itor->count = component_array->sparse_index->length;
+			itor->cursor_max = itor->count;
 			itor->master_index = i;
 		}
 	}
@@ -325,7 +420,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		size_t array_offset = itor->component_ids_rw->length + i;
 		if (itor->component_arrays->arr[array_offset] == NULL)
 		{
-			whisker_ecs_c_get_component_array(system->components, itor->component_ids_opt->arr[i], &component_array);
+			whisker_ecs_c_get_component_array(context->components, itor->component_ids_opt->arr[i], &component_array);
 			if (component_array == NULL)
 			{
 				continue;
@@ -335,11 +430,24 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, siz
 		}
 	}
 
+	// calculate cursor start and end point from thread context
+	if (context->thread_max > 1)
+	{
+    	size_t context_thread_max = context->thread_max;
+    	size_t thread_context_chunk_size = itor->count / context_thread_max;
+    	itor->cursor = (context->thread_id * thread_context_chunk_size) - 1;
+    	itor->cursor_max = (context->thread_id == context_thread_max - 1) ? itor->count : (context->thread_id * thread_context_chunk_size) + thread_context_chunk_size;
+
+    	/* if (context->thread_max > 1) { */
+        /* 	debug_printf("itor: thread stats system %zu [t:%zu of %zu][cs:%zu m:%zu][c:%zu-%zu]\n", context->system_entity_id.id, context->thread_id + 1, context_thread_max, thread_context_chunk_size, itor->count, itor->cursor + 1, itor->cursor_max); */
+    	/* } */
+	}
+
 	return itor;
 }
 
 // init the provided iterator and cache the given components
-E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components)
+E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
 	// convert read and write component names to component sparse sets
 	char *combined_components;
@@ -362,7 +470,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	// rw components include read and write component IDs
 	if (itor->component_ids_rw == NULL)
 	{
-		itor->component_ids_rw = whisker_ecs_e_from_named_entities(system->entities, combined_components);
+		itor->component_ids_rw = whisker_ecs_e_from_named_entities(context->entities, combined_components);
 		if (itor->component_ids_rw == NULL)
 		{
 			// TODO: panic here
@@ -388,7 +496,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	// note: these do not resize the main component arrays
 	if (itor->component_ids_w == NULL)
 	{
-		itor->component_ids_w = whisker_ecs_e_from_named_entities(system->entities, write_components);
+		itor->component_ids_w = whisker_ecs_e_from_named_entities(context->entities, write_components);
 		if (itor->component_ids_w == NULL)
 		{
 			// TODO: panic here
@@ -400,7 +508,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 	// note: these belong at the end of the component arrays
 	if (itor->component_ids_opt == NULL)
 	{
-		itor->component_ids_opt = whisker_ecs_e_from_named_entities(system->entities, optional_components);
+		itor->component_ids_opt = whisker_ecs_e_from_named_entities(context->entities, optional_components);
 		if (itor->component_ids_opt == NULL)
 		{
 			// TODO: panic here
@@ -419,7 +527,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whiske
 
 // iterate one step with the provided iterator
 // note: iteration returns true while the iteration is still on-going
-bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *itor)
+bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iterator *itor)
 {
 	// if the master index is invalid then there is nothing to iterate
 	bool iteration_active = (itor->master_index != UINT64_MAX && itor->count > 0);
@@ -523,9 +631,8 @@ bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *ito
 
 	/* debug_printf("ecs:sys:itor cursor %zu state %d\n", itor->cursor, cursor_state); */
 
-	if (itor->cursor + 1 >= master_set->sparse_index->length)
+	if (itor->cursor + 1 >= itor->cursor_max)
 	{
-		/* debug_printf("ecs:sys:itor reached end of master %zu with entity %zu\n", itor->master_index, itor->entity_id); */
 		itor->master_index = UINT64_MAX;
 	}
 

@@ -4,6 +4,8 @@
  * @created     : Thursday Feb 13, 2025 17:59:50 CST
  */
 
+#include <pthread.h>
+
 #include "whisker_std.h"
 #include "whisker_block_array.h"
 #include "whisker_sparse_set.h"
@@ -73,12 +75,15 @@
 // system management functions
 E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems);
 void whisker_ecs_s_free_systems(whisker_ecs_systems *systems);
+E_WHISKER_ECS_SYS whisker_ecs_s_create_system_context(whisker_ecs_system_context **context, whisker_ecs_system *system);
+void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context);
 
 // system operation functions
 whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system);
 void whisker_ecs_s_free_system(whisker_ecs_system *system);
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
-E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system);
+E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);
+void* whisker_ecs_s_update_system_thread(void *context);
 
 // system process phases functions
 E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec);
@@ -92,9 +97,9 @@ int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* com
 
 // system iterator functions
 E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor);
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system *system, size_t itor_index, char *read_components, char *write_components, char *optional_components);
-bool whisker_ecs_s_iterate(whisker_ecs_system *system, whisker_ecs_iterator *itor);
-E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system *system, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components);
+whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components);
+bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iterator *itor);
+E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components);
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 

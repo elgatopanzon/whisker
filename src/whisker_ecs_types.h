@@ -4,6 +4,7 @@
  * @created     : Sunday Mar 02, 2025 15:30:18 CST
  */
 
+#include <pthread.h>
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
 #include "whisker_time.h"
@@ -13,6 +14,7 @@
 #include "generics/whisker_generic_array_whisker_ecs_entity_index.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_deferred_action.h"
 #include "generics/whisker_generic_array_whisker_ecs_system_process_phase.h"
+#include "generics/whisker_generic_array_pthread_t.h"
 #include "generics/whisker_generic_array_void_.h"
 
 #ifndef WHISKER_ECS_TYPES_H
@@ -33,6 +35,9 @@ typedef struct whisker_ecs_entities
 
 	// stack of deferred actions to process
 	whisker_arr_whisker_ecs_entity_deferred_action *deferred_actions;
+
+	// mutex to lock access to entities
+	pthread_mutex_t thread_lock;
 } whisker_ecs_entities;
 
 
@@ -45,6 +50,8 @@ typedef struct whisker_ecs_components
 	whisker_sparse_set **components;
 	size_t components_length;
 	whisker_sparse_set *changed_components;
+	// mutex to lock access to components
+	pthread_mutex_t thread_lock;
 } whisker_ecs_components;
 
 
@@ -59,6 +66,7 @@ typedef struct whisker_ecs_iterator
 
 	// current cursor position in the master iterator
 	size_t cursor;
+	size_t cursor_max;
 	size_t count;
 	whisker_ecs_entity_id entity_id;
 
@@ -77,22 +85,51 @@ typedef struct whisker_ecs_iterator
 
 } whisker_ecs_iterator;
 
+typedef struct whisker_ecs_system_context
+{
+	// entity ID of system
+	whisker_ecs_entity_id system_entity_id;
+
+	// iterators used by this context
+	whisker_sparse_set *iterators;
+
+	// pointers to ECS entities and components
+	whisker_ecs_components *components;
+	whisker_ecs_entities *entities;
+
+	// pointer to the system's time step instance
+	whisker_time_step *process_phase_time_step;
+
+	// delta time since the last system update
+	double delta_time;
+
+	// managed thread id
+	uint64_t thread_id;
+	uint64_t thread_max;
+
+	// system pointer from main system
+	void (*system_ptr)(struct whisker_ecs_system_context*);
+} whisker_ecs_system_context;
 
 // component acting as a system container
 typedef struct whisker_ecs_system
 {
 	whisker_ecs_entity_id entity_id;
 	whisker_ecs_entity_id process_phase_id;
-	void (*system_ptr)(struct whisker_ecs_system*);
+	void (*system_ptr)(struct whisker_ecs_system_context*);
 	int8_t thread_id;
+	int8_t thread_count;
 	double last_update;
 	double delta_time;
 	whisker_time_step *process_phase_time_step;
 
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
-	whisker_sparse_set *iterators;
+	// whisker_sparse_set *iterators;
+
+	whisker_arr_void_ *thread_contexts;
 } whisker_ecs_system;
+
 
 typedef struct whisker_ecs_systems
 {

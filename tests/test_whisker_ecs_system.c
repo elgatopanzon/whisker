@@ -68,7 +68,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(88), &val3, true);
 
 	// request an iterator with the created components
-	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts->arr[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
 	whisker_sparse_set *comp2_ss;
@@ -123,10 +123,10 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(20), &(int){ 123 }, true);
 
 	// get the iterator again
-	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = whisker_ecs_s_get_iterator(sys->thread_contexts->arr[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	whisker_ecs_entity_id expected_entities[] = {10,15,19};
-	while (whisker_ecs_s_iterate(sys, itor)) 
+	while (whisker_ecs_s_iterate(sys->thread_contexts->arr[0], itor)) 
 	{
 		printf("itor test: entity %zu\n", itor->entity_id);
 		ck_assert_uint_eq(expected_entities[itor->cursor].index, itor->entity_id.index);
@@ -134,18 +134,18 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	printf("itor test: iteration ended\n");
 
 	// test iterator reset
-	itor = whisker_ecs_s_get_iterator(sys, 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = whisker_ecs_s_get_iterator(sys->thread_contexts->arr[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
-	while (whisker_ecs_s_iterate(sys, itor)) 
+	while (whisker_ecs_s_iterate(sys->thread_contexts->arr[0], itor)) 
 	{
 		ck_assert_uint_eq(expected_entities[itor->cursor].index, itor->entity_id.index);
 	}
 
 	// get another iterator with a single component
-	itor = whisker_ecs_s_get_iterator(sys, 1, "comp1", "", "");
+	itor = whisker_ecs_s_get_iterator(sys->thread_contexts->arr[0], 1, "comp1", "", "");
 
 	whisker_ecs_entity_id expected_entities_smaller[] = {10,11,15,16,19};
-	while (whisker_ecs_s_iterate(sys, itor)) 
+	while (whisker_ecs_s_iterate(sys->thread_contexts->arr[0], itor)) 
 	{
 		printf("itor single test: entity %zu\n", itor->entity_id);
 		ck_assert_uint_eq(expected_entities_smaller[itor->cursor].index, itor->entity_id.index);

@@ -4,6 +4,7 @@
  * @created     : Thursday Feb 13, 2025 17:53:46 CST
  */
 
+#include <pthread.h>
 #include "whisker_std.h"
 #include "whisker_array.h"
 #include "whisker_ecs_types.h"
