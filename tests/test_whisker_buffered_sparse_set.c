@@ -74,14 +74,15 @@ START_TEST(test_whisker_buffered_sparse_set_sync_and_swap)
 	// sync the buffers
 	whisker_bss_sync(bss);
 
-	// verify the swapped buffers lengths
-	ck_assert_int_eq(3, *bss->front_buffer->length);
-	ck_assert_int_eq(0, *bss->back_buffer->length);
-
 	// swap the buffers and verify values
 	whisker_bss_swap(bss);
 	uint64_t *val0_f0_swapped = whisker_ss_get(bss->front_buffer, 0);
 	ck_assert_int_eq(545, *val0_f0_swapped);
+
+	// verify the swapped buffers lengths
+	ck_assert_int_eq(3, *bss->front_buffer->length);
+	ck_assert_int_eq(0, *bss->back_buffer->length);
+
 
 	// free
 	whisker_bss_free(bss);

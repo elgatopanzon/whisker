@@ -39,7 +39,7 @@ E_WHISKER_BSS whisker_bss_create_f(whisker_buffered_sparse_set **bss, size_t buf
 	for (int i = 0; i < buffer_count; ++i)
 	{
 		whisker_sparse_set *ss;
-		E_WHISKER_SS b_err = whisker_ss_create_f(&ss, 0);
+		E_WHISKER_SS b_err = whisker_ss_create_f(&ss, element_size);
 		if (b_err != E_WHISKER_SS_OK)
 		{
 			// free any created sparse sets
