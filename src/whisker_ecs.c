@@ -171,6 +171,19 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 		return NULL;
 	}
 
+	// HACK: do a single execution of the system to initialise the iterator
+	// why: this ensures the system's iterators initialise their component
+	// strings and underlying entities in a thread-safe way before
+	// multi-threading the system execution
+	whisker_ecs_system_context *exec_context = system->thread_contexts->arr[0];
+	exec_context->system_ptr = system->system_ptr;
+	exec_context->entities = system->entities;
+	exec_context->components = system->components;
+	uint64_t thread_max_back = exec_context->thread_max;
+	exec_context->thread_max = UINT64_MAX;
+	whisker_ecs_s_update_system(system, exec_context);
+	exec_context->thread_max = thread_max_back;
+
 	return system;
 }
 

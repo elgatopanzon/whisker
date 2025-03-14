@@ -117,6 +117,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	{
 		return NULL;
 	}
+
 	
 	// add system to main systems list
 	E_WHISKER_ARR push_err = warr_push(&systems->systems, &system);
@@ -138,6 +139,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	}
 
 	whisker_arr_free_void_(system->thread_contexts);
+	whisker_tp_wait_work(system->thread_pool);
 	whisker_tp_free(system->thread_pool);
 }
 
@@ -445,6 +447,14 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
     	/* if (context->thread_max > 1) { */
         /* 	debug_printf("itor: thread stats system %zu [t:%zu of %zu][cs:%zu m:%zu][c:%zu-%zu]\n", context->system_entity_id.id, context->thread_id + 1, context_thread_max, thread_context_chunk_size, itor->count, itor->cursor + 1, itor->cursor_max); */
     	/* } */
+	}
+
+	// if thread_max is uint64_max, assume we don't want to process anything
+	// note: this is a hack added to allow an iterator to complete an
+	// initialisation but ignore any matched entities
+	else if (context->thread_max == UINT64_MAX)
+	{
+		itor->count = 0;
 	}
 
 	return itor;
