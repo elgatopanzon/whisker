@@ -13,6 +13,7 @@
 #include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
 #include "whisker_dict.h"
 #include "whisker_time.h"
+#include "whisker_thread_pool.h"
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_component.h"
@@ -83,7 +84,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 void whisker_ecs_s_free_system(whisker_ecs_system *system);
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
 E_WHISKER_ECS_SYS whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);
-void* whisker_ecs_s_update_system_thread(void *context);
+void whisker_ecs_s_update_system_thread_(void *context);
 
 // system process phases functions
 E_WHISKER_ECS_SYS whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec);

@@ -97,18 +97,25 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 
 	// create contexts for the provided thread count
 	// set thread count to 1 when it's set to 0
-	if (system.thread_count == 0)
+	if (system.thread_count == -1)
 	{
-		system.thread_count = 1;
+		system.thread_count = whisker_tp_system_core_count();
 	}
 	debug_printf("sys: e %zu creating %zu thread contexts\n", system.entity_id, system.thread_count);
-	for (int i = 0; i < system.thread_count; ++i)
+	for (int i = 0; i < system.thread_count + 1; ++i)
 	{
 		whisker_ecs_system_context *c;
 		whisker_ecs_s_create_system_context(&c, &system);
 		c->thread_id = i;
 		c->thread_max = system.thread_count;
 		whisker_arr_push_void_(system.thread_contexts, c);
+	}
+
+	// create thread pool
+	E_WHISKER_TP tp_err = whisker_tp_create_f(&system.thread_pool, system.thread_count);
+	if (tp_err != E_WHISKER_TP_OK)
+	{
+		return NULL;
 	}
 	
 	// add system to main systems list
@@ -131,6 +138,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	}
 
 	whisker_arr_free_void_(system->thread_contexts);
+	whisker_tp_free(system->thread_pool);
 }
 
 // deallocate a system context instance
@@ -207,10 +215,8 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 				system->delta_time = process_phase->time_step.delta_time_fixed;
 				system->process_phase_time_step = &process_phase->time_step;
 
-				if (system->thread_count > 1)
+				if (system->thread_count > 0)
 				{
-					pthread_t threads[system->thread_count] = {};
-
 					for (int ti = 0; ti < system->thread_count; ++ti)
 					{
 						// set current system context values before update
@@ -219,13 +225,13 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 						context->process_phase_time_step = system->process_phase_time_step;
 						context->delta_time = system->delta_time;
 						context->system_ptr = system->system_ptr;
-						pthread_create(&threads[ti], NULL, whisker_ecs_s_update_system_thread, context);
+
+						// queue system work with thread pool
+						whisker_tp_queue_work(system->thread_pool, whisker_ecs_s_update_system_thread_, context);
 					}
 
-					for (int ti = 0; ti < system->thread_count; ++ti)
-					{
-						pthread_join(threads[ti], NULL);
-					}
+					// wait for thread pool work before continuing
+					whisker_tp_wait_work(system->thread_pool);
 				}
 				else
 				{
@@ -244,12 +250,10 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 	return E_WHISKER_ECS_SYS_OK;
 }
 
-void* whisker_ecs_s_update_system_thread(void *context)
+void whisker_ecs_s_update_system_thread_(void *context)
 {
 	whisker_ecs_system_context *system_context = context;
 	system_context->system_ptr(system_context);
-
-	return NULL;
 }
 
 // update the provided system

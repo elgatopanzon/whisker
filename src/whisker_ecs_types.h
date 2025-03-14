@@ -8,6 +8,7 @@
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
 #include "whisker_time.h"
+#include "whisker_thread_pool.h"
 #include "whisker_ecs_types_base.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity.h"
 #include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
@@ -123,6 +124,7 @@ typedef struct whisker_ecs_system
 	// whisker_sparse_set *iterators;
 
 	whisker_arr_void_ *thread_contexts;
+	whisker_thread_pool *thread_pool;
 } whisker_ecs_system;
 
 
