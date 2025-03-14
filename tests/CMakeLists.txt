@@ -41,6 +41,11 @@ target_link_libraries(test_whisker_buffered_sparse_set PRIVATE
 	Check::check whisker)
 add_test(NAME test_whisker_buffered_sparse_set COMMAND test_whisker_buffered_sparse_set)
 
+add_executable(test_whisker_thread_pool test_whisker_thread_pool.c)
+target_link_libraries(test_whisker_thread_pool PRIVATE
+	Check::check whisker)
+add_test(NAME test_whisker_thread_pool COMMAND test_whisker_thread_pool)
+
 add_executable(test_whisker_ecs test_whisker_ecs.c)
 target_link_libraries(test_whisker_ecs PRIVATE
 	Check::check whisker)
