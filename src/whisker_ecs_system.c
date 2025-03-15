@@ -444,6 +444,13 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
     	itor->cursor = (context->thread_id * thread_context_chunk_size) - 1;
     	itor->cursor_max = (context->thread_id == context_thread_max - 1) ? itor->count : (context->thread_id * thread_context_chunk_size) + thread_context_chunk_size;
 
+    	if (itor->cursor_max == itor->cursor + 1)
+    	{
+    		itor->count = 0;
+    		itor->master_index = UINT64_MAX;
+    		return itor;
+    	}
+
     	/* if (context->thread_max > 1) { */
         /* 	debug_printf("itor: thread stats system %zu [t:%zu of %zu][cs:%zu m:%zu][c:%zu-%zu]\n", context->system_entity_id.id, context->thread_id + 1, context_thread_max, thread_context_chunk_size, itor->count, itor->cursor + 1, itor->cursor_max); */
     	/* } */
