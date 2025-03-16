@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <pthread.h>
+#include "whisker_debug.h"
 
 #ifndef WHISKER_MEMORY_H
 #define WHISKER_MEMORY_H
@@ -34,10 +36,37 @@ extern const char* E_WHISKER_MEM_STR[];
 #define wmemb_header whisker_mem_block_header_from_data_pointer
 #define wmemb_header_size whisker_mem_block_calc_header_size
 
+// function pointers to register callbacks for failed allocations
+typedef void (*whisker_mem_alloc_warning_func)(void *arg);
+typedef void (*whisker_mem_alloc_panic_func)(void *arg);
+
+static whisker_mem_alloc_warning_func alloc_warning_callback_;
+static void *alloc_warning_callback_arg_;
+static whisker_mem_alloc_panic_func alloc_panic_callback_;
+static void *alloc_panic_callback_arg_;
+
 // general memory functions
+void *whisker_mem_malloc(size_t size);
+void *whisker_mem_calloc(size_t count, size_t size);
+void *whisker_mem_realloc(void* ptr, size_t size_new);
 E_WHISKER_MEM whisker_mem_try_malloc(size_t size, void** ptr);
 E_WHISKER_MEM whisker_mem_try_calloc(size_t count, size_t size, void** ptr);
 E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new);
+
+// internal xmalloc functions
+void *whisker_mem_xmalloc_(size_t size, size_t source_line, char *source_file, whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg, whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_failed_func_arg);
+void *whisker_mem_xcalloc_(size_t count, size_t size, size_t source_line, char *source_file, whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg, whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_failed_func_arg);
+void *whisker_mem_xrealloc_(void* ptr, size_t size_new, size_t source_line, char *source_file, whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg, whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_failed_func_arg);
+void whisker_mem_register_alloc_warning_callback(whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg);
+void whisker_mem_handle_alloc_warning_(size_t size, void *realloc_ptr, size_t source_line, char *source_file, whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg);
+void whisker_mem_register_alloc_failed_callback(whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_panic_func_arg);
+void whisker_mem_handle_alloc_failed_(size_t size, void *realloc_ptr, size_t source_line, char *source_file, whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_failed_func_arg);
+
+
+// x-style memory allocation macros to allocate or die
+#define whisker_mem_xmalloc(size) whisker_mem_xmalloc_(size, __LINE__, __FILE__, alloc_warning_callback_, alloc_warning_callback_arg_, alloc_panic_callback_, alloc_panic_callback_arg_)
+#define whisker_mem_xcalloc(count, size) whisker_mem_xcalloc_(count, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
+#define whisker_mem_xrealloc(ptr, size) whisker_mem_xrealloc_(ptr, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
 
 // memory blocks
 // a block is a managed header and data pointer
