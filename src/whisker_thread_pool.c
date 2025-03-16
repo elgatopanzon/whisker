@@ -77,7 +77,7 @@ E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 	for (int i = 0; i < count; ++i)
 	{
 		pthread_t thread;
-		whisker_thread_pool_context *context = calloc(1, sizeof(*context));
+		whisker_thread_pool_context *context = whisker_mem_xcalloc(1, sizeof(*context));
 		if (context == NULL)
 		{
 			whisker_tp_free(tp_new);

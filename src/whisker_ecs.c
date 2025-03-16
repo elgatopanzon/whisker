@@ -16,7 +16,7 @@
 // state (entities, components, systems)
 E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 {
-	whisker_ecs *new = calloc(1, sizeof(*new));
+	whisker_ecs *new = whisker_mem_xcalloc(1, sizeof(*new));
 	if (new == NULL)
 	{
 		return E_WHISKER_ECS_MEM;

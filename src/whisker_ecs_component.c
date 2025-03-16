@@ -15,7 +15,7 @@
 // create instance of components array holder
 E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **components)
 {
-	whisker_ecs_components *c = calloc(1, sizeof(*c));
+	whisker_ecs_components *c = whisker_mem_xcalloc(1, sizeof(*c));
 	if (c == NULL)
 	{
 		return E_WHISKER_ECS_COMP_MEM;
