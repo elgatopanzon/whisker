@@ -21,12 +21,7 @@ const char* E_WHISKER_ARR_STR[] = {
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 {
 	// alloc whisker_mem block for the array + header struct
-	whisker_memory_block* block;
-	E_WHISKER_MEM err = whisker_mem_block_try_malloc(type_size * length, sizeof(whisker_array_header), &block);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_ARR_MEM;
-	}
+	whisker_memory_block* block = whisker_mem_block_malloc(type_size * length, sizeof(whisker_array_header));
 
 	// set header values
 	whisker_array_header* header = block->header;
@@ -66,11 +61,7 @@ E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements, bool allow_shrin
 	};
 
 	// try to realloc the underlying block to the new size
-	E_WHISKER_MEM err = whisker_mem_block_try_realloc_data(&block, elements * header->element_size);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_ARR_MEM;
-	}
+	whisker_mem_block_realloc(&block, elements * header->element_size);
 
 	// set new pointer and update length
 	*arr = block.data;

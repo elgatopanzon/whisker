@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "whisker_memory.h"
+#include "whisker_debug.h"
 
 const char* E_WHISKER_MEM_STR[] = {
 	[E_WHISKER_MEM_OK]="OK",
@@ -18,10 +19,10 @@ const char* E_WHISKER_MEM_STR[] = {
 };
 
 // static callback functions for alloc failed warning and fatal
-static whisker_mem_alloc_warning_func alloc_warning_callback_ = NULL;
-static void *alloc_warning_callback_arg_ = NULL;
-static whisker_mem_alloc_panic_func alloc_panic_callback_ = NULL;
-static void *alloc_panic_callback_arg_ = NULL;
+whisker_mem_alloc_warning_func alloc_warning_callback_ = NULL;
+void *alloc_warning_callback_arg_ = NULL;
+whisker_mem_alloc_panic_func alloc_panic_callback_ = NULL;
+void *alloc_panic_callback_arg_ = NULL;
 
 /******************************
 *  general memory functions  *
@@ -178,74 +179,50 @@ E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new)
 // a memory block contains a header and a data pointer with a stored size
 
 // allocate the underlying data for a memory block
-E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block** block)
+whisker_memory_block *whisker_mem_block_malloc(size_t data_size, size_t header_size)
 {
+	whisker_assert_ulong_gt(header_size, 0);
+
 	// create the full block data
-	void* block_data;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, header_size + data_size, &block_data);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return err;
-	}
+	void* block_data = whisker_mem_xcalloc(1, header_size + data_size);
 
 	// malloc the block
-	E_WHISKER_MEM errBlock = whisker_mem_try_malloc(sizeof(whisker_memory_block), (void**)block);
-	if (errBlock != E_WHISKER_MEM_OK)
-	{
-		free(block_data);
-		return errBlock;
-	}
+	whisker_memory_block *block = whisker_mem_xcalloc_t(1, *block);
 
 	// assign the block values
-	(*block)->header = block_data;
-	(*block)->header_size = header_size;
-	(*block)->data = (char*)block_data + header_size;
-	(*block)->data_size = data_size;
+	block->header = block_data;
+	block->header_size = header_size;
+	block->data = (char*)block_data + header_size;
+	block->data_size = data_size;
 
-	return E_WHISKER_MEM_OK;
+	return block;
 }
 
 // realloc the data pointer for a memory block
-E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block* block, size_t size)
+void whisker_mem_block_realloc(whisker_memory_block* block, size_t size)
 {
+	// validate input
+	whisker_assert_ptr_ne(NULL, block);
+	whisker_assert_ptr_ne(NULL, block->header);
+
 	size_t header_size = block->header_size;
 	size_t original_data_size = block->data_size;
 
-	// backup header
-	void* header_backup;
-	E_WHISKER_MEM err = whisker_mem_try_malloc(header_size, &header_backup);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return err;
-	}
-
+	void* header_backup = whisker_mem_xmalloc(header_size);
 	memcpy(header_backup, block->header, header_size);
 
-	void* reallocd;
-	E_WHISKER_MEM errRealloc = whisker_mem_try_realloc(block->header, size + header_size, &reallocd);
-	if (errRealloc != E_WHISKER_MEM_OK)
-	{
-		free(header_backup);
-		return errRealloc;
-	}
-
-	// restore header and free
+	void* reallocd = whisker_mem_xrealloc(block->header, size + header_size);
 	memcpy(reallocd, header_backup, header_size);
 	free(header_backup);
 
-	// update block
 	block->header = reallocd;
 	block->data = (unsigned char*)reallocd + header_size;
 
-	// 0 out the new memory
-	if (size > original_data_size)
-	{
+	if (size > original_data_size) {
 		memset(((unsigned char*)block->data) + original_data_size, 0, (size - original_data_size));
 	}
 
 	block->data_size = size;
-
-	return E_WHISKER_MEM_OK;
 }
 
 // free the underlying pointer and block data for a memory block

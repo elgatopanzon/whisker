@@ -31,12 +31,7 @@ const char* E_WHISKER_DICT_STR[] = {
 E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t capacity)
 {
 	// create memory block for the dict header
-	whisker_memory_block* block;
-	E_WHISKER_MEM block_err = whisker_mem_block_try_malloc(element_size * capacity, sizeof(whisker_dict_header), &block);
-	if (block_err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_DICT_MEM;
-	}
+	whisker_memory_block* block = whisker_mem_block_malloc(element_size * capacity, sizeof(whisker_dict_header));
 
 	// create an array for the keys cache
 	// this will be stored in the dict header as a pointer
@@ -349,11 +344,7 @@ E_WHISKER_DICT whisker_dict_resize_(void** dict, size_t capacity)
 		};
 
 		// try to realloc the underlying block to the new size
-		E_WHISKER_MEM err = whisker_mem_block_try_realloc_data(&block, capacity * header->arr_header.element_size);
-		if (err != E_WHISKER_MEM_OK)
-		{
-			return E_WHISKER_DICT_MEM;
-		}
+		whisker_mem_block_realloc(&block, capacity * header->arr_header.element_size);
 
 		// set new pointers and update length
 		*dict = block.data;

@@ -40,10 +40,10 @@ extern const char* E_WHISKER_MEM_STR[];
 typedef void (*whisker_mem_alloc_warning_func)(void *arg);
 typedef void (*whisker_mem_alloc_panic_func)(void *arg);
 
-static whisker_mem_alloc_warning_func alloc_warning_callback_;
-static void *alloc_warning_callback_arg_;
-static whisker_mem_alloc_panic_func alloc_panic_callback_;
-static void *alloc_panic_callback_arg_;
+extern whisker_mem_alloc_warning_func alloc_warning_callback_;
+extern void *alloc_warning_callback_arg_;
+extern whisker_mem_alloc_panic_func alloc_panic_callback_;
+extern void *alloc_panic_callback_arg_;
 
 // general memory functions
 void *whisker_mem_malloc(size_t size);
@@ -67,6 +67,9 @@ void whisker_mem_handle_alloc_failed_(size_t size, void *realloc_ptr, size_t sou
 #define whisker_mem_xmalloc(size) whisker_mem_xmalloc_(size, __LINE__, __FILE__, alloc_warning_callback_, alloc_warning_callback_arg_, alloc_panic_callback_, alloc_panic_callback_arg_)
 #define whisker_mem_xcalloc(count, size) whisker_mem_xcalloc_(count, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
 #define whisker_mem_xrealloc(ptr, size) whisker_mem_xrealloc_(ptr, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
+#define whisker_mem_xmalloc_t(t) whisker_mem_xmalloc(sizeof(t))
+#define whisker_mem_xcalloc_t(count, t) whisker_mem_xcalloc(count, sizeof(t))
+#define whisker_mem_xrealloc_t(ptr, t) whisker_mem_xrealloc(ptr, sizeof(t))
 
 // memory blocks
 // a block is a managed header and data pointer
@@ -78,8 +81,8 @@ typedef struct whisker_memory_block
 	size_t data_size;
 } whisker_memory_block;
 
-E_WHISKER_MEM whisker_mem_block_try_malloc(size_t data_size, size_t header_size, whisker_memory_block** block);
-E_WHISKER_MEM whisker_mem_block_try_realloc_data(whisker_memory_block* block, size_t size);
+whisker_memory_block *whisker_mem_block_malloc(size_t data_size, size_t header_size);
+void whisker_mem_block_realloc(whisker_memory_block* block, size_t size);
 void whisker_mem_block_free(whisker_memory_block* block);
 void* whisker_mem_block_header_from_data_pointer(char* data, size_t header_size);
 size_t whisker_mem_block_calc_header_size(size_t header_type_size, size_t data_type_size);
