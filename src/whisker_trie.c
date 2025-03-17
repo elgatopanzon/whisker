@@ -24,11 +24,9 @@ const char* E_WHISKER_TRIE_STR[] = {
 // 2. create and allocate array of children to map to offset IDs
 E_WHISKER_TRIE whisker_trie_create_node(whisker_trie** node)
 {
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_trie), (void**)node);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_TRIE_MEM;
-	}
+	whisker_trie *node_new;
+	node_new = whisker_mem_xcalloc_t(1, *node_new);
+	*node = node_new;
 
 	return E_WHISKER_TRIE_OK;
 }

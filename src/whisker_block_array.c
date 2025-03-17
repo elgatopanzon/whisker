@@ -16,12 +16,7 @@
 // create a whisker_block_array instance
 E_WHISKER_BLOCK_ARR whisker_block_arr_create_f(size_t type_size, size_t block_size, whisker_block_array **block_arr)
 {
-	whisker_block_array *arr;
-	E_WHISKER_MEM err = wmem_try_calloc(1, sizeof(whisker_block_array), (void**)&arr);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_BLOCK_ARR_MEM;
-	}
+	whisker_block_array *arr = whisker_mem_xcalloc_t(1, *arr);
 
 	// create array of block arrays
 	void** arrs;

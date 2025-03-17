@@ -13,9 +13,7 @@
 // create an instance of a managed array with type int
 E_WHISKER_ARR whisker_arr_create_int(whisker_arr_int **arr, size_t length)
 {
-	whisker_arr_int *a;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_arr_int), (void**)&a);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+	whisker_arr_int *a = whisker_mem_xcalloc_t(1, *a);
 	a->length = length;
 	a->alloc_size = sizeof(int) * a->length;
 	if (length > 0) { whisker_arr_init_int(a); }
@@ -27,8 +25,7 @@ E_WHISKER_ARR whisker_arr_create_int(whisker_arr_int **arr, size_t length)
 E_WHISKER_ARR whisker_arr_init_int(whisker_arr_int *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
-		E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(int) * arr->length, (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+		arr->arr = whisker_mem_xcalloc(1, sizeof(int) * arr->length);
 	}
 	return E_WHISKER_ARR_OK;
 }
@@ -55,10 +52,7 @@ E_WHISKER_ARR whisker_arr_resize_int(whisker_arr_int *arr, size_t length, bool s
 		arr->length = length;
 		return E_WHISKER_ARR_OK;
 	} else {
-		E_WHISKER_MEM err = whisker_mem_try_realloc(arr->arr, length * sizeof(int), (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) {
-			return E_WHISKER_ARR_MEM;
-		}
+		arr->arr = whisker_mem_xrealloc(arr->arr, length * sizeof(int));
 		memset(((unsigned char*)arr->arr) + arr->alloc_size, 0, (length * sizeof(int)) - arr->alloc_size);
 		arr->alloc_size = length * sizeof(int);
 		arr->length = length;

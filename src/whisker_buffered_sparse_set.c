@@ -18,14 +18,8 @@ E_WHISKER_BSS whisker_bss_create_f(whisker_buffered_sparse_set **bss, size_t buf
 	// ensure min buffer count
 	assert(buffer_count >= 2);
 
-	whisker_buffered_sparse_set *bss_new;
-
 	// allocate the bss struct
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(*bss_new), (void**)&bss_new);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_BSS_MEM;
-	}
+	whisker_buffered_sparse_set *bss_new = whisker_mem_xcalloc_t(1, *bss_new);
 
 	// create empty array of sparse sets
 	E_WHISKER_ARR ss_err = whisker_arr_create_whisker_sparse_set_ptr(&bss_new->sparse_sets, 0);

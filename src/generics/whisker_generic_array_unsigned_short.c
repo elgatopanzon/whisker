@@ -13,9 +13,7 @@
 // create an instance of a managed array with type unsigned short
 E_WHISKER_ARR whisker_arr_create_unsigned_short(whisker_arr_unsigned_short **arr, size_t length)
 {
-	whisker_arr_unsigned_short *a;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_arr_unsigned_short), (void**)&a);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+	whisker_arr_unsigned_short *a = whisker_mem_xcalloc_t(1, *a);
 	a->length = length;
 	a->alloc_size = sizeof(unsigned short) * a->length;
 	if (length > 0) { whisker_arr_init_unsigned_short(a); }
@@ -27,8 +25,7 @@ E_WHISKER_ARR whisker_arr_create_unsigned_short(whisker_arr_unsigned_short **arr
 E_WHISKER_ARR whisker_arr_init_unsigned_short(whisker_arr_unsigned_short *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
-		E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(unsigned short) * arr->length, (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+		arr->arr = whisker_mem_xcalloc(1, sizeof(unsigned short) * arr->length);
 	}
 	return E_WHISKER_ARR_OK;
 }
@@ -55,10 +52,7 @@ E_WHISKER_ARR whisker_arr_resize_unsigned_short(whisker_arr_unsigned_short *arr,
 		arr->length = length;
 		return E_WHISKER_ARR_OK;
 	} else {
-		E_WHISKER_MEM err = whisker_mem_try_realloc(arr->arr, length * sizeof(unsigned short), (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) {
-			return E_WHISKER_ARR_MEM;
-		}
+		arr->arr = whisker_mem_xrealloc(arr->arr, length * sizeof(unsigned short));
 		memset(((unsigned char*)arr->arr) + arr->alloc_size, 0, (length * sizeof(unsigned short)) - arr->alloc_size);
 		arr->alloc_size = length * sizeof(unsigned short);
 		arr->length = length;

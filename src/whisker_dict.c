@@ -112,12 +112,7 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, void *key, size_t key_size, void*
 	whisker_arr_push(&header->keys, &key_mem);
 
 	// add the key pointing to the dict array index
-	size_t* array_index;
-	E_WHISKER_MEM m_err = whisker_mem_try_malloc(sizeof(size_t), (void**)&array_index);
-	if (m_err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_DICT_MEM;
-	}
+	size_t *array_index = whisker_mem_xmalloc_t(*array_index);
 
 	*array_index = header->arr_header.length - 1;
 	if (whisker_trie_set_value(&header->trie, key, key_size, array_index) != E_WHISKER_TRIE_OK)

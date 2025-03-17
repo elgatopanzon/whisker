@@ -13,9 +13,7 @@
 // create an instance of a managed array with type whisker_sparse_set
 E_WHISKER_ARR whisker_arr_create_whisker_sparse_set(whisker_arr_whisker_sparse_set **arr, size_t length)
 {
-	whisker_arr_whisker_sparse_set *a;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_arr_whisker_sparse_set), (void**)&a);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+	whisker_arr_whisker_sparse_set *a = whisker_mem_xcalloc_t(1, whisker_arr_whisker_sparse_set);
 	a->length = length;
 	a->alloc_size = sizeof(whisker_sparse_set) * a->length;
 	if (length > 0) { whisker_arr_init_whisker_sparse_set(a); }
@@ -27,8 +25,7 @@ E_WHISKER_ARR whisker_arr_create_whisker_sparse_set(whisker_arr_whisker_sparse_s
 E_WHISKER_ARR whisker_arr_init_whisker_sparse_set(whisker_arr_whisker_sparse_set *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
-		E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_sparse_set) * arr->length, (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+		arr->arr = whisker_mem_xcalloc(1, sizeof(whisker_sparse_set) * arr->length);
 	}
 	return E_WHISKER_ARR_OK;
 }
@@ -55,10 +52,7 @@ E_WHISKER_ARR whisker_arr_resize_whisker_sparse_set(whisker_arr_whisker_sparse_s
 		arr->length = length;
 		return E_WHISKER_ARR_OK;
 	} else {
-		E_WHISKER_MEM err = whisker_mem_try_realloc(arr->arr, length * sizeof(whisker_sparse_set), (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) {
-			return E_WHISKER_ARR_MEM;
-		}
+		arr->arr = whisker_mem_xrealloc(arr->arr, length * sizeof(whisker_sparse_set));
 		memset(((unsigned char*)arr->arr) + arr->alloc_size, 0, (length * sizeof(whisker_sparse_set)) - arr->alloc_size);
 		arr->alloc_size = length * sizeof(whisker_sparse_set);
 		arr->length = length;
@@ -146,9 +140,7 @@ size_t whisker_arr_contains_value_whisker_sparse_set(whisker_arr_whisker_sparse_
 // create an instance of a managed array with type whisker_sparse_set
 E_WHISKER_ARR whisker_arr_create_whisker_sparse_set_ptr(whisker_arr_whisker_sparse_set_ptr **arr, size_t length)
 {
-	whisker_arr_whisker_sparse_set_ptr *a;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_arr_whisker_sparse_set_ptr), (void**)&a);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+	whisker_arr_whisker_sparse_set_ptr *a = whisker_mem_xcalloc_t(1, whisker_arr_whisker_sparse_set_ptr);
 	a->length = length;
 	a->alloc_size = sizeof(whisker_sparse_set*) * a->length;
 	if (length > 0) { whisker_arr_init_whisker_sparse_set_ptr(a); }
@@ -160,8 +152,7 @@ E_WHISKER_ARR whisker_arr_create_whisker_sparse_set_ptr(whisker_arr_whisker_spar
 E_WHISKER_ARR whisker_arr_init_whisker_sparse_set_ptr(whisker_arr_whisker_sparse_set_ptr *arr)
 {
 	if (arr->length > 0 && arr->arr == NULL) {  \
-		E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_sparse_set*) * arr->length, (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) { return E_WHISKER_ARR_MEM; }
+		arr->arr = whisker_mem_xcalloc(1, sizeof(whisker_sparse_set*) * arr->length);
 	}
 	return E_WHISKER_ARR_OK;
 }
@@ -188,10 +179,7 @@ E_WHISKER_ARR whisker_arr_resize_whisker_sparse_set_ptr(whisker_arr_whisker_spar
 		arr->length = length;
 		return E_WHISKER_ARR_OK;
 	} else {
-		E_WHISKER_MEM err = whisker_mem_try_realloc(arr->arr, length * sizeof(whisker_sparse_set*), (void**)&arr->arr);
-		if (err != E_WHISKER_MEM_OK) {
-			return E_WHISKER_ARR_MEM;
-		}
+		arr->arr = whisker_mem_xrealloc(arr->arr, length * sizeof(whisker_sparse_set*));
 		memset(((unsigned char*)arr->arr) + arr->alloc_size, 0, (length * sizeof(whisker_sparse_set*)) - arr->alloc_size);
 		arr->alloc_size = length * sizeof(whisker_sparse_set*);
 		arr->length = length;

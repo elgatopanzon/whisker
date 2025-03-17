@@ -18,14 +18,8 @@
 // allocate a new sparse set
 E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 {
-	whisker_sparse_set *ss_new;
-
 	// allocate the ss struct
-	E_WHISKER_MEM err = whisker_mem_try_malloc(sizeof(*ss_new), (void**)&ss_new);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_SS_MEM;
-	}
+	whisker_sparse_set *ss_new = whisker_mem_xmalloc_t(*ss_new);
 
 	// allocate sparse array
 	E_WHISKER_ARR arr_err = whisker_arr_create_uint64_t(&ss_new->sparse, 0);

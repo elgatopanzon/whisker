@@ -23,11 +23,7 @@
 // create an instance of entities state
 E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entities)
 {
-	whisker_ecs_entities *e;
-	if (wmem_try_calloc_t(1, *e, &e) != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_ECS_ENTITY_MEM;
-	}
+	whisker_ecs_entities *e = whisker_mem_xcalloc_t(1, *e);
 
 	// create arrays and dict
 	if (whisker_arr_create_whisker_ecs_entity(&e->entities, 0) != E_WHISKER_ARR_OK)

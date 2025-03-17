@@ -12,9 +12,7 @@
 //
 E_WHISKER_BLOCK_ARR whisker_block_arr_create_whisker_ecs_entity_index(whisker_block_arr_whisker_ecs_entity_index **barr, size_t block_size)
 {
-	whisker_block_arr_whisker_ecs_entity_index *ba;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_block_arr_whisker_ecs_entity_index), (void**)&ba);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_BLOCK_ARR_MEM; }
+	whisker_block_arr_whisker_ecs_entity_index *ba = whisker_mem_xcalloc_t(1, whisker_block_arr_whisker_ecs_entity_index);
 	whisker_arr_void_ *blocks;
 	whisker_arr_create_void_(&blocks, 0);
 	ba->blocks = blocks;

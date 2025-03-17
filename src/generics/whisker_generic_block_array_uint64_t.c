@@ -12,9 +12,7 @@
 //
 E_WHISKER_BLOCK_ARR whisker_block_arr_create_uint64_t(whisker_block_arr_uint64_t **barr, size_t block_size)
 {
-	whisker_block_arr_uint64_t *ba;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(whisker_block_arr_uint64_t), (void**)&ba);
-	if (err != E_WHISKER_MEM_OK) { return E_WHISKER_BLOCK_ARR_MEM; }
+	whisker_block_arr_uint64_t *ba = whisker_mem_xcalloc_t(1, whisker_block_arr_uint64_t);
 	whisker_arr_void_ *blocks;
 	whisker_arr_create_void_(&blocks, 0);
 	ba->blocks = blocks;

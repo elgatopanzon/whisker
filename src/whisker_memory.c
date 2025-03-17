@@ -10,14 +10,6 @@
 #include "whisker_memory.h"
 #include "whisker_debug.h"
 
-const char* E_WHISKER_MEM_STR[] = {
-	[E_WHISKER_MEM_OK]="OK",
-	[E_WHISKER_MEM_UNKNOWN]="Unknown error",
-	[E_WHISKER_MEM_MALLOC_FAILED]="Malloc operation failed",
-	[E_WHISKER_MEM_CALLOC_FAILED]="Calloc operation failed",
-	[E_WHISKER_MEM_REALLOC_FAILED]="Realloc operation failed",
-};
-
 // static callback functions for alloc failed warning and fatal
 whisker_mem_alloc_warning_func alloc_warning_callback_ = NULL;
 void *alloc_warning_callback_arg_ = NULL;
@@ -147,31 +139,6 @@ void whisker_mem_register_alloc_panic_callback(whisker_mem_alloc_warning_func al
 	alloc_panic_callback_arg_ = alloc_panic_func_arg;
 }
 
-
-E_WHISKER_MEM whisker_mem_try_malloc(size_t size, void** ptr)
-{
-    *ptr = whisker_mem_xmalloc(size);
-    return (*ptr != NULL) ? E_WHISKER_MEM_OK : E_WHISKER_MEM_MALLOC_FAILED;
-}
-
-E_WHISKER_MEM whisker_mem_try_calloc(size_t count, size_t size, void** ptr)
-{
-    *ptr = whisker_mem_xcalloc(count, size);
-    return (*ptr != NULL) ? E_WHISKER_MEM_OK : E_WHISKER_MEM_CALLOC_FAILED;
-}
-
-E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new)
-{
-    void* ptr_reallocd = whisker_mem_xrealloc(ptr, size);
-    if (ptr_reallocd == NULL)
-    {
-    	return E_WHISKER_MEM_REALLOC_FAILED;
-    }
-
-    *ptr_new = ptr_reallocd;
-
-    return E_WHISKER_MEM_OK;
-}
 
 /****************************
 *  memory block functions  *

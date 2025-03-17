@@ -31,12 +31,7 @@ int whisker_tp_system_core_count() {
 // create and init a thread pool instance with the given thread count
 E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 {
-	whisker_thread_pool *tp_new;
-	E_WHISKER_MEM mem_err = whisker_mem_try_calloc(1, sizeof(*tp_new), (void**)&tp_new);
-	if (mem_err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_TP_MEM;
-	}
+	whisker_thread_pool *tp_new = whisker_mem_xcalloc_t(1, *tp_new);
 
 	// create the work array
 	E_WHISKER_ARR arr_err = whisker_arr_create_void_(&tp_new->work_queue, 0);
@@ -198,12 +193,7 @@ void whisker_tp_wait_work(whisker_thread_pool *tp)
 // create and init a work object
 whisker_thread_pool_work *whisker_tp_create_work(whisker_thread_pool_func func, void* arg)
 {
-	whisker_thread_pool_work *work;
-	E_WHISKER_MEM mem_err = whisker_mem_try_calloc(1, sizeof(*work), (void**)&work);
-	if (mem_err != E_WHISKER_MEM_OK)
-	{
-		return NULL;
-	}
+	whisker_thread_pool_work *work = whisker_mem_xcalloc_t(1, *work);
 
 	work->func = func;
 	work->arg = arg;

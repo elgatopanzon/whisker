@@ -12,26 +12,7 @@
 #ifndef WHISKER_MEMORY_H
 #define WHISKER_MEMORY_H
 
-// errors
-typedef enum E_WHISKER_MEM  
-{
-	E_WHISKER_MEM_OK = 0,
-	E_WHISKER_MEM_UNKNOWN = 1,
-	E_WHISKER_MEM_MALLOC_FAILED = 2,
-	E_WHISKER_MEM_CALLOC_FAILED = 3,
-	E_WHISKER_MEM_REALLOC_FAILED = 4,
-} E_WHISKER_MEM;
-extern const char* E_WHISKER_MEM_STR[];
-
 // short macros
-#define wmem_try_malloc whisker_mem_try_malloc
-#define wmem_try_calloc whisker_mem_try_calloc
-#define wmem_try_realloc whisker_mem_try_realloc
-#define wmem_try_malloc_t(t, p) whisker_mem_try_malloc(sizeof(t), (void**) p)
-#define wmem_try_calloc_t(c, t, p) whisker_mem_try_calloc(c, sizeof(t), (void**) p)
-#define wmem_try_realloc_t(p, t, pn) whisker_mem_try_realloc(p, sizeof(t), (void**) pn);
-#define wmemb_try_malloc whisker_mem_block_try_malloc
-#define wmemb_try_realloc_data whisker_mem_block_try_realloc_data
 #define wmemb_free whisker_mem_block_free
 #define wmemb_header whisker_mem_block_header_from_data_pointer
 #define wmemb_header_size whisker_mem_block_calc_header_size
@@ -49,9 +30,6 @@ extern void *alloc_panic_callback_arg_;
 void *whisker_mem_malloc(size_t size);
 void *whisker_mem_calloc(size_t count, size_t size);
 void *whisker_mem_realloc(void* ptr, size_t size_new);
-E_WHISKER_MEM whisker_mem_try_malloc(size_t size, void** ptr);
-E_WHISKER_MEM whisker_mem_try_calloc(size_t count, size_t size, void** ptr);
-E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new);
 
 // internal xmalloc functions
 void *whisker_mem_xmalloc_(size_t size, size_t source_line, char *source_file, whisker_mem_alloc_warning_func alloc_warning_func, void *alloc_warning_func_arg, whisker_mem_alloc_panic_func alloc_failed_func, void *alloc_failed_func_arg);

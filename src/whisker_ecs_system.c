@@ -325,12 +325,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_reset_process_phases(whisker_ecs_systems *system
 // create and init an iterator instance
 E_WHISKER_ECS_SYS whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 {
-	whisker_ecs_iterator *itor_new;
-	E_WHISKER_MEM err = whisker_mem_try_calloc(1, sizeof(*itor_new), (void**)&itor_new);
-	if (err != E_WHISKER_MEM_OK)
-	{
-		return E_WHISKER_ECS_SYS_MEM;
-	}
+	whisker_ecs_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
 
 	// create sparse sets for component pointers
 	if (whisker_arr_create_void_(&itor_new->read, 0) != E_WHISKER_ARR_OK) return E_WHISKER_ECS_SYS_ARR;
