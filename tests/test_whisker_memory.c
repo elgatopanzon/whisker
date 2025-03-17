@@ -20,9 +20,9 @@ START_TEST(test_whisker_mem_try_malloc_block)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_malloc(data_size, header_size);
+	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
 
-	whisker_mem_block_free(block);
+	whisker_mem_block_free_all(block);
 
 	return;
 }
@@ -34,7 +34,7 @@ START_TEST(test_whisker_mem_try_realloc_block_data)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_malloc(data_size, header_size);
+	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
 
 	// realloc the block and double it's size
 	void* data_prev = block->data;
@@ -43,7 +43,7 @@ START_TEST(test_whisker_mem_try_realloc_block_data)
 	// check the data size changed
 	ck_assert_uint_eq(block->data_size, data_size * 2);
 
-	whisker_mem_block_free(block);
+	whisker_mem_block_free_all(block);
 
 	return;
 }
@@ -55,12 +55,12 @@ START_TEST(test_whisker_mem_block_header_from_data_pointer)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_malloc(data_size, header_size);
+	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
 
 	// check the obtained header matches the one from the block
 	ck_assert(whisker_mem_block_header_from_data_pointer(block->data, header_size) == block->header);
 
-	whisker_mem_block_free(block);
+	whisker_mem_block_free_all(block);
 
 	return;
 }
@@ -98,7 +98,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_malloc(data_size, header_size);
+	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
 
 	// verify data bytes are 0
 	for (int i = 0; i < block->data_size; ++i)
@@ -128,7 +128,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 		}
 	}
 
-	whisker_mem_block_free(block);
+	whisker_mem_block_free_all(block);
 
 	return;
 }

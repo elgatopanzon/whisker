@@ -31,7 +31,7 @@ const char* E_WHISKER_DICT_STR[] = {
 E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t capacity)
 {
 	// create memory block for the dict header
-	whisker_memory_block* block = whisker_mem_block_malloc(element_size * capacity, sizeof(whisker_dict_header));
+	whisker_memory_block* block = whisker_mem_block_create_and_init(element_size * capacity, sizeof(whisker_dict_header));
 
 	// create an array for the keys cache
 	// this will be stored in the dict header as a pointer

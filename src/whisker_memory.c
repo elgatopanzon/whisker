@@ -178,23 +178,38 @@ E_WHISKER_MEM whisker_mem_try_realloc(void* ptr, size_t size, void** ptr_new)
 ****************************/
 // a memory block contains a header and a data pointer with a stored size
 
-// allocate the underlying data for a memory block
-whisker_memory_block *whisker_mem_block_malloc(size_t data_size, size_t header_size)
+// allocate memory block struct
+whisker_memory_block *whisker_mem_block_create(size_t data_size, size_t header_size)
 {
-	whisker_assert_ulong_gt(header_size, 0);
-
-	// create the full block data
-	void* block_data = whisker_mem_xcalloc(1, header_size + data_size);
-
 	// malloc the block
 	whisker_memory_block *block = whisker_mem_xcalloc_t(1, *block);
 
 	// assign the block values
-	block->header = block_data;
 	block->header_size = header_size;
-	block->data = (char*)block_data + header_size;
 	block->data_size = data_size;
 
+	return block;
+}
+
+// allocate the underlying memory for the block header and data
+void whisker_mem_block_init(whisker_memory_block *block)
+{
+	whisker_assert_ptr_ne(NULL, block);
+	whisker_assert_ulong_gt(block->header_size, 0);
+
+	// create the full block data
+	void* block_data = whisker_mem_xcalloc(1, block->header_size + block->data_size);
+
+	// assign the block values
+	block->header = block_data;
+	block->data = (char*)block_data + block->header_size;
+}
+
+// allocate memory block and initialise it
+whisker_memory_block *whisker_mem_block_create_and_init(size_t data_size, size_t header_size)
+{
+	whisker_memory_block *block = whisker_mem_block_create(data_size, header_size);
+	whisker_mem_block_init(block);
 	return block;
 }
 
@@ -228,7 +243,15 @@ void whisker_mem_block_realloc(whisker_memory_block* block, size_t size)
 // free the underlying pointer and block data for a memory block
 void whisker_mem_block_free(whisker_memory_block* block)
 {
-	free(block->header);
+	// freeing the header frees everything else
+	if (block->header) free(block->header);
+}
+
+// free the underlying pointer and block data for a memory block, including the
+// block itself
+void whisker_mem_block_free_all(whisker_memory_block* block)
+{
+	whisker_mem_block_free(block);
 	free(block);
 }
 

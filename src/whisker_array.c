@@ -21,7 +21,7 @@ const char* E_WHISKER_ARR_STR[] = {
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 {
 	// alloc whisker_mem block for the array + header struct
-	whisker_memory_block* block = whisker_mem_block_malloc(type_size * length, sizeof(whisker_array_header));
+	whisker_memory_block* block = whisker_mem_block_create_and_init(type_size * length, sizeof(whisker_array_header));
 
 	// set header values
 	whisker_array_header* header = block->header;
