@@ -9,14 +9,15 @@
 #ifndef WHISKER_DEBUG_H
 #define WHISKER_DEBUG_H
 
-#ifdef NDEBUG
-#define DEBUG_TEST 0
-#else
-#define DEBUG_TEST 1
-#endif
-
+#ifndef NDEBUG
 #define debug_printf(fmt, ...) \
-            do { if (DEBUG_TEST) fprintf(stderr, fmt, ##__VA_ARGS__); } while (0)
+    fprintf(stderr, fmt, ##__VA_ARGS__)
+#define trace_printf(fmt, ...) \
+    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define debug_printf(fmt, ...)
+#define trace_printf(fmt, ...)
+#endif
 
 void whisker_debug_print_value_layout(void *obj, size_t len, const char *name);
 
