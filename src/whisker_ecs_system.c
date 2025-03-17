@@ -467,7 +467,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_init_iterator(whisker_ecs_system_context *contex
 {
 	// convert read and write component names to component sparse sets
 	char *combined_components;
-	combined_components = whisker_mem_malloc(strlen(read_components) + strlen(write_components) + 2);
+	combined_components = whisker_mem_xmalloc(strlen(read_components) + strlen(write_components) + 2);
 	if (combined_components == NULL)
 	{
 		return E_WHISKER_ECS_SYS_MEM;

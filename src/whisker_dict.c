@@ -59,7 +59,7 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 	header->arr_header.length = capacity;
 	header->arr_header.element_size = element_size;
 	header->arr_header.size = capacity * element_size;
-	header->arr_header.swap_buffer = whisker_mem_malloc(element_size);
+	header->arr_header.swap_buffer = whisker_mem_xmalloc(element_size);
 	
 	*dict = block->data;
 	free(block);
@@ -107,7 +107,7 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, void *key, size_t key_size, void*
 	memcpy(array_dest, value, header->arr_header.element_size);
 
 	// create wstring from key and add it to keys array
-	void* key_mem = whisker_mem_malloc(key_size);
+	void* key_mem = whisker_mem_xmalloc(key_size);
 	memcpy(key_mem, key, key_size);
 	whisker_arr_push(&header->keys, &key_mem);
 
