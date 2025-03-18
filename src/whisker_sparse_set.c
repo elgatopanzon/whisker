@@ -75,7 +75,7 @@ void whisker_ss_free(whisker_sparse_set *ss)
 	whisker_arr_free_uint64_t(ss->sparse);
 	whisker_arr_free_uint64_t(ss->sparse_index);
 	warr_free(ss->dense);
-	wtrie_free_node(ss->sparse_trie, true);
+	whisker_trie_free_node(ss->sparse_trie, true);
 	free(ss);
 }
 
