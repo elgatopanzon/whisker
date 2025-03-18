@@ -45,9 +45,15 @@ void whisker_mem_handle_alloc_failed_(size_t size, void *realloc_ptr, size_t sou
 #define whisker_mem_xmalloc(size) whisker_mem_xmalloc_(size, __LINE__, __FILE__, alloc_warning_callback_, alloc_warning_callback_arg_, alloc_panic_callback_, alloc_panic_callback_arg_)
 #define whisker_mem_xcalloc(count, size) whisker_mem_xcalloc_(count, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
 #define whisker_mem_xrealloc(ptr, size) whisker_mem_xrealloc_(ptr, size, __LINE__, __FILE__, alloc_warning_callback_arg_, alloc_warning_callback_, alloc_panic_callback_, alloc_panic_callback_arg_)
+#define whisker_mem_xrecalloc(ptr, old_size, new_size) \
+	whisker_mem_xrealloc(ptr, new_size) \
+	memset(((unsigned char*)ptr) + old_size, 0, new_size - old_size); \
+
 #define whisker_mem_xmalloc_t(t) whisker_mem_xmalloc(sizeof(t))
 #define whisker_mem_xcalloc_t(count, t) whisker_mem_xcalloc(count, sizeof(t))
 #define whisker_mem_xrealloc_t(ptr, t) whisker_mem_xrealloc(ptr, sizeof(t))
+
+#define free_null(p) if (p) { free(p); p = NULL; }
 
 // memory blocks
 // a block is a managed header and data pointer
