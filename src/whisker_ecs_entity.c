@@ -75,12 +75,12 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 // free an instance of entities state
 void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 {
-	// free entity name wstrs
+	// free entity name strings
 	for (int i = 0; i < entities->entities->length; ++i)
 	{
 		if (entities->entities->arr[i].name != NULL)
 		{
-			wstr_free(entities->entities->arr[i].name);
+			free_null(entities->entities->arr[i].name);
 		}
 	}
 
@@ -180,10 +180,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char
 
 	// copy the name into the entities name
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-	if (wstr(name, &e->name) != E_WHISKER_STR_OK)
-	{
-		return E_WHISKER_ECS_ENTITY_MEM;
-	}
+	e->name = whisker_mem_xmalloc(strlen(name) + 1);
+	strncpy(e->name, name, strlen(name) + 1);
 
 	return E_WHISKER_ECS_ENTITY_OK;
 }
@@ -238,7 +236,7 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	if (e->name != NULL)
 	{
 		whisker_dict_remove_strk(&entities->entity_names, e->name);
-		wstr_free(e->name);
+		free_null(e->name);
 		e->name = NULL;
 	}
 
@@ -380,12 +378,13 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 		return NULL;
 	}
 
-	char* entity_names; wstr(entity_names_str, &entity_names);
-	size_t names_length = wstr_length(entity_names);
+	size_t names_length = strlen(entity_names_str);
+	char* entity_names = whisker_mem_xmalloc(names_length + 1);
+	strncpy(entity_names, entity_names_str, names_length + 1);
 
 	if (names_length == 0)
 	{
-		wstr_free(entity_names);
+		free_null(entity_names);
 		return entities_new;
 	}
 
@@ -430,7 +429,7 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 		}
 	}
 
-	wstr_free(entity_names);
+	free_null(entity_names);
 
 	return entities_new;
 }
