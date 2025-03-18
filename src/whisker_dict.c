@@ -7,7 +7,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "whisker_string.h"
 #include "whisker_array.h"
 #include "whisker_trie.h"
 #include "whisker_memory.h"
