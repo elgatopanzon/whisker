@@ -71,7 +71,7 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 	int created = 123;
 	whisker_ss_set(ss, 0, &created);
 
-	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->dense); ++i) */
 	/* { */
 	/* 	printf("1 dense index %d: %zu\n", i, ss->sparse_index[i]); */
 	/* 	printf("1 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
@@ -83,13 +83,13 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 	created2 = 456;
 	whisker_ss_set(ss, 1, &created2);
 
-	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->dense); ++i) */
 	/* { */
 	/* 	printf("2 dense index %d: %zu\n", i, ss->sparse_index[i]); */
 	/* 	printf("2 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
 	/* } */
 
-	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->dense); ++i) */
 	/* { */
 	/* 	printf("3 dense index %d: %zu\n", i, ss->sparse_index[i]); */
 	/* 	printf("3 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
@@ -98,7 +98,7 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 	// get it again create
 	int *created_3 = whisker_ss_get(ss, 1);
 
-	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->dense); ++i) */
 	/* { */
 	/* 	printf("4 dense index %d: %zu\n", i, ss->sparse_index[i]); */
 	/* 	printf("4 dense value %d: %d\n", i, ((int*)ss->dense)[i]); */
@@ -164,7 +164,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 	// TODO: add option to disable auto sort
 	/* // validate dense index order */
 	/* int expected[] = {1,0,100,10}; */
-	/* for (int i = 0; i < warr_length(ss->sparse_index); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->sparse_index); ++i) */
 	/* { */
 	/* 	ck_assert_uint_eq(expected[i], ss->sparse_index[i]); */
 	/* 	printf("ss sort dense index %d: %zu:%zu\n", i, ss->sparse_index[i], ((int*)ss->dense)[i]); */
@@ -172,7 +172,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
     /*  */
 	/* // validate dense order */
 	/* int expected_dense[] = {7, 9, 4, 3}; */
-	/* for (int i = 0; i < warr_length(ss->dense); ++i) */
+	/* for (int i = 0; i < whisker_arr_length(ss->dense); ++i) */
 	/* { */
 	/* 	ck_assert_uint_eq(expected_dense[i], ((int*)ss->dense)[i]); */
 	/* } */
@@ -190,7 +190,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 
 	// validate dense order
 	int expected_dense_sorted[] = {9, 7, 3, 4};
-	for (int i = 0; i < warr_length(ss->dense); ++i)
+	for (int i = 0; i < whisker_arr_length(ss->dense); ++i)
 	{
 		ck_assert_uint_eq(expected_dense_sorted[i], ((int*)ss->dense)[i]);
 	}

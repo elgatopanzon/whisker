@@ -463,7 +463,7 @@ START_TEST(test_whisker_dict_ordered)
 
 	// use array functions on the dict to check keys
 	uint64_t** keys = (uint64_t**)whisker_dict_keys(dict);
-	/* for (int i = 0; i < warr_length(keys); i++) { */
+	/* for (int i = 0; i < whisker_arr_length(keys); i++) { */
     /* 	printf("key %d: %zu\n", i, *keys[i]); */
     /* 	printf("value %d: %zu\n", i, dict[i]); */
 	/* } */
@@ -477,7 +477,7 @@ START_TEST(test_whisker_dict_ordered)
 
 	whisker_dict_order_by_key((void**)&dict);
 
-	/* for (int i = 0; i < warr_length(keys); i++) { */
+	/* for (int i = 0; i < whisker_arr_length(keys); i++) { */
     /* 	printf("key ordered %d: %zu\n", i, *keys[i]); */
     /* 	printf("value %d: %zu\n", i, dict[i]); */
 	/* } */

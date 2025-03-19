@@ -20,7 +20,7 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_f(size_t type_size, size_t block_si
 
 	// create array of block arrays
 	void** arrs;
-	E_WHISKER_ARR arr_err = warr_create(void*, 0, &arrs);
+	E_WHISKER_ARR arr_err = whisker_arr_create(void*, 0, &arrs);
 	if (arr_err != E_WHISKER_ARR_OK)
 	{
 		free(arr);
@@ -54,11 +54,11 @@ void whisker_block_arr_free_blocks(whisker_block_array *block_arr)
 		{
 			if (block_arr->blocks[i] != NULL)
 			{
-				warr_free(block_arr->blocks[i]);
+				whisker_arr_free(block_arr->blocks[i]);
 			}
 		}
 
-		warr_free(block_arr->blocks);
+		whisker_arr_free(block_arr->blocks);
 		block_arr->blocks = NULL;
 	}
 }
@@ -69,7 +69,7 @@ E_WHISKER_BLOCK_ARR whisker_block_arr_create_block(whisker_block_array *block_ar
 	// resize block pointer array if block id exceeds current length
 	if (block_array->blocks_length < block_id + 1)
 	{
-		E_WHISKER_ARR resize_err = warr_resize(&block_array->blocks, block_id + 1);
+		E_WHISKER_ARR resize_err = whisker_arr_resize(&block_array->blocks, block_id + 1);
 		if (resize_err != E_WHISKER_ARR_OK)
 		{
 			return E_WHISKER_BLOCK_ARR_MEM;

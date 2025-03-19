@@ -255,7 +255,7 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 		}
 
 		ecs->components->changed_components->sparse_index->length = 0;
-    	warr_header(ecs->components->changed_components->dense)->length = 0;
+    	whisker_arr_header(ecs->components->changed_components->dense)->length = 0;
 	}
 	
 	// process entity actions

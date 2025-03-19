@@ -268,7 +268,7 @@ E_WHISKER_DICT whisker_dict_free(void* dict)
 void whisker_dict_order_by_key(void** dict)
 {
 	whisker_dict_header *header = whisker_dict_get_header(*dict);
-	whisker_dict_order_by_key_(header->keys, *dict, warr_length(*dict), warr_header(header->keys)->element_size, header->arr_header.element_size, warr_header(header->keys)->swap_buffer, header->arr_header.swap_buffer);
+	whisker_dict_order_by_key_(header->keys, *dict, whisker_arr_length(*dict), whisker_arr_header(header->keys)->element_size, header->arr_header.element_size, whisker_arr_header(header->keys)->swap_buffer, header->arr_header.swap_buffer);
 }
 
 void whisker_dict_order_by_key_(void **keys, void *values, size_t length, size_t key_size, size_t value_size, void* key_temp, void* value_temp)

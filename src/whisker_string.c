@@ -127,5 +127,5 @@ int whisker_str_contains(char* w_haystack, char* needle)
 // free the string by obtaining the header
 void whisker_str_free(char* w_str)
 {
-	warr_free(w_str);
+	whisker_arr_free(w_str);
 }

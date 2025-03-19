@@ -22,7 +22,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 	}
 
 	// create array
-	if (warr_create(void*, 0, &c->components) != E_WHISKER_ARR_OK)
+	if (whisker_arr_create(void*, 0, &c->components) != E_WHISKER_ARR_OK)
 	{
 		free(c);
 		return E_WHISKER_ECS_COMP_ARR;
@@ -31,7 +31,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **comp
 
 	if (wss_create_t(&c->changed_components, whisker_ecs_entity_id) != E_WHISKER_SS_OK)
 	{
-		warr_free(c->components);
+		whisker_arr_free(c->components);
 		free(c);
 		return E_WHISKER_ECS_COMP_ARR;
 	}
@@ -50,7 +50,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 			wss_free(components->components[i]);
 		}
 	}
-	warr_free(components->components);
+	whisker_arr_free(components->components);
 	wss_free(components->changed_components);
 
 	free(components);
@@ -87,7 +87,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *compon
 		return E_WHISKER_ECS_COMP_OK;
 	}
 
-	if (warr_resize(&components->components, capacity) != E_WHISKER_ARR_OK)
+	if (whisker_arr_resize(&components->components, capacity) != E_WHISKER_ARR_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;
 	}
@@ -122,7 +122,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_free_component_array(whisker_ecs_components *co
 		return err;
 	}
 
-	warr_free(component_array);
+	whisker_arr_free(component_array);
 
 	return E_WHISKER_ECS_COMP_OK;
 }

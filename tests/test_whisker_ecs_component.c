@@ -20,7 +20,7 @@ START_TEST(test_whisker_ecs_component_create_components_struct)
 	whisker_ecs_c_create_components(&c);
 
 	// verify empty arrays
-	ck_assert_int_eq(0, warr_length(c->components));
+	ck_assert_int_eq(0, whisker_arr_length(c->components));
 
 	// free
 	whisker_ecs_c_free_components(c);

@@ -22,7 +22,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_systems(whisker_ecs_systems **systems)
 	}
 
 	// create array for systems
-	if (warr_create(whisker_ecs_system, 0, &s->systems) != E_WHISKER_ARR_OK)
+	if (whisker_arr_create(whisker_ecs_system, 0, &s->systems) != E_WHISKER_ARR_OK)
 		return E_WHISKER_ECS_SYS_ARR;
 	s->systems_length = 0;
 
@@ -47,7 +47,7 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 		whisker_ecs_s_free_system(&systems->systems[i]);
 	}
 
-	warr_free(systems->systems);
+	whisker_arr_free(systems->systems);
 	whisker_arr_free_whisker_ecs_system_process_phase(systems->process_phases);
 
 	free(systems);
@@ -119,7 +119,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 
 	
 	// add system to main systems list
-	E_WHISKER_ARR push_err = warr_push(&systems->systems, &system);
+	E_WHISKER_ARR push_err = whisker_arr_push(&systems->systems, &system);
 	if (push_err != E_WHISKER_ARR_OK)
 	{
 		return NULL;
