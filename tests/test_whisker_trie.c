@@ -11,154 +11,125 @@
 
 #include "check.h"
 
-void whisker_trie_test_create_cat_tree(whisker_trie** trie_root)
+whisker_trie* whisker_trie_test_create_cat_tree()
 {
 	// create trie root node
-	whisker_trie_create_node(trie_root);
+	whisker_trie *root = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	// create 3 trie child nodes
-	whisker_trie* trie_a;
-	whisker_trie_create_child_node(*trie_root, 'a', &trie_a);
+	whisker_trie* trie_a = whisker_trie_create_child_node(root, 'a');
 
-	whisker_trie* trie_b;
-	whisker_trie_create_child_node(*trie_root, 'b', &trie_b);
+	whisker_trie* trie_b = whisker_trie_create_child_node(root, 'b');
 
 	// trie tree for "cat"
-	whisker_trie* trie_c;
-	whisker_trie_create_child_node(*trie_root, 'c', &trie_c);
-	whisker_trie* trie_ca;
-	whisker_trie_create_child_node(trie_c, 'a', &trie_ca);
-	whisker_trie* trie_cat;
-	whisker_trie_create_child_node(trie_ca, 't', &trie_cat);
+	whisker_trie* trie_c = whisker_trie_create_child_node(root, 'c');
+	whisker_trie* trie_ca = whisker_trie_create_child_node(trie_c, 'a');
+	whisker_trie* trie_cat = whisker_trie_create_child_node(trie_ca, 't');
 	trie_cat->value = "cat";
+
+	return root;
 }
 
 START_TEST(test_whisker_trie_create)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_create_node(&trie_root);
+	whisker_trie* trie_root = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	// free node from root
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 
 START_TEST(test_whisker_trie_create_node_tree)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_test_create_cat_tree(&trie_root);
+	whisker_trie* trie_root = whisker_trie_test_create_cat_tree();
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 
 START_TEST(test_whisker_trie_search_node_by_key)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_test_create_cat_tree(&trie_root);
+	whisker_trie* trie_root = whisker_trie_test_create_cat_tree();
 
 	// search for the prefix match "ca" node
-	whisker_trie* ca_node;
-	E_WHISKER_TRIE errCa = whisker_trie_search_node_str(trie_root, "ca", &ca_node);
-
-	// verify error code
-	ck_assert_int_eq(errCa, E_WHISKER_TRIE_OK);
+	whisker_trie* ca_node = whisker_trie_search_node_str(trie_root, "ca");
 
 	// verify value is empty
 	ck_assert(ca_node != NULL && ca_node->value == NULL);
 
 	// search for the "cat" node
-	whisker_trie* cat_node;
-	E_WHISKER_TRIE errCat = whisker_trie_search_node_str(trie_root, "cat", &cat_node);
-
-	// verify error code
-	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
+	whisker_trie* cat_node = whisker_trie_search_node_str(trie_root, "cat");
 
 	// verify the value of the node matches "cat"
 	ck_assert_str_eq("cat", cat_node->value);
 
 	// search for a partially missing "cut" node
-	whisker_trie* cut_node;
-	E_WHISKER_TRIE errCut = whisker_trie_search_node_str(trie_root, "cut", &cut_node);
+	whisker_trie* cut_node = whisker_trie_search_node_str(trie_root, "cut");
 
-	// verify error code
-	ck_assert_int_eq(errCut, E_WHISKER_TRIE_SEARCH_MISSING_NODE);
+	ck_assert_ptr_eq(NULL, cut_node);
 
 	// search for a missing "dog" node
-	whisker_trie* dog_node;
-	E_WHISKER_TRIE errDog = whisker_trie_search_node_str(trie_root, "dog", &dog_node);
+	whisker_trie* dog_node = whisker_trie_search_node_str(trie_root, "dog");
 
-	// verify error code
-	ck_assert_int_eq(errDog, E_WHISKER_TRIE_SEARCH_MISSING_ALL);
+	ck_assert_ptr_eq(NULL, dog_node);
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 
 START_TEST(test_whisker_trie_search_value_by_key)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_test_create_cat_tree(&trie_root);
+	whisker_trie* trie_root = whisker_trie_test_create_cat_tree();
 
 	// search for the "cat" key's value
-	char* cat_value;
-	E_WHISKER_TRIE errCat = whisker_trie_search_value_str(trie_root, "cat", &cat_value);
-
-	// verify error code
-	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
+	char* cat_value = whisker_trie_search_value_str(trie_root, "cat");
 
 	// verify the value of the node matches "cat"
 	ck_assert_str_eq("cat", cat_value);
 
 	// search for the partial match "ca" key's value
-	char* ca_value;
-	E_WHISKER_TRIE errCa = whisker_trie_search_value_str(trie_root, "ca", &ca_value);
+	char* ca_value = whisker_trie_search_value_str(trie_root, "ca");
 
-	// verify error code
-	ck_assert_int_eq(errCa, E_WHISKER_TRIE_SEARCH_MISSING_VALUE);
+	ck_assert_ptr_eq(NULL, ca_value);
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 
 START_TEST(test_whisker_trie_set_value)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_test_create_cat_tree(&trie_root);
+	whisker_trie* trie_root = whisker_trie_test_create_cat_tree();
 
 	// search for the "cat" key's value
-	char* cat_value;
-	E_WHISKER_TRIE errCat = whisker_trie_search_value_str(trie_root, "cat", &cat_value);
-
-	// verify error code
-	ck_assert_int_eq(errCat, E_WHISKER_TRIE_OK);
+	char* cat_value = whisker_trie_search_value_str(trie_root, "cat");
 
 	// verify the value of the node matches "cat"
 	ck_assert_str_eq("cat", cat_value);
 
 	// set value to dog
-	whisker_trie_set_value_str(&trie_root, "dog", "dog");
+	whisker_trie_set_value_str(trie_root, "dog", "dog");
 	
 	// search for the "dog" key's value
-	char* dog_value;
-	E_WHISKER_TRIE errDog = whisker_trie_search_value_str(trie_root, "dog", &dog_value);
-
-	// verify error code
-	ck_assert_int_eq(errDog, E_WHISKER_TRIE_OK);
+	char* dog_value = whisker_trie_search_value_str(trie_root, "dog");
 
 	// verify the value of the node matches "cat"
 	ck_assert_str_eq("dog", dog_value);
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 
@@ -168,29 +139,25 @@ void whisker_trie_test_set_int(whisker_trie* root)
 	int* val = malloc(sizeof(int));
 	*val = 123;
 
-	whisker_trie_set_value_str(&root, "dog", val);
+	whisker_trie_set_value_str(root, "dog", val);
 }
 
 START_TEST(test_whisker_trie_set_value_int)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_test_create_cat_tree(&trie_root);
+	whisker_trie* trie_root = whisker_trie_test_create_cat_tree();
 
 	whisker_trie_test_set_int(trie_root);
 	
 	// search for the "dog" key's value
-	int* dog_value;
-	E_WHISKER_TRIE errDog = whisker_trie_search_value_str(trie_root, "dog", &dog_value);
-
-	// verify error code
-	ck_assert_int_eq(errDog, E_WHISKER_TRIE_OK);
+	int* dog_value = whisker_trie_search_value_str(trie_root, "dog");
 
 	// verify the value of the node matches "cat"
 	ck_assert_int_eq(123, *dog_value);
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 	free(dog_value);
 }
 END_TEST
@@ -198,26 +165,22 @@ END_TEST
 START_TEST(test_whisker_trie_set_value_uint64_key)
 {
 	// create trie root node
-	whisker_trie* trie_root;
-	whisker_trie_create_node(&trie_root);
+	whisker_trie* trie_root = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	// set some large keys
 	uint64_t uintkey_1 = 4294967296;
-	whisker_trie_set_value(&trie_root, &uintkey_1, sizeof(uint64_t), &trie_root);
+	whisker_trie_set_value(trie_root, &uintkey_1, sizeof(uint64_t), &trie_root);
 
 	uint64_t uintkey_2 = 8589934593;
-	whisker_trie_set_value(&trie_root, &uintkey_2, sizeof(uint64_t), &trie_root);
+	whisker_trie_set_value(trie_root, &uintkey_2, sizeof(uint64_t), &trie_root);
 
 	uint64_t uintkey_3 = 1095216660481;
-	whisker_trie_set_value(&trie_root, &uintkey_3, sizeof(uint64_t), &trie_root);
+	whisker_trie_set_value(trie_root, &uintkey_3, sizeof(uint64_t), &trie_root);
 
 	// search for the key's values
-	whisker_trie* key1_value;
-	whisker_trie_search_value_f(trie_root, &uintkey_1, sizeof(uint64_t), (void**)&key1_value);
-	whisker_trie* key2_value;
-	whisker_trie_search_value_f(trie_root, &uintkey_2, sizeof(uint64_t), (void**)&key2_value);
-	whisker_trie* key3_value;
-	whisker_trie_search_value_f(trie_root, &uintkey_3, sizeof(uint64_t), (void**)&key3_value);
+	whisker_trie* key1_value = whisker_trie_search_value_f(trie_root, &uintkey_1, sizeof(uint64_t));
+	whisker_trie* key2_value = whisker_trie_search_value_f(trie_root, &uintkey_2, sizeof(uint64_t));
+	whisker_trie* key3_value = whisker_trie_search_value_f(trie_root, &uintkey_3, sizeof(uint64_t));
 
 	// verify the value of the node 
 	ck_assert_ptr_eq(&trie_root, key1_value);
@@ -225,7 +188,8 @@ START_TEST(test_whisker_trie_set_value_uint64_key)
 	ck_assert_ptr_eq(&trie_root, key3_value);
 
 	// free node from root (should free all children too)
-	whisker_trie_free_node(trie_root, false);
+	whisker_trie_free_nodes(trie_root);
+	free(trie_root);
 }
 END_TEST
 

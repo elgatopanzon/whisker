@@ -49,14 +49,7 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 		return E_WHISKER_SS_ARR;
 	}
 
-	E_WHISKER_TRIE trie_err = whisker_trie_create_node(&ss_new->sparse_trie);
-	if (trie_err != E_WHISKER_TRIE_OK)
-	{
-		whisker_arr_free_uint64_t(ss_new->sparse);
-		whisker_arr_free_uint64_t(ss_new->sparse_index);
-		warr_free(ss_new->dense);
-		free(ss_new);
-	}
+	ss_new->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	ss_new->element_size = element_size;
 	ss_new->swap_buffer = warr_header(ss_new->dense)->swap_buffer;
@@ -75,7 +68,7 @@ void whisker_ss_free(whisker_sparse_set *ss)
 	whisker_arr_free_uint64_t(ss->sparse);
 	whisker_arr_free_uint64_t(ss->sparse_index);
 	warr_free(ss->dense);
-	whisker_trie_free_node(ss->sparse_trie, true);
+	whisker_trie_free_all(ss->sparse_trie);
 	free(ss);
 }
 
@@ -206,16 +199,14 @@ bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index)
 E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index)
 {
     if (index > UINT_MAX) {
-        whisker_trie *node;
-        whisker_trie_search_node_(ss->sparse_trie, &index, sizeof(index), 0, false, &node);
+        whisker_trie *node = whisker_trie_search_node_(ss->sparse_trie, &index, sizeof(index), 0, false);
         if (node) {
             free(node->value);
         }
         uint64_t *dense_index_value = whisker_mem_xmalloc_t(*dense_index_value);
         if (dense_index_value) {
             *dense_index_value = dense_index;
-            E_WHISKER_TRIE trie_err = whisker_trie_set_value(&ss->sparse_trie, &index, sizeof(index), dense_index_value);
-            if (trie_err != E_WHISKER_TRIE_OK)
+            if (!whisker_trie_set_value(ss->sparse_trie, &index, sizeof(index), dense_index_value))
             {
             	return E_WHISKER_SS_ARR;
             }
@@ -257,8 +248,7 @@ E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
 {
     if (index > UINT_MAX) {
-        uint64_t *dense_index = NULL;
-        whisker_trie_search_value_f(ss->sparse_trie, &index, sizeof(index), (void**)&dense_index);
+        uint64_t *dense_index = whisker_trie_search_value_f(ss->sparse_trie, &index, sizeof(index));
         return dense_index ? *dense_index : UINT64_MAX;
     }
 
