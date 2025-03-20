@@ -494,7 +494,7 @@ void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_
 		}
 	}
 
-	return whisker_ecs_get_component(components, component_id, entity_id);
+	return value;
 }
 
 // remove the component by ID from the given entity

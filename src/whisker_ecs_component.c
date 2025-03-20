@@ -188,8 +188,7 @@ E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *component
 	{
 		return err;
 	}
-
-	bool sort_required = (!wss_contains(component_array, entity_id.index) && sort);
+	bool sort_required = (sort && !wss_contains(component_array, entity_id.index));
 
 	// set the component
 	E_WHISKER_SS set_err = wss_set(component_array, entity_id.index, component);
