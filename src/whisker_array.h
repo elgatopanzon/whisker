@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "whisker_debug.h"
 #include "whisker_memory.h"
 
 #ifndef WHISKER_ARRAY_H
@@ -30,6 +31,27 @@ typedef struct whisker_array_header
 	size_t length;
 	void *swap_buffer;
 } whisker_array_header;
+
+// helper macros
+#define whisker_arr_declare(t, name) \
+	t *name; size_t name##_size; size_t name##_length;
+
+#define whisker_arr_declare_struct(t, name) \
+	struct name { t *arr; size_t size; size_t length; };
+
+#define whisker_arr_init_t(name, count) \
+	name = whisker_mem_xcalloc_t(count, *name); \
+	name##_size = count * sizeof(*name); \
+	name##_length = count; \
+
+#define whisker_arr_realloc(name, length) \
+	name = whisker_mem_xrecalloc(name, name##_size, length * sizeof(*name)); \
+	name##_size = length * sizeof(*name); \
+	if (length < name##_length) { name##_length = length; } \
+
+#define whisker_arr_ensure_alloc(arr, length) \
+	if (arr##_length == 0 && arr##_size > 0) { arr##_size = 0; } \
+	else if ((arr##_length < length) || arr##_size < (length * sizeof(*arr))) { whisker_arr_realloc(arr, length); } \
 
 // macros
 #define whisker_arr_create(t, l, p) whisker_arr_create_f(sizeof(t), l, (void**) p)
