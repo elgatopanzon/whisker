@@ -34,12 +34,7 @@ E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 	whisker_thread_pool *tp_new = whisker_mem_xcalloc_t(1, *tp_new);
 
 	// create the work array
-	E_WHISKER_ARR arr_err = whisker_arr_create_void_(&tp_new->work_queue, 0);
-	if (arr_err != E_WHISKER_ARR_OK)
-	{
-		free(tp_new);
-		return E_WHISKER_TP_ARR;
-	}
+	whisker_arr_init_t(tp_new->work_queue, WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT);
 
 	// set minimum to 1 thread
 	if (count == 0)
@@ -58,43 +53,24 @@ E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 	}
 
 	// create thread context array
-	arr_err = whisker_arr_create_void_(&tp_new->thread_contexts, count);
-	if (arr_err != E_WHISKER_ARR_OK)
-	{
-		pthread_mutex_destroy(&tp_new->thread_mutex_worker);
-		pthread_cond_destroy(&tp_new->thread_new_work_signal);
-		pthread_cond_destroy(&tp_new->thread_working_signal);
-		free(tp_new);
-		return E_WHISKER_TP_ARR;
-	}
+	whisker_arr_init_t(tp_new->thread_contexts, count);
 
 	// create and detach threads
 	for (int i = 0; i < count; ++i)
 	{
 		pthread_t thread;
-		whisker_thread_pool_context *context = whisker_mem_xcalloc(1, sizeof(*context));
-		if (context == NULL)
-		{
-			whisker_tp_free(tp_new);
-			return E_WHISKER_TP_MEM;
-		}
-		context->thread_pool = tp_new;
-		context->thread_id = i;
+		whisker_thread_pool_context context = {
+			.thread_pool = tp_new,
+			.thread_id = i,
+		};
+		tp_new->thread_contexts[i] = context;
 
-		if (pthread_create(&thread, NULL, whisker_tp_worker_func_, context) != 0)
+		if (pthread_create(&thread, NULL, whisker_tp_worker_func_, &tp_new->thread_contexts[i]) != 0)
 		{
-			free(context);
 			whisker_tp_free(tp_new);
 			return E_WHISKER_TP_THREAD;
 		}
 		pthread_detach(thread);
-
-		if (whisker_arr_push_void_(tp_new->thread_contexts, context) != E_WHISKER_ARR_OK)
-		{
-			free(context);
-			whisker_tp_free(tp_new);
-			return E_WHISKER_TP_ARR;
-		}
 	}
 
 	*tp = tp_new;
@@ -121,19 +97,13 @@ void whisker_tp_free(whisker_thread_pool *tp)
 	pthread_cond_destroy(&tp->thread_working_signal);
 
 	// free all unfinished work
-	for (int i = 0; i < tp->work_queue->length; ++i)
+	for (int i = 0; i < tp->work_queue_length; ++i)
 	{
-		free(tp->work_queue->arr[i]);
+		free(tp->work_queue[i]);
 	}
 
-	// free thread contexts
-	for (int i = 0; i < tp->thread_contexts->length; ++i)
-	{
-		free(tp->thread_contexts->arr[i]);
-	}
-
-	whisker_arr_free_void_(tp->work_queue);
-	whisker_arr_free_void_(tp->thread_contexts);
+	free(tp->work_queue);
+	free(tp->thread_contexts);
 	free(tp);
 }
 
@@ -152,12 +122,16 @@ E_WHISKER_TP whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_
 	}
 
 	pthread_mutex_lock(&tp->thread_mutex_worker);
-	if (whisker_arr_push_void_(tp->work_queue, work) != E_WHISKER_ARR_OK)
+
+	size_t alloc_block_size = ((tp->work_queue_length + 1) * sizeof(*tp->work_queue) / WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT) + sizeof(*tp->work_queue);
+	printf("block alloc size %zu current size %zu\n", alloc_block_size, tp->work_queue_size);
+	if (tp->work_queue_size < alloc_block_size)
 	{
-		pthread_mutex_unlock(&tp->thread_mutex_worker);
-		whisker_tp_free_work(work);
-		return E_WHISKER_TP_ARR;
+		printf("realloc required\n");
+		whisker_arr_ensure_alloc(tp->work_queue, alloc_block_size / sizeof(*tp->work_queue));
 	}
+	printf("%zu\n", tp->work_queue_length);
+	tp->work_queue[tp->work_queue_length++] = work;
 
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
@@ -177,7 +151,7 @@ void whisker_tp_wait_work(whisker_thread_pool *tp)
 
 	while (true) 
 	{
-		if (tp->work_queue->length > 0 || (!tp->stop && tp->thread_count_working != 0) || (tp->stop && tp->thread_count != 0))
+		if (tp->work_queue_length > 0 || (!tp->stop && tp->thread_count_working != 0) || (tp->stop && tp->thread_count != 0))
 		{
 			pthread_cond_wait(&tp->thread_working_signal, &tp->thread_mutex_worker);
 		}
@@ -214,12 +188,7 @@ void whisker_tp_free_work(whisker_thread_pool_work *work)
 // get a work item if there's any
 whisker_thread_pool_work *whisker_tp_get_work(whisker_thread_pool *tp)
 {
-	whisker_thread_pool_work *work;
-	if (whisker_arr_pop_void_(tp->work_queue, (void**)&work) == E_WHISKER_ARR_OK)
-	{
-		return work;
-	}
-	return NULL;
+	return (tp->work_queue_length > 0) ? tp->work_queue[--tp->work_queue_length] : NULL;
 }
 
 // the function used by the thread pool workers
@@ -237,13 +206,13 @@ void *whisker_tp_worker_func_(void *arg)
 		pthread_mutex_lock(&tp->thread_mutex_worker);
 
 		// wait for the new work signal or stop signal before waking up
-		while (tp->work_queue->length == 0 && !tp->stop) 
+		while (tp->work_queue_length == 0 && !tp->stop) 
 		{
 			pthread_cond_wait(&tp->thread_new_work_signal, &tp->thread_mutex_worker);
 		}
 
 		// stop the loop if stop is set
-		if (tp->stop && tp->work_queue->length == 0)
+		if (tp->stop && tp->work_queue_length == 0)
 		{
 			break;
 		}
@@ -265,7 +234,7 @@ void *whisker_tp_worker_func_(void *arg)
 		tp->thread_count_working--;
 
 		// wait for working signal if there's no work
-		if (!tp->stop && tp->thread_count_working == 0 && tp->work_queue->length == 0)
+		if (!tp->stop && tp->thread_count_working == 0 && tp->work_queue_length == 0)
 		{
 			pthread_cond_signal(&tp->thread_working_signal);
 		}

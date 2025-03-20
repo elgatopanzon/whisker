@@ -48,7 +48,9 @@ START_TEST(test_whisker_thread_pool_work_test)
 	{
 		values[i] = i * 100;
 		values_expected[i] = values[i] + 1;
-
+	}
+	for (int i = 0; i < work_item_count; ++i)
+	{
 		whisker_tp_queue_work(tp, whisker_thread_pool_test_work_func, &values[i]);
 	}
 

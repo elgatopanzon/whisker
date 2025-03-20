@@ -14,6 +14,8 @@
 #ifndef WHISKER_THREAD_POOL_H
 #define WHISKER_THREAD_POOL_H
 
+#define WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT 2
+
 // errors
 typedef enum E_WHISKER_TP  
 {
@@ -41,10 +43,10 @@ typedef struct whisker_thread_pool
 	// thread count in pool
 	size_t thread_count;
 	size_t thread_count_working;
-	whisker_arr_void_ *thread_contexts;
+	whisker_arr_declare(struct whisker_thread_pool_context, thread_contexts)
 
 	// work queue holds list of work items to execute on the thread
-	whisker_arr_void_ *work_queue;
+	whisker_arr_declare(struct whisker_thread_pool_work *, work_queue)
 
 	// mutex and thread conditions to signal working/not working
 	pthread_mutex_t thread_mutex_worker;
