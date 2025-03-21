@@ -37,6 +37,24 @@ typedef struct whisker_trie
     whisker_trie* matching_node = whisker_trie_search_node_((whisker_trie *)root, key, key_size, 0, true); \
     (matching_node == NULL) ? false : (matching_node->value = val, true); \
 })
+#define whisker_trie_remove_value_str(r, k) whisker_trie_remove_value((whisker_trie *)r, k, strlen(k))
+#define whisker_trie_remove_value(root, key, key_size) ({ \
+    whisker_trie* matching_node = whisker_trie_search_node_((whisker_trie *)root, key, key_size, 0, false); \
+    if (matching_node != NULL && matching_node->value != NULL) { \
+        free(matching_node->value); \
+        matching_node->value = NULL; \
+        true; \
+    } else { \
+        false; \
+    } \
+})
+
+#define whisker_trie_free_value(node) ({ \
+    if (node != NULL && node->value != NULL) { \
+        free(node->value); \
+        node->value = NULL; \
+    } \
+})
 #define whisker_trie_free_all(root) \
 	whisker_trie_free_node_values((whisker_trie *)root); \
 	whisker_trie_free_nodes((whisker_trie *)root); \
