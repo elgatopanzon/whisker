@@ -50,8 +50,13 @@ typedef struct whisker_array_header
 	if (length < name##_length) { name##_length = length; } \
 
 #define whisker_arr_ensure_alloc(arr, length) \
-	if (arr##_length == 0 && arr##_size > 0) { arr##_size = 0; } \
-	else if ((arr##_length < length) || arr##_size < (length * sizeof(*arr))) { whisker_arr_realloc(arr, length); } \
+	if (arr##_size < (length * sizeof(*arr))) { whisker_arr_realloc(arr, length); } \
+
+#define whisker_arr_ensure_alloc_block_size(arr, length, block_size) \
+	do { \
+		size_t adjusted_length = ((size_t) ((length / block_size) + 1)) * block_size; \
+		whisker_arr_ensure_alloc(arr, adjusted_length); \
+	} while (0)
 
 // macros
 #define whisker_arr_create(t, l, p) whisker_arr_create_f(sizeof(t), l, (void**) p)
