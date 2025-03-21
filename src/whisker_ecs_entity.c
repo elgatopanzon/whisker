@@ -24,15 +24,10 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 {
 	whisker_ecs_entities *e = whisker_mem_xcalloc_t(1, *e);
 
-	// create arrays and dict
-	e->entities = whisker_mem_xcalloc_t(WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE, *e->entities);
-	e->entities_size = WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE * sizeof(*e->entities);
-
-	e->destroyed_entities = whisker_mem_xcalloc_t(WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE, *e->destroyed_entities);
-	e->destroyed_entities_size = WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE * sizeof(*e->destroyed_entities);
-
-	e->deferred_actions = whisker_mem_xcalloc_t(WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE, *e->deferred_actions);
-	e->deferred_actions_size = WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE * sizeof(*e->deferred_actions);
+	// create arrays
+	whisker_arr_init_t(e->entities, WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE);
+	whisker_arr_init_t(e->destroyed_entities, WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
+	whisker_arr_init_t(e->deferred_actions, WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
 
 	if (wdict_create(&e->entity_names, char*, 0) != E_WHISKER_DICT_OK)
 	{
