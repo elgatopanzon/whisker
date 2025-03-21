@@ -169,7 +169,7 @@ void asteroids_system_velocity_2d(whisker_ecs_system_context *context)
 
 void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
 {
-	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "system_asteroid_spawn", "system_asteroid_spawn_time", "");
+	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "system_asteroid_spawn", "system_asteroid_spawn_time", "pos_2d,vel_2d,ast_size,radius,rot,rot_v,ctime,t_ast,t_screen_cull");
 
 	while (whisker_ecs_s_iterate(context, itor)) 
 	{
@@ -179,11 +179,57 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
 
 		double time_diff = (*system_asteroid_spawn_time + ASTEROID_SPAWN_RATE) - time;
 		int spawn_count = (-time_diff / ASTEROID_SPAWN_RATE + 1);
+		if (spawn_count > 50)
+		{
+			spawn_count = 50;
+		}
 
 		for (int i = 0; i < spawn_count; ++i)
 		{
-			asteroids_spawn_asteroid();
 			*system_asteroid_spawn_time = time;
+
+			// choose spawn position off screen
+			Vector2 position = {
+				.x = (GetRandomValue(-ASTEROID_OFF_SCREEN_PAD, asteroids_screen_width + ASTEROID_OFF_SCREEN_PAD)),
+				.y = (GetRandomValue(-ASTEROID_OFF_SCREEN_PAD, asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD)),
+			};
+
+			// set the position randomly to the left/right/top/bottom of the screen
+			if (GetRandomValue(0, 1))
+			{
+				position.x = (position.x > asteroids_screen_center.x) ? asteroids_screen_width + ASTEROID_OFF_SCREEN_PAD : -ASTEROID_OFF_SCREEN_PAD;
+			}
+			else
+			{
+				position.y = (position.y > asteroids_screen_center.y) ? asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD : -ASTEROID_OFF_SCREEN_PAD;
+			}
+
+			// set random velocity angle
+			Vector2 velocity = Vector2Subtract(asteroids_screen_center, position);
+			velocity = Vector2Scale(Vector2Normalize(velocity), GetRandomValue(ASTEROID_VELOCITY_MIN, ASTEROID_VELOCITY_MAX));
+			velocity = Vector2Rotate(velocity, (float) GetRandomValue(-ASTEROID_RANDOM_ANGLE, ASTEROID_RANDOM_ANGLE));
+
+			// set random size
+			int size_i = (ASTEROIDS_ASTEROID_SIZE)rand() % 3;
+			ASTEROIDS_ASTEROID_SIZE size = asteroid_sizes[size_i];
+
+			// create an entity id
+			whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
+
+			// set the entity component data
+			float rotation = (float)(rand() % 360);
+			float rotation_velocity = GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[0], Vector2, e, &position);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[1], Vector2, e, &velocity);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[2], ASTEROIDS_ASTEROID_SIZE, e, (void*)&size);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[3], float, e, (void*)&((float){(ASTEROID_RADIUS * 0.6f) * size}));
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[4], float, e, (void*)&rotation);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[5], float, e, (void*)&rotation_velocity);
+    		whisker_ecs_set(context->components, itor->component_ids_opt->arr[6], double, e, (void*)&(double){GetTime()});
+    		whisker_ecs_set_tag(context->components, itor->component_ids_opt->arr[7], e);
+    		whisker_ecs_set_tag(context->components, itor->component_ids_opt->arr[8], e);
+
+			debug_printf("spawn_asteroid:entity %d size %d at %fx%f\n", e.index, size, position.x, position.y);
 		}
 	}
 }
