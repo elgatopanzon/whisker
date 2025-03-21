@@ -23,7 +23,7 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 	// note: starts with 1, since it contains entity 0
 	ck_assert_int_eq(1, entities->entities_length);
 	ck_assert_int_eq(0, entities->destroyed_entities_length);
-	ck_assert_int_eq(0, whisker_arr_length(entities->entity_names));
+	ck_assert_ptr_ne(NULL, entities->entity_names);
 
 	// free
 	whisker_ecs_e_free_entities(entities);

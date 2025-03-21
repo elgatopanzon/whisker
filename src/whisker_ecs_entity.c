@@ -29,13 +29,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entiti
 	whisker_arr_init_t(e->destroyed_entities, WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
 	whisker_arr_init_t(e->deferred_actions, WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
 
-	if (wdict_create(&e->entity_names, char*, 0) != E_WHISKER_DICT_OK)
-	{
-		free(e->entities);
-		free(e->destroyed_entities);
-		free(e);
-		return E_WHISKER_ECS_ENTITY_DICT;
-	}
+	// create entity names trie
+	e->entity_names = whisker_mem_xcalloc_t(1, *e->entity_names);
 
 	// create empty entities up to the MIN
 	for (int i = 0; i < WHISKER_ECS_ENTITY_MIN; ++i)
@@ -68,7 +63,9 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 
 	free(entities->entities);
 	free(entities->destroyed_entities);
-	wdict_free(entities->entity_names);
+	whisker_trie_free_node_values(entities->entity_names);
+	whisker_trie_free_nodes(entities->entity_names);
+	free(entities->entity_names);
 	free(entities->deferred_actions);
 
 	free(entities);
@@ -155,11 +152,9 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, w
 // set the name for an entity
 E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
 {
-	E_WHISKER_DICT err = whisker_dict_set_strk(&entities->entity_names, name, &entity_id);
-	if (err != E_WHISKER_DICT_OK)
-	{
-		return E_WHISKER_ECS_ENTITY_DICT;
-	}
+	whisker_ecs_entity_index *trie_id = whisker_mem_xcalloc_t(1, *trie_id);
+	*trie_id = entity_id.index;
+	whisker_trie_set_value_str(entities->entity_names, name, trie_id);
 
 	// copy the name into the entities name
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
@@ -218,7 +213,8 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	// clear name pointer
 	if (e->name != NULL)
 	{
-		whisker_dict_remove_strk(&entities->entity_names, e->name);
+		whisker_trie_remove_value_str(entities->entity_names, e->name);
+		whisker_trie_set_value_str(entities->entity_names, e->name, NULL);
 		free_null(e->name);
 		e->name = NULL;
 	}
@@ -313,13 +309,13 @@ inline whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id)
 whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name)
 {
 	// lookup entity by name and return a match, or NULL
-	whisker_ecs_entity_id *entity_id = whisker_dict_get_strk(entities->entity_names, entity_name);
-	if (entity_id == NULL)
+	whisker_ecs_entity_index *e_idx = whisker_trie_search_value_str(entities->entity_names, entity_name);
+	if (e_idx == NULL)
 	{
 		return NULL;
 	}
 
-	return whisker_ecs_e(entities, *entity_id);
+	return &entities->entities[*e_idx];
 }
 
 // check if an entity is dead by comparing the provided entity version with the

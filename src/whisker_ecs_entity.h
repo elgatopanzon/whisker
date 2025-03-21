@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include "whisker_std.h"
 #include "whisker_array.h"
+#include "whisker_trie.h"
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_err.h"
 

@@ -6,6 +6,7 @@
 
 #include <pthread.h>
 #include "whisker_std.h"
+#include "whisker_trie.h"
 #include "whisker_sparse_set.h"
 #include "whisker_time.h"
 #include "whisker_thread_pool.h"
@@ -31,7 +32,7 @@ typedef struct whisker_ecs_entities
 	whisker_arr_declare(whisker_ecs_entity_index, destroyed_entities);
 
 	// dictionary of entity names mapping to indexes
-	whisker_ecs_entity_id *entity_names;
+	whisker_trie *entity_names;
 
 	// stack of deferred actions to process
 	whisker_arr_declare(whisker_ecs_entity_deferred_action, deferred_actions);
