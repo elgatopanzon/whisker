@@ -206,7 +206,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 		// update all systems in the process phase by update count
 		for (int ui = 0; ui < update_count; ++ui)
 		{
-			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities->arr[process_phase->id.index].name, "");
+			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities[process_phase->id.index].name, "");
 
 			while (whisker_ecs_s_iterate(default_context, system_itor)) 
 			{

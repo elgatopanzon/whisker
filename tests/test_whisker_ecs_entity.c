@@ -21,8 +21,8 @@ START_TEST(test_whisker_ecs_entity_create_entities_struct)
 
 	// verify empty arrays
 	// note: starts with 1, since it contains entity 0
-	ck_assert_int_eq(1, entities->entities->length);
-	ck_assert_int_eq(0, entities->destroyed_entities->length);
+	ck_assert_int_eq(1, entities->entities_length);
+	ck_assert_int_eq(0, entities->destroyed_entities_length);
 	ck_assert_int_eq(0, whisker_arr_length(entities->entity_names));
 
 	// free
@@ -43,7 +43,7 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 
 	// validate entity count
 	// note: since we added 3 and 0 already exists, the length is 4
-	ck_assert_uint_eq(4, entities->entities->length);
+	ck_assert_uint_eq(4, entities->entities_length);
 	ck_assert_uint_eq(4, wecs_e_count(entities));
 	
 	// validate returned indexes

@@ -199,9 +199,9 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 
 	// process deferred actions
 	// for each deferred deleted entity remove all its components
-	for (size_t i = 0; i < ecs->entities->deferred_actions->length; ++i)
+	for (size_t i = 0; i < ecs->entities->deferred_actions_length; ++i)
 	{
-		whisker_ecs_entity_deferred_action *action = &ecs->entities->deferred_actions->arr[i];
+		whisker_ecs_entity_deferred_action *action = &ecs->entities->deferred_actions[i];
 
 		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
 		{
@@ -345,7 +345,7 @@ whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *e
 	}
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities->arr[e.index].destroyed = true;
+	entities->entities[e.index].destroyed = true;
 	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 	if (err != E_WHISKER_ECS_ENTITY_OK)
 	{
@@ -366,7 +366,7 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 	}
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities->arr[e.index].destroyed = true;
+	entities->entities[e.index].destroyed = true;
 	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 	if (err != E_WHISKER_ECS_ENTITY_OK)
 	{

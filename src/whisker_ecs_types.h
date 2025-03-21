@@ -21,21 +21,20 @@
 #ifndef WHISKER_ECS_TYPES_H
 #define WHISKER_ECS_TYPES_H
 
-
 // the main entities struct
 typedef struct whisker_ecs_entities
 {
 	// current list of entities used by the system
-	whisker_arr_whisker_ecs_entity *entities;
+	whisker_arr_declare(whisker_ecs_entity, entities);
 
 	// stack of destroyed entities, used when recycling
-	whisker_arr_whisker_ecs_entity_index *destroyed_entities;
+	whisker_arr_declare(whisker_ecs_entity_index, destroyed_entities);
 
 	// dictionary of entity names mapping to indexes
 	whisker_ecs_entity_id *entity_names;
 
 	// stack of deferred actions to process
-	whisker_arr_whisker_ecs_entity_deferred_action *deferred_actions;
+	whisker_arr_declare(whisker_ecs_entity_deferred_action, deferred_actions);
 } whisker_ecs_entities;
 
 
