@@ -33,8 +33,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	// create entities, components and systems holders
 	whisker_ecs_systems *s;
 	whisker_ecs_s_create_systems(&s);
-	whisker_ecs_components *c;
-	whisker_ecs_c_create_components(&c);
+	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
 	whisker_ecs_entities *e = whisker_ecs_e_create_and_init_entities();
 
 	// create and register a system
@@ -152,7 +151,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	printf("itor single test: iteration ended\n");
 
 	whisker_ecs_e_free_entities_all(e);
-	whisker_ecs_c_free_components(c);
+	whisker_ecs_c_free_components_all(c);
 	whisker_ecs_s_free_systems(s);
 }
 END_TEST

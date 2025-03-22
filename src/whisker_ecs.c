@@ -23,21 +23,14 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 
 	whisker_ecs_entities *e = whisker_ecs_e_create_and_init_entities();
 	
-	whisker_ecs_components *c;
-	if (whisker_ecs_c_create_components(&c) != E_WHISKER_ECS_COMP_OK)
-	{
-		free(new);
-		whisker_ecs_e_free_entities_all(e);
-
-		return E_WHISKER_ECS_ARR;
-	}
+	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
 
 	whisker_ecs_systems *s;
 	if (whisker_ecs_s_create_systems(&s) != E_WHISKER_ECS_COMP_OK)
 	{
 		free(new);
 		whisker_ecs_e_free_entities_all(e);
-		whisker_ecs_c_free_components(c);
+		whisker_ecs_c_free_components_all(c);
 
 		return E_WHISKER_ECS_ARR;
 	}
@@ -99,7 +92,7 @@ void whisker_ecs_free(whisker_ecs *ecs)
 {
 	// free ecs state
 	whisker_ecs_e_free_entities_all(ecs->entities);
-	whisker_ecs_c_free_components(ecs->components);
+	whisker_ecs_c_free_components_all(ecs->components);
 	whisker_ecs_s_free_systems(ecs->systems);
 
 	free(ecs);

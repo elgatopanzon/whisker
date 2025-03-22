@@ -12,36 +12,42 @@
 
 #include "whisker_ecs.h"
 
-// create instance of components array holder
-E_WHISKER_ECS_COMP whisker_ecs_c_create_components(whisker_ecs_components **components)
+// create instance of components container
+whisker_ecs_components *whisker_ecs_c_create_components()
 {
 	whisker_ecs_components *c = whisker_mem_xcalloc(1, sizeof(*c));
-	if (c == NULL)
-	{
-		return E_WHISKER_ECS_COMP_MEM;
-	}
-
-	// create array
-	if (whisker_arr_create(void*, 0, &c->components) != E_WHISKER_ARR_OK)
-	{
-		free(c);
-		return E_WHISKER_ECS_COMP_ARR;
-	}
-	c->components_length = 0;
-
-	if (wss_create_t(&c->changed_components, whisker_ecs_entity_id) != E_WHISKER_SS_OK)
-	{
-		whisker_arr_free(c->components);
-		free(c);
-		return E_WHISKER_ECS_COMP_ARR;
-	}
-
-	*components = c;
-
-	return E_WHISKER_ECS_COMP_OK;
+	return c;
 }
 
-// free instance of components array holder
+// init instance of components container
+void whisker_ecs_c_init_components(whisker_ecs_components *components)
+{
+	// create array
+	whisker_arr_init_t(
+		components->components, 
+		WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE
+	);
+
+	// create sparse set for changed components
+	wss_create_t(&components->changed_components, whisker_ecs_entity_id);
+}
+
+// create and init instance of components container
+whisker_ecs_components *whisker_ecs_c_create_and_init_components()
+{
+	whisker_ecs_components *c = whisker_ecs_c_create_components();
+	whisker_ecs_c_init_components(c);
+	return c;
+}
+
+// free instance of components container and all component sets
+void whisker_ecs_c_free_components_all(whisker_ecs_components *components)
+{
+	whisker_ecs_c_free_components(components);
+	free(components);
+}
+
+// free component data in components container
 void whisker_ecs_c_free_components(whisker_ecs_components *components)
 {
 	for (int i = 0; i < components->components_length; i++) {
@@ -50,10 +56,8 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 			wss_free(components->components[i]);
 		}
 	}
-	whisker_arr_free(components->components);
+	free(components->components);
 	wss_free(components->changed_components);
-
-	free(components);
 }
 
 /******************************************
@@ -63,12 +67,12 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 // allocate an empty component array
 E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size)
 {
-	// grow the components array to fit the new component ID if required
+	// grow the components array to fit the new component ID
 	whisker_ecs_c_grow_components_(components, component_id.index + 1);
 
 	// create array
 	whisker_sparse_set *ss;
-	debug_printf("creating component block array %zu size %zu\n", component_id.id, component_size);
+	debug_printf("creating component sparse set %zu size %zu\n", component_id.id, component_size);
 	if (wss_create_s(&ss, component_size) != E_WHISKER_SS_OK)
 	{
 		return E_WHISKER_ECS_COMP_ARR;
@@ -79,34 +83,25 @@ E_WHISKER_ECS_COMP whisker_ecs_c_create_component_array(whisker_ecs_components *
 	return E_WHISKER_ECS_COMP_OK;
 }
 
-// resize the components array to the specified size
-E_WHISKER_ECS_COMP whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t capacity)
+// grow components array size if required to the nearest block size
+void whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t capacity)
 {
-	if (components->components_length >= capacity)
+	whisker_arr_ensure_alloc_block_size(
+		components->components, 
+		(capacity), 
+		(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
+	);
+	if (capacity > components->components_length)
 	{
-		return E_WHISKER_ECS_COMP_OK;
+		components->components_length = capacity;
 	}
-
-	if (whisker_arr_resize(&components->components, capacity) != E_WHISKER_ARR_OK)
-	{
-		return E_WHISKER_ECS_COMP_ARR;
-	}
-	components->components_length = capacity;
-
-	return E_WHISKER_ECS_COMP_OK;
 }
 
 // get the component array for the provided component ID 
 // note: will create if it doesn't exist
 E_WHISKER_ECS_COMP whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_sparse_set **component_array)
 {
-	// grow components if needed
-	E_WHISKER_ECS_COMP err = whisker_ecs_c_grow_components_(components, component_id.index + 1);
-	if (err != E_WHISKER_ECS_COMP_OK)
-	{
-		return err;
-	}
-
+	whisker_ecs_c_grow_components_(components, component_id.index + 1);
 	*component_array = components->components[component_id.index];
 
 	return E_WHISKER_ECS_COMP_OK;
@@ -165,11 +160,7 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 E_WHISKER_ECS_COMP whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component, bool sort)
 {
 	// grow array of sparse sets if required
-	E_WHISKER_ECS_COMP grow_err = whisker_ecs_c_grow_components_(components, component_id.index + 1);
-	if (grow_err != E_WHISKER_ECS_COMP_OK)
-	{
-		return grow_err;
-	}
+	whisker_ecs_c_grow_components_(components, component_id.index + 1);
 
 	// create a sparse set for the component if its null
 	if (components->components_length < component_id.index + 1 || components->components[component_id.index] == NULL)

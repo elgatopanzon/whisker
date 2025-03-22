@@ -45,8 +45,7 @@ typedef struct whisker_ecs_entities
 
 typedef struct whisker_ecs_components
 {
-	whisker_sparse_set **components;
-	size_t components_length;
+	whisker_arr_declare(whisker_sparse_set *, components);
 	whisker_sparse_set *changed_components;
 } whisker_ecs_components;
 
