@@ -39,9 +39,18 @@ whisker_ecs_entities *whisker_ecs_e_create_entities()
 void whisker_ecs_e_init_entities(whisker_ecs_entities *entities)
 {
 	// create and allocate entity arrays
-	whisker_arr_init_t(entities->entities, WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE);
-	whisker_arr_init_t(entities->destroyed_entities, WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
-	whisker_arr_init_t(entities->deferred_actions, WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
+	whisker_arr_init_t(
+		entities->entities, 
+		WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE
+	);
+	whisker_arr_init_t(
+		entities->destroyed_entities, 
+		WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE
+	);
+	whisker_arr_init_t(
+		entities->deferred_actions,
+		WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+	);
 
 	// create entity names trie
 	entities->entity_names = whisker_mem_xcalloc_t(1, *entities->entity_names);
@@ -80,80 +89,53 @@ void whisker_ecs_e_free_entities_all(whisker_ecs_entities *entities)
 // request a new entity
 whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
 {
-	whisker_ecs_entity_id e;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_create_(entities, &e);
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// TODO: some kind of panic
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
-
-	return e;
+	return whisker_ecs_e_create_(entities);
 }
 
 // creates and sets an entity, either new or recycled
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_(whisker_ecs_entities *entities, whisker_ecs_entity_id *entity_id)
+whisker_ecs_entity_id whisker_ecs_e_create_(whisker_ecs_entities *entities)
 {
-	whisker_ecs_entity_id new_id;
-
-	E_WHISKER_ECS_ENTITY err_create;
-	if (whisker_ecs_e_destroyed_count(entities))
+	if (entities->destroyed_entities_length)
 	{
-		whisker_ecs_entity_index recycled_index;
-		err_create = whisker_ecs_e_pop_recycled_(entities, &recycled_index);
-
-		new_id = entities->entities[recycled_index].id;
-		entities->entities[recycled_index].destroyed = false;
+		return entities->entities[whisker_ecs_e_pop_recycled_(entities)].id;
 	}
-	else
-	{
-		err_create = whisker_ecs_e_create_new_(entities, &new_id);
-	}
-
-	if (err_create != E_WHISKER_ECS_ENTITY_OK)
-	{
-		return err_create;
-	}
-
-	*entity_id = new_id;
-
-	return E_WHISKER_ECS_ENTITY_OK;
+	return whisker_ecs_e_create_new_(entities);
 }
 
 // pop a recycled entity from the destroyed_entities stack
-E_WHISKER_ECS_ENTITY whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities, whisker_ecs_entity_index *entity_index)
+whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities)
 {
 	if (entities->destroyed_entities_length > 0)
 	{
-		*entity_index = entities->destroyed_entities[--entities->destroyed_entities_length];
-		return E_WHISKER_ECS_ENTITY_OK;
+		whisker_ecs_entity_index recycled_index = --entities->destroyed_entities_length;
+		entities->entities[recycled_index].destroyed = false;
+		return entities->destroyed_entities[recycled_index];
 	}
 
-	return E_WHISKER_ECS_ENTITY_ARR;
+	return 0;
 }
 
 // create a new entity and add it to the entities list
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_new_(whisker_ecs_entities *entities, whisker_ecs_entity_id *entity_id)
+whisker_ecs_entity_id whisker_ecs_e_create_new_(whisker_ecs_entities *entities)
 {
-	size_t entity_count = whisker_ecs_e_count(entities);
+	const size_t new_idx = entities->entities_length++;
 
-	// TODO: check for max entities reached if there's a limit set later
-	
-	whisker_arr_ensure_alloc_block_size(entities->entities, (entities->entities_length + 1), WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE);
+	// reallocate the entity array if required
+	whisker_arr_ensure_alloc_block_size(
+		entities->entities, 
+		(new_idx + 1), 
+		WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE
+	);
 
-	entities->entities[entity_count].id.index = entity_count;
-	entities->entities[entity_count].id.version = 0;
-	entities->entities[entity_count].destroyed = false;
-	entities->entities[entity_count].name = NULL;
-
-	*entity_id = entities->entities[entity_count].id;
-	entities->entities_length++;
-
-	return E_WHISKER_ECS_ENTITY_OK;
+	// init the newly created entity with valid index
+	entities->entities[new_idx] = (whisker_ecs_entity) {
+		.id.index = new_idx,
+	};
+	return entities->entities[new_idx].id;
 }
 
 // set the name for an entity
-E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_index *trie_id = whisker_mem_xcalloc_t(1, *trie_id);
 	*trie_id = entity_id.index;
@@ -163,51 +145,34 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_set_name(whisker_ecs_entities *entities, char
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 	e->name = whisker_mem_xmalloc(strlen(name) + 1);
 	strncpy(e->name, name, strlen(name) + 1);
-
-	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 // create entity with a name, or return an existing entity with the same name
 whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities, char *name)
 {
-	whisker_ecs_entity_id e;
-	whisker_ecs_e_create_named_(entities, name, &e);
-
-	return e;
+	return whisker_ecs_e_create_named_(entities, name);
 }
 
 // create a new entity with the given name
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id *entity_id)
+whisker_ecs_entity_id whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char* name)
 {
 	whisker_ecs_entity *e = whisker_ecs_e_named(entities, name);
-	if (e != NULL)
+	if (e)
 	{
-		*entity_id = e->id;
-		return E_WHISKER_ECS_ENTITY_OK;
+		return e->id;
 	}
 
 	// create new entity with name
-	whisker_ecs_entity_id e_id;
-	E_WHISKER_ECS_ENTITY create_err = whisker_ecs_e_create_(entities, &e_id);
-	if (create_err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		return create_err;
-	}
+	whisker_ecs_entity_id e_id = whisker_ecs_e_create_(entities);
 
 	// set the name
-	create_err = whisker_ecs_e_set_name(entities, name, e_id);
-	if (create_err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		return create_err;
-	}
+	whisker_ecs_e_set_name(entities, name, e_id);
 
-	*entity_id = e_id;
-
-	return E_WHISKER_ECS_ENTITY_OK;
+	return e_id;
 }
 
 // recycle an entity into the destroyed entities stack
-E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
 	// increment version
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
@@ -217,52 +182,46 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisk
 	if (e->name != NULL)
 	{
 		whisker_trie_remove_value_str(entities->entity_names, e->name);
-		whisker_trie_set_value_str(entities->entity_names, e->name, NULL);
 		free_null(e->name);
 		e->name = NULL;
 	}
 
 	// push to dead entities stack
-	whisker_arr_ensure_alloc_block_size(entities->destroyed_entities, (entities->destroyed_entities_length + 1), WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
+	whisker_arr_ensure_alloc_block_size(
+		entities->destroyed_entities, 
+		(entities->destroyed_entities_length + 1), 
+		WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE
+	);
 	entities->destroyed_entities[entities->destroyed_entities_length++] = e->id.index;
-
-	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 // destroy an entity, incrementing it's version and adding it to the destroyed
 // entities stack
-E_WHISKER_ECS_ENTITY whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
 	// mark entity as destroyed
 	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
 	if (!e->destroyed)
 	{
 		e->destroyed = true;
-
-		if (whisker_ecs_e_recycle(entities, entity_id) != E_WHISKER_ECS_ENTITY_OK)
-			return E_WHISKER_ECS_ENTITY_ARR;
+		whisker_ecs_e_recycle(entities, entity_id);
 	}
-	else
-	{
-		// TODO: better error than this
-		return E_WHISKER_ECS_ENTITY_UNKNOWN;
-	}
-
-	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 // add a deferred entity action to be processed at a later time
 // note: typically it would be the end of an update
-E_WHISKER_ECS_ENTITY whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
+void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
 {
-	whisker_arr_ensure_alloc_block_size(entities->deferred_actions, (entities->deferred_actions_length + 1), WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
+	whisker_arr_ensure_alloc_block_size(
+		entities->deferred_actions, 
+		(entities->deferred_actions_length + 1),
+		WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+	);
 	entities->deferred_actions[entities->deferred_actions_length++] = action;
-
-	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 // process the deferred actions stack
-E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
+void whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
 {
 	while (entities->deferred_actions_length > 0) 
 	{
@@ -273,16 +232,10 @@ E_WHISKER_ECS_ENTITY whisker_ecs_e_process_deferred(whisker_ecs_entities *entiti
 				entities->entities[action.id.index].destroyed = false;		
 				break;
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
-				if (whisker_ecs_e_destroy(entities, action.id) != E_WHISKER_ECS_ENTITY_OK)
-				{
-					// TODO: panic here
-					break;
-				}
+				whisker_ecs_e_destroy(entities, action.id);
 				break;
 		}
 	}
-
-	return E_WHISKER_ECS_ENTITY_OK;
 }
 
 
@@ -383,13 +336,7 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 		if (entity_names[i] == 0x0)
 		{
 			// create/get entity ID for name
-			whisker_ecs_entity_id e;
-			E_WHISKER_ECS_ENTITY entity_err = whisker_ecs_e_create_named_(entities, entity_names + search_index, &e);
-			if (entity_err != E_WHISKER_ECS_ENTITY_OK)
-			{
-				// TODO: panic here
-				break;
-			}
+			whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, entity_names + search_index);
 
 			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 

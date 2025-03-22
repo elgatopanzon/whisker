@@ -289,40 +289,20 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 // request an entity ID to be created or recycled
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities)
 {
-	whisker_ecs_entity_id e;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_create_(entities, &e);
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// note: make it more obvious elsewhere that entity ID 0 means the
-		// entity failed to be created
-		// TODO: whisker_error.h global error handler, setting the real error
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
-
-	return e;
+	return whisker_ecs_e_create_(entities);
 }
 
 // request an entity ID to be created or recycled, providing a name
 // note: names are unique, creating an entity with the same name returns the existing entity if it exists
 whisker_ecs_entity_id whisker_ecs_create_named_entity(whisker_ecs_entities *entities, char* name)
 {
-	whisker_ecs_entity_id e;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_create_named_(entities, name, &e);
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// note: make it more obvious elsewhere that entity ID 0 means the
-		// entity failed to be created
-		// TODO: whisker_error.h global error handler, setting the real error
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
-
-	return e;
+	return whisker_ecs_e_create_named_(entities, name);
 }
 
 // immediately destroy the given entity ID
-bool whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-	return (whisker_ecs_e_destroy(entities, entity_id) == E_WHISKER_ECS_ENTITY_OK);
+	whisker_ecs_e_destroy(entities, entity_id);
 }
 
 // check whether the given entity ID is still alive
@@ -343,12 +323,7 @@ whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *e
 
 	// set the entity to dead and add it to the deferred entities
 	entities->entities[e.index].destroyed = true;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// TODO: whisker_error.h global error handler, setting the real error
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
+	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 
 	return e;
 }
@@ -364,28 +339,15 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 
 	// set the entity to dead and add it to the deferred entities
 	entities->entities[e.index].destroyed = true;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// TODO: whisker_error.h global error handler, setting the real error
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
+	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
 
 	return e;
 }
 
 // request to destroy the provided entity ID at the end of current frame
-bool whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
-
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// TODO: whisker_error.h global error handler, setting the real error
-		return false;
-	}
-
-	return true;
+	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
 }
 
 /*************************
@@ -394,17 +356,7 @@ bool whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker
 // get the component entity ID for the given component name
 whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs_entities *entities, char* component_name)
 {
-	whisker_ecs_entity_id e;
-	E_WHISKER_ECS_ENTITY err = whisker_ecs_e_create_named_(entities, component_name, &e);
-	if (err != E_WHISKER_ECS_ENTITY_OK)
-	{
-		// note: make it more obvious elsewhere that entity ID 0 means the
-		// entity failed to be created
-		// TODO: whisker_error.h global error handler, setting the real error
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
-
-	return e;
+	return whisker_ecs_e_named(entities, component_name)->id;
 }
 
 // get a named component for an entity
@@ -426,7 +378,7 @@ void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ec
 // note: this will handle the creation of the underlying component array
 void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
+	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named_(entities, component_name);;
 	if (component_id.id == 0)
 	{
 		// TODO: panic here
@@ -437,17 +389,15 @@ void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ec
 }
 
 // remove a named component from an entity
-bool whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 	if (component_id.id == 0)
 	{
 		// TODO: panic here
-		// for now just return a NULL
-		return NULL;
 	}
 
-	return whisker_ecs_remove_component(components, component_id, entity_id) == E_WHISKER_ECS_COMP_OK;
+	whisker_ecs_remove_component(components, component_id, entity_id);
 }
 
 // check whether an entity has a named component attached
@@ -495,7 +445,7 @@ void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_
 }
 
 // remove the component by ID from the given entity
-bool whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	if (!wss_contains(components->changed_components, component_id.id))
 	{
@@ -503,11 +453,10 @@ bool whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ec
 		if (err != E_WHISKER_SS_OK)
 		{
 			// TODO: panic here
-			return NULL;
 		}
 	}
 
-	return whisker_ecs_c_remove_component(components, component_id, entity_id, false) == E_WHISKER_ECS_COMP_OK;
+	whisker_ecs_c_remove_component(components, component_id, entity_id, false);
 }
 
 // check if an entity has the given component by ID
