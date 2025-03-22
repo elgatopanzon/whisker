@@ -87,12 +87,6 @@ E_WHISKER_ECS_SYS whisker_ecs_s_create_system_context(whisker_ecs_system_context
 // regiser a system in the systems container
 whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
 {
-	// create system context array
-	E_WHISKER_ARR err = whisker_arr_create_void_(&system.thread_contexts, 0);
-	if (err != E_WHISKER_ARR_OK)
-	{
-		return NULL;
-	}
 
 	// create contexts for the provided thread count
 	// set thread count to 1 when it's set to 0
@@ -101,13 +95,19 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 		system.thread_count = whisker_tp_system_core_count();
 	}
 	debug_printf("sys: e %zu creating %zu thread contexts\n", system.entity_id, system.thread_count);
+
+	// create system context array
+	whisker_arr_init_t(system.thread_contexts, (system.thread_count + 1));
+
+	// create 1 extra context, which acts as the default context or first
+	// thread's context
 	for (int i = 0; i < system.thread_count + 1; ++i)
 	{
 		whisker_ecs_system_context *c;
 		whisker_ecs_s_create_system_context(&c, &system);
 		c->thread_id = i;
 		c->thread_max = system.thread_count;
-		whisker_arr_push_void_(system.thread_contexts, c);
+		system.thread_contexts[system.thread_contexts_length++] = c;
 	}
 
 	// create thread pool
@@ -132,12 +132,12 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 // deallocate a system instance
 void whisker_ecs_s_free_system(whisker_ecs_system *system)
 {
-	for (int i = 0; i < system->thread_contexts->length; ++i)
+	for (int i = 0; i < system->thread_contexts_length; ++i)
 	{
-		whisker_ecs_s_free_system_context(system->thread_contexts->arr[i]);
+		whisker_ecs_s_free_system_context(system->thread_contexts[i]);
 	}
 
-	whisker_arr_free_void_(system->thread_contexts);
+	free(system->thread_contexts);
 	whisker_tp_wait_work(system->thread_pool);
 	whisker_tp_free(system->thread_pool);
 }
@@ -191,7 +191,7 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
 	whisker_ecs_system *default_system = &systems->systems[systems->system_id];
-	whisker_ecs_system_context *default_context = default_system->thread_contexts->arr[0];
+	whisker_ecs_system_context *default_context = default_system->thread_contexts[0];
 
 	// loop over each registered process phase
 	for (int i = 0; i < systems->process_phases->length; ++i)
@@ -221,7 +221,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 					for (int ti = 0; ti < system->thread_count; ++ti)
 					{
 						// set current system context values before update
-						whisker_ecs_system_context *context = system->thread_contexts->arr[ti];
+						whisker_ecs_system_context *context = system->thread_contexts[ti];
 
 						context->process_phase_time_step = system->process_phase_time_step;
 						context->delta_time = system->delta_time;
@@ -237,7 +237,7 @@ E_WHISKER_ECS_SYS whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whi
 				else
 				{
 					// set current system context values before update
-					whisker_ecs_system_context *context = system->thread_contexts->arr[0];
+					whisker_ecs_system_context *context = system->thread_contexts[0];
 
 					context->process_phase_time_step = system->process_phase_time_step;
 					context->delta_time = system->delta_time;

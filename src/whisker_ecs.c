@@ -174,7 +174,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	// why: this ensures the system's iterators initialise their component
 	// strings and underlying entities in a thread-safe way before
 	// multi-threading the system execution
-	whisker_ecs_system_context *exec_context = system->thread_contexts->arr[0];
+	whisker_ecs_system_context *exec_context = system->thread_contexts[0];
 	exec_context->system_ptr = system->system_ptr;
 	exec_context->entities = system->entities;
 	exec_context->components = system->components;

@@ -123,7 +123,7 @@ typedef struct whisker_ecs_system
 	whisker_ecs_entities *entities;
 	// whisker_sparse_set *iterators;
 
-	whisker_arr_void_ *thread_contexts;
+	whisker_arr_declare(whisker_ecs_system_context *, thread_contexts);
 	whisker_thread_pool *thread_pool;
 } whisker_ecs_system;
 
