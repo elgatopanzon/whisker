@@ -26,14 +26,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
 
 	whisker_ecs_systems *s;
-	if (whisker_ecs_s_create_systems(&s) != E_WHISKER_ECS_COMP_OK)
-	{
-		free(new);
-		whisker_ecs_e_free_entities_all(e);
-		whisker_ecs_c_free_components_all(c);
-
-		return E_WHISKER_ECS_ARR;
-	}
+	whisker_ecs_s_create_systems(&s);
 
 	new->entities = e;
 	new->components = c;
@@ -201,13 +194,7 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 
 				if (whisker_ecs_c_has_component(ecs->components, component_id, action->id))
 				{
-					E_WHISKER_ECS_COMP remove_err = whisker_ecs_c_remove_component(ecs->components, component_id, action->id, false);
-					if (remove_err != E_WHISKER_ECS_COMP_OK)
-					{
-						// TODO: panic here since it's unrecoverable
-						// for now, just continue the loop
-						continue;
-					}
+					whisker_ecs_c_remove_component(ecs->components, component_id, action->id, false);
 
 					if (!wss_contains(ecs->components->changed_components, component_id.id))
 					{
@@ -230,11 +217,7 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 		{
 			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index->arr[i]};
 
-			E_WHISKER_ECS_COMP sort_err = whisker_ecs_c_sort_component_array(ecs->components, component_id);
-			if (sort_err != E_WHISKER_ECS_COMP_OK)
-			{
-				// TODO: panic here
-			}
+			whisker_ecs_c_sort_component_array(ecs->components, component_id);
 
 			E_WHISKER_SS set_err = whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
 			if (set_err != E_WHISKER_SS_OK)
@@ -417,12 +400,7 @@ void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_
 // note: this will handle the creation of the underlying component array
 void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	E_WHISKER_ECS_COMP err = whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
-
-	if (err != E_WHISKER_ECS_COMP_OK)
-	{
-		return NULL;
-	}
+	whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
 
 	if (!wss_contains(components->changed_components, component_id.id))
 	{

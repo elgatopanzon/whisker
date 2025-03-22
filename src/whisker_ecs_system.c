@@ -375,7 +375,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 		whisker_sparse_set *component_array;
 		if (itor->component_arrays->arr[i] == NULL)
 		{
-			whisker_ecs_c_get_component_array(context->components, itor->component_ids_rw->arr[i], &component_array);
+			component_array = whisker_ecs_c_get_component_array(context->components, itor->component_ids_rw->arr[i]);
 			if (component_array == NULL)
 			{
 				itor->master_index = UINT64_MAX;
@@ -406,7 +406,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 		size_t array_offset = itor->component_ids_rw->length + i;
 		if (itor->component_arrays->arr[array_offset] == NULL)
 		{
-			whisker_ecs_c_get_component_array(context->components, itor->component_ids_opt->arr[i], &component_array);
+			component_array = whisker_ecs_c_get_component_array(context->components, itor->component_ids_opt->arr[i]);
 			if (component_array == NULL)
 			{
 				continue;
