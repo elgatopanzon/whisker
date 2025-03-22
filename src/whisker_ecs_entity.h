@@ -50,7 +50,7 @@ size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities);
 size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities);
 struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
 int whisker_ecs_e_compare_entity_ids_(const void *id_a, const void *id_b);
-void whisker_ecs_e_sort_entity_array(whisker_arr_whisker_ecs_entity_id *entities);
+void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities, size_t length);
 
 // short macros and types
 typedef whisker_ecs_entity_id wecs_id;

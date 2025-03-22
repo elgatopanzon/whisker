@@ -361,7 +361,7 @@ int whisker_ecs_e_compare_entity_ids_(const void *id_a, const void *id_b)
 }
 
 // sort an array of entities in ascending order
-void whisker_ecs_e_sort_entity_array(whisker_arr_whisker_ecs_entity_id *entities)
+void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities, size_t length)
 {
-	qsort(entities->arr, entities->length, sizeof(whisker_ecs_entity_id), whisker_ecs_e_compare_entity_ids_);
+	qsort(entities, length, sizeof(whisker_ecs_entity_id), whisker_ecs_e_compare_entity_ids_);
 }
