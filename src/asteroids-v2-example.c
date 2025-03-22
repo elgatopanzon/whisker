@@ -143,7 +143,7 @@ int main(int argc, char** argv)
 
 void asteroids_init_ecs()
 {
-	whisker_ecs_create(&asteroids_ecs);
+	asteroids_ecs = whisker_ecs_create();
 }
 void asteroids_deinit_ecs()
 {

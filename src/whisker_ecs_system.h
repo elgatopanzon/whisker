@@ -17,7 +17,6 @@
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_component.h"
-#include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_SYSTEM_H
 #define WHISKER_ECS_SYSTEM_H

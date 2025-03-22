@@ -9,7 +9,6 @@
 #include "whisker_array.h"
 #include "whisker_trie.h"
 #include "whisker_ecs_types.h"
-#include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_ENTITY_H
 #define WHISKER_ECS_ENTITY_H

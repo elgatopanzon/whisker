@@ -13,13 +13,9 @@
 
 // create and initialise an instance of whisker_ecs to hold the ECS's world
 // state (entities, components, systems)
-E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
+whisker_ecs *whisker_ecs_create()
 {
 	whisker_ecs *new = whisker_mem_xcalloc(1, sizeof(*new));
-	if (new == NULL)
-	{
-		return E_WHISKER_ECS_MEM;
-	}
 
 	new->entities = whisker_ecs_e_create_and_init_entities();
 	new->components = whisker_ecs_c_create_and_init_components();
@@ -41,11 +37,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 		.entities = new->entities,
 		.components = new->components,
 	};
-	whisker_ecs_system *sys = whisker_ecs_s_register_system(new->systems, new->components, system);
-	if (sys == NULL)
-	{
-		return E_WHISKER_ECS_MEM;
-	}
+	whisker_ecs_s_register_system(new->systems, new->components, system);
 
 	// note: for now the first system will be ID 0 and reserved for this dummy
 	// system instance
@@ -67,9 +59,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_PHASE_FINAL_RATE);
 
-	*ecs = new;
-
-	return E_WHISKER_ECS_OK;
+	return new;
 }
 
 // deallocate an instance of whisker_ecs and it's complete state
@@ -99,27 +89,12 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 
 	// create an entity for this system with it's name
 	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->entities, system_name);
-	if (e.id == 0)
-	{
-		// TODO: panic here since it's an unrecoverable error
-		return NULL;
-	}
 
 	// add process phase component to system
-	void *phase_component = whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
-	if (phase_component == NULL)
-	{
-		// TODO: panic here since it's an unrecoverable error
-		return NULL;
-	}
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
 
 	// set component of its type on itself
-	void *name_component = whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
-	if (name_component == NULL)
-	{
-		// TODO: panic here since it's an unrecoverable error
-		return NULL;
-	}
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
 
 	// register the system with the system scheduler
 	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
@@ -131,19 +106,8 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 		.entities = ecs->entities,
 	});
 
-	if (system == NULL)
-	{
-		// TODO: panic here since it's an unrecoverable error
-		return NULL;
-	}
-
 	// add the system index component to the system entity
-	void *system_idx_component = whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
-	if (system_idx_component == NULL)
-	{
-		// TODO: panic here since it's an unrecoverable error
-		return NULL;
-	}
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
 
 	// HACK: do a single execution of the system to initialise the iterator
 	// why: this ensures the system's iterators initialise their component
@@ -162,7 +126,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 }
 
 // issue an update of all registered systems on all matching world entities
-E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
+void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
 	// run the actual system update
 	whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
@@ -185,12 +149,7 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 
 					if (!wss_contains(ecs->components->changed_components, component_id.id))
 					{
-						E_WHISKER_SS set_err = wss_set(ecs->components->changed_components, component_id.id, &component_id);
-						if (set_err != E_WHISKER_SS_OK)
-						{
-							// TODO: panic here since it's unrecoverable
-							continue;
-						}
+						wss_set(ecs->components->changed_components, component_id.id, &component_id);
 					}
 				}
 			}
@@ -205,13 +164,7 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index->arr[i]};
 
 			whisker_ecs_c_sort_component_array(ecs->components, component_id);
-
-			E_WHISKER_SS set_err = whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
-			if (set_err != E_WHISKER_SS_OK)
-			{
-				// TODO: some kind of panic
-				continue;
-			}
+			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
 		}
 
 		ecs->components->changed_components->sparse_index->length = 0;
@@ -220,8 +173,6 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	
 	// process entity actions
 	whisker_ecs_e_process_deferred(ecs->entities);
-
-	return E_WHISKER_ECS_OK;
 }
 
 // register a process phase for use by the system scheduler
@@ -229,11 +180,6 @@ E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
-	if (component_id.id == 0)
-	{
-		// TODO: some kind of panic
-		return component_id;
-	}
 
 	// add component ID to system's process phase list
 	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
@@ -353,6 +299,7 @@ void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_
 	if (component_id.id == 0)
 	{
 		// TODO: panic here
+		return;
 	}
 
 	whisker_ecs_remove_component(components, component_id, entity_id);
@@ -386,12 +333,7 @@ void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_
 
 	if (!wss_contains(components->changed_components, component_id.id))
 	{
-		E_WHISKER_SS err = wss_set(components->changed_components, component_id.id, &component_id);
-		if (err != E_WHISKER_SS_OK)
-		{
-			// TODO: panic here
-			return NULL;
-		}
+		wss_set(components->changed_components, component_id.id, &component_id);
 	}
 
 	return value;
@@ -402,11 +344,7 @@ void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ec
 {
 	if (!wss_contains(components->changed_components, component_id.id))
 	{
-		E_WHISKER_SS err = wss_set(components->changed_components, component_id.id, &component_id);
-		if (err != E_WHISKER_SS_OK)
-		{
-			// TODO: panic here
-		}
+		wss_set(components->changed_components, component_id.id, &component_id);
 	}
 
 	whisker_ecs_c_remove_component(components, component_id, entity_id, false);
@@ -417,4 +355,3 @@ bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_e
 {
 	return whisker_ecs_c_has_component(components, component_id, entity_id);
 }
-

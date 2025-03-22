@@ -8,7 +8,6 @@
 #include "whisker_sparse_set.h"
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_entity.h"
-#include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_COMPONENT_H
 #define WHISKER_ECS_COMPONENT_H

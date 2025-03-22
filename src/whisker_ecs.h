@@ -9,7 +9,6 @@
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"
-#include "whisker_ecs_err.h"
 
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
@@ -21,12 +20,12 @@ typedef struct whisker_ecs
 	whisker_ecs_systems *systems;
 } whisker_ecs;
 
-E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs);
+whisker_ecs *whisker_ecs_create();
 void whisker_ecs_free(whisker_ecs *ecs);
 
 // system functions
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count);
-E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time);
+void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec);
 
 // entity shortcut functions

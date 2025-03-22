@@ -16,8 +16,7 @@
 
 START_TEST(test_whisker_ecs_create)
 {
-	whisker_ecs *ecs;
-	whisker_ecs_create(&ecs);
+	whisker_ecs *ecs = whisker_ecs_create();
 
 	// verify the lengths of some of the struct's arrays
 	ck_assert_int_eq(0, ecs->components->components_length);
