@@ -301,16 +301,11 @@ size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities)
 
 // convert a string of named entities in the format "name1,name2,name3" to an
 // array of entities, creating them if they don't already exist
-whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
+struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
 {
 	// entity list derived from string entity names
-	whisker_arr_whisker_ecs_entity_id *entities_new;
-	E_WHISKER_ARR arr_err = whisker_arr_create_whisker_ecs_entity_id(&entities_new, 0);
-	if (arr_err != E_WHISKER_ARR_OK)
-	{
-		// TODO: panic here
-		return NULL;
-	}
+	struct whisker_ecs_entity_id_array *entities_new = whisker_mem_xcalloc_t(1, *entities_new);
+	whisker_arr_init_t(entities_new->arr, 1);
 
 	size_t names_length = strlen(entity_names_str);
 	char* entity_names = whisker_mem_xmalloc(names_length + 1);
@@ -341,12 +336,8 @@ whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs
 			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
 
 			// add the entity id to the final list, and reset name array
-			arr_err = whisker_arr_push_whisker_ecs_entity_id(entities_new, e);
-			if (arr_err != E_WHISKER_ARR_OK)
-			{
-				// TODO: panic here
-				break;
-			}
+			whisker_arr_ensure_alloc(entities_new->arr, entities_new->arr_length + 1);
+			entities_new->arr[entities_new->arr_length++] = e;
 
 			search_index = i + 1;
 			if (mutated)

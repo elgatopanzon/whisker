@@ -129,8 +129,8 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	whisker_ecs_entities *en = whisker_ecs_e_create_and_init_entities();
 
 	// create archetype from named entities
-	whisker_arr_whisker_ecs_entity_id *a1 = whisker_ecs_e_from_named_entities(en, "test1,test2");
-	ck_assert_int_eq(2, a1->length);
+	struct whisker_ecs_entity_id_array *a1 = whisker_ecs_e_from_named_entities(en, "test1,test2");
+	ck_assert_int_eq(2, a1->arr_length);
 
 	// verify the entity IDs created
 	int expected[] = {0, 1};
@@ -140,8 +140,8 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	}
 
 	// create the archetype from same named entities
-	whisker_arr_whisker_ecs_entity_id *a2 = whisker_ecs_e_from_named_entities(en, "test1,test2");
-	ck_assert_int_eq(2, a2->length);
+	struct whisker_ecs_entity_id_array *a2 = whisker_ecs_e_from_named_entities(en, "test1,test2");
+	ck_assert_int_eq(2, a2->arr_length);
 
 	// verify the entity ids are the same
 	for (int i = 0; i < 2; ++i)
@@ -154,8 +154,8 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	whisker_ecs_entity_id e4 = whisker_ecs_e_create_named_(en, "test4");
 
 	// create new archetype from the named entities
-	whisker_arr_whisker_ecs_entity_id *a3 = whisker_ecs_e_from_named_entities(en, "test3,test4,test1");
-	ck_assert_int_eq(3, a3->length);
+	struct whisker_ecs_entity_id_array *a3 = whisker_ecs_e_from_named_entities(en, "test3,test4,test1");
+	ck_assert_int_eq(3, a3->arr_length);
 
 	// verify the entity IDs created
 	int expected_2[] = {2, 3, 0};
@@ -166,9 +166,12 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 
 	// free
 	whisker_ecs_e_free_entities_all(en);
-	whisker_arr_free_whisker_ecs_entity_id(a1);
-	whisker_arr_free_whisker_ecs_entity_id(a2);
-	whisker_arr_free_whisker_ecs_entity_id(a3);
+	free(a1->arr);
+	free(a2->arr);
+	free(a3->arr);
+	free(a1);
+	free(a2);
+	free(a3);
 }
 END_TEST
 

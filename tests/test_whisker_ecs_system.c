@@ -16,14 +16,13 @@
 
 START_TEST(test_whisker_ecs_system_create_systems_struct)
 {
-	whisker_ecs_systems *s;
-	whisker_ecs_s_create_systems(&s);
+	whisker_ecs_systems *s = whisker_ecs_s_create_and_init_systems();
 
 	// verify empty arrays
 	ck_assert_int_eq(0, s->systems_length);
 
 	// free
-	whisker_ecs_s_free_systems(s);
+	whisker_ecs_s_free_systems_all(s);
 }
 END_TEST
 
@@ -31,8 +30,7 @@ END_TEST
 START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 {
 	// create entities, components and systems holders
-	whisker_ecs_systems *s;
-	whisker_ecs_s_create_systems(&s);
+	whisker_ecs_systems *s = whisker_ecs_s_create_and_init_systems();
 	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
 	whisker_ecs_entities *e = whisker_ecs_e_create_and_init_entities();
 
@@ -69,9 +67,9 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
-	whisker_sparse_set *comp2_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw->arr[1]);
-	whisker_sparse_set *comp5_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw->arr[4]);
-	whisker_sparse_set *comp6_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_opt->arr[0]);
+	whisker_sparse_set *comp2_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw[1]);
+	whisker_sparse_set *comp5_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw[4]);
+	whisker_sparse_set *comp6_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_opt[0]);
 
 	// validate values
 	int val1_obtained = *(int*)wss_get(comp2_ss, 12);
@@ -149,7 +147,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 
 	whisker_ecs_e_free_entities_all(e);
 	whisker_ecs_c_free_components_all(c);
-	whisker_ecs_s_free_systems(s);
+	whisker_ecs_s_free_systems_all(s);
 }
 END_TEST
 

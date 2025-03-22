@@ -18,6 +18,8 @@
 #define WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_index))
 #define WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_deferred_action))
 
+whisker_arr_declare_struct(whisker_ecs_entity_id, whisker_ecs_entity_id_array);
+
 // entity struct management functions
 whisker_ecs_entities *whisker_ecs_e_create_and_init_entities();
 whisker_ecs_entities *whisker_ecs_e_create_entities();
@@ -46,7 +48,7 @@ bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_i
 size_t whisker_ecs_e_count(whisker_ecs_entities *entities);
 size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities);
 size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities);
-whisker_arr_whisker_ecs_entity_id* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
+struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
 int whisker_ecs_e_compare_entity_ids_(const void *id_a, const void *id_b);
 void whisker_ecs_e_sort_entity_array(whisker_arr_whisker_ecs_entity_id *entities);
 

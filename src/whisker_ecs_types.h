@@ -66,17 +66,17 @@ typedef struct whisker_ecs_iterator
 	whisker_ecs_entity_id entity_id;
 
 	// array of component name IDs to match with
-	whisker_arr_whisker_ecs_entity_id *component_ids_rw;
-	// array of component name IDs including write and optional
-	whisker_arr_whisker_ecs_entity_id *component_ids_w;
-	whisker_arr_whisker_ecs_entity_id *component_ids_opt;
+	whisker_arr_declare(whisker_ecs_entity_id, component_ids_rw);
+	whisker_arr_declare(whisker_ecs_entity_id, component_ids_w);
+	whisker_arr_declare(whisker_ecs_entity_id, component_ids_opt);
+
 	// component arrays, including read/write/optional
-	whisker_arr_void_ *component_arrays;
+	whisker_arr_declare(whisker_sparse_set *, component_arrays);
 
 	// read/write arrays for the components of the current iteration step
-	whisker_arr_void_ *read;
-	whisker_arr_void_ *write;
-	whisker_arr_void_ *opt;
+	whisker_arr_declare(void *, read);
+	whisker_arr_declare(void *, write);
+	whisker_arr_declare(void *, opt);
 
 } whisker_ecs_iterator;
 

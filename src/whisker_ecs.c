@@ -21,20 +21,12 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 		return E_WHISKER_ECS_MEM;
 	}
 
-	whisker_ecs_entities *e = whisker_ecs_e_create_and_init_entities();
-	
-	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
-
-	whisker_ecs_systems *s;
-	whisker_ecs_s_create_systems(&s);
-
-	new->entities = e;
-	new->components = c;
-	new->systems = s;
-
+	new->entities = whisker_ecs_e_create_and_init_entities();
+	new->components = whisker_ecs_c_create_and_init_components();
+	new->systems = whisker_ecs_s_create_and_init_systems();
 
 	// reserve 1 entity for system use
-	whisker_ecs_e_create(e);
+	whisker_ecs_e_create(new->entities);
 
 	// create and register a dummy system to use by the system scheduler
 	// note: this is currently to use as a holder for the system iterator used
@@ -46,10 +38,10 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 		.thread_id = 0,
 		.last_update = 0,
 		.delta_time = 0,
-		.entities = e,
-		.components = c,
+		.entities = new->entities,
+		.components = new->components,
 	};
-	whisker_ecs_system *sys = whisker_ecs_s_register_system(s, c, system);
+	whisker_ecs_system *sys = whisker_ecs_s_register_system(new->systems, new->components, system);
 	if (sys == NULL)
 	{
 		return E_WHISKER_ECS_MEM;
@@ -57,7 +49,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 
 	// note: for now the first system will be ID 0 and reserved for this dummy
 	// system instance
-	s->system_id = 0;
+	new->systems->system_id = 0;
 
 	// register default system process phases to allow bundled systems and
 	// modules and a standard default processing phase group set
@@ -86,7 +78,7 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	// free ecs state
 	whisker_ecs_e_free_entities_all(ecs->entities);
 	whisker_ecs_c_free_components_all(ecs->components);
-	whisker_ecs_s_free_systems(ecs->systems);
+	whisker_ecs_s_free_systems_all(ecs->systems);
 
 	free(ecs);
 }
@@ -173,12 +165,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 E_WHISKER_ECS whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
 	// run the actual system update
-	E_WHISKER_ECS_SYS execute_err = whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
-
-	if (execute_err != E_WHISKER_ECS_SYS_OK)
-	{
-		return E_WHISKER_ECS_UPDATE_SYSTEM;
-	}
+	whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
 
 	// process deferred actions
 	// for each deferred deleted entity remove all its components
@@ -249,12 +236,7 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 	}
 
 	// add component ID to system's process phase list
-	E_WHISKER_ECS_SYS add_err = whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
-	if (add_err != E_WHISKER_ECS_SYS_OK)
-	{
-		// TODO: some kind of panic
-		return (whisker_ecs_entity_id) { .id = 0 };
-	}
+	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
 
 	return component_id;
 }
