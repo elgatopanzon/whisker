@@ -130,9 +130,8 @@ typedef struct whisker_ecs_system
 
 typedef struct whisker_ecs_systems
 {
-	whisker_ecs_system *systems;	
-	size_t systems_length;
-	whisker_arr_whisker_ecs_system_process_phase *process_phases;
+	whisker_arr_declare(whisker_ecs_system, systems);
+	whisker_arr_declare(whisker_ecs_system_process_phase, process_phases);
 	size_t system_id;
 } whisker_ecs_systems;
 
