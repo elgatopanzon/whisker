@@ -21,19 +21,13 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 		return E_WHISKER_ECS_MEM;
 	}
 
-	whisker_ecs_entities *e;
-	if (whisker_ecs_e_create_entities(&e) != E_WHISKER_ECS_ENTITY_OK)
-	{
-		free(new);
-
-		return E_WHISKER_ECS_ARR;
-	}
-
+	whisker_ecs_entities *e = whisker_ecs_e_create_and_init_entities();
+	
 	whisker_ecs_components *c;
 	if (whisker_ecs_c_create_components(&c) != E_WHISKER_ECS_COMP_OK)
 	{
 		free(new);
-		whisker_ecs_e_free_entities(e);
+		whisker_ecs_e_free_entities_all(e);
 
 		return E_WHISKER_ECS_ARR;
 	}
@@ -42,7 +36,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 	if (whisker_ecs_s_create_systems(&s) != E_WHISKER_ECS_COMP_OK)
 	{
 		free(new);
-		whisker_ecs_e_free_entities(e);
+		whisker_ecs_e_free_entities_all(e);
 		whisker_ecs_c_free_components(c);
 
 		return E_WHISKER_ECS_ARR;
@@ -52,6 +46,9 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 	new->components = c;
 	new->systems = s;
 
+
+	// reserve 1 entity for system use
+	whisker_ecs_e_create(e);
 
 	// create and register a dummy system to use by the system scheduler
 	// note: this is currently to use as a holder for the system iterator used
@@ -101,7 +98,7 @@ E_WHISKER_ECS whisker_ecs_create(whisker_ecs **ecs)
 void whisker_ecs_free(whisker_ecs *ecs)
 {
 	// free ecs state
-	whisker_ecs_e_free_entities(ecs->entities);
+	whisker_ecs_e_free_entities_all(ecs->entities);
 	whisker_ecs_c_free_components(ecs->components);
 	whisker_ecs_s_free_systems(ecs->systems);
 

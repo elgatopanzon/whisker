@@ -19,37 +19,35 @@
 /*************************************
 *  entities struct management  *
 *************************************/
-// create an instance of entities state
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entities)
+// create an instance of entities container
+whisker_ecs_entities *whisker_ecs_e_create_and_init_entities()
 {
-	whisker_ecs_entities *e = whisker_mem_xcalloc_t(1, *e);
+	whisker_ecs_entities *e = whisker_ecs_e_create_entities();
+	whisker_ecs_e_init_entities(e);
 
-	// create arrays
-	whisker_arr_init_t(e->entities, WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE);
-	whisker_arr_init_t(e->destroyed_entities, WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
-	whisker_arr_init_t(e->deferred_actions, WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
-
-	// create entity names trie
-	e->entity_names = whisker_mem_xcalloc_t(1, *e->entity_names);
-
-	// create empty entities up to the MIN
-	for (int i = 0; i < WHISKER_ECS_ENTITY_MIN; ++i)
-	{
-		whisker_ecs_entity_id create_err = whisker_ecs_e_create(e);
-		if (create_err.id == 0)
-		{
-			// note: the ONLY occasion where entity ID 0 is a possible expected
-			// value
-			// TODO: handle this with whisker_error.h by checking for an error
-		}
-	}
-
-	*entities = e;
-
-	return E_WHISKER_ECS_ENTITY_OK;
+	return e;
 }
 
-// free an instance of entities state
+// allocate instance of entities container
+whisker_ecs_entities *whisker_ecs_e_create_entities()
+{
+	whisker_ecs_entities *e = whisker_mem_xcalloc_t(1, *e);
+	return e;
+}
+
+// init entity arrays for an entity container
+void whisker_ecs_e_init_entities(whisker_ecs_entities *entities)
+{
+	// create and allocate entity arrays
+	whisker_arr_init_t(entities->entities, WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE);
+	whisker_arr_init_t(entities->destroyed_entities, WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE);
+	whisker_arr_init_t(entities->deferred_actions, WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE);
+
+	// create entity names trie
+	entities->entity_names = whisker_mem_xcalloc_t(1, *entities->entity_names);
+}
+
+// free arrays on instance of entities container
 void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 {
 	// free entity name strings
@@ -67,7 +65,12 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 	whisker_trie_free_nodes(entities->entity_names);
 	free(entities->entity_names);
 	free(entities->deferred_actions);
+}
 
+// free entity container and containing arrays
+void whisker_ecs_e_free_entities_all(whisker_ecs_entities *entities)
+{
+	whisker_ecs_e_free_entities(entities);
 	free(entities);
 }
 

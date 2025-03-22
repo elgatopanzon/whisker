@@ -11,12 +11,6 @@
 #include "whisker_ecs_types.h"
 #include "whisker_ecs_err.h"
 
-// reserve entities for system use by setting a minimum
-// the default is only to reserve entity 0 for programatic reasons
-#ifndef WHISKER_ECS_ENTITY_MIN
-#define WHISKER_ECS_ENTITY_MIN 1
-#endif
-
 #ifndef WHISKER_ECS_ENTITY_H
 #define WHISKER_ECS_ENTITY_H
 
@@ -25,8 +19,11 @@
 #define WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_deferred_action))
 
 // entity struct management functions
-E_WHISKER_ECS_ENTITY whisker_ecs_e_create_entities(whisker_ecs_entities **entities);
+whisker_ecs_entities *whisker_ecs_e_create_and_init_entities();
+whisker_ecs_entities *whisker_ecs_e_create_entities();
+void whisker_ecs_e_init_entities(whisker_ecs_entities *entities);
 void whisker_ecs_e_free_entities(whisker_ecs_entities *entities);
+void whisker_ecs_e_free_entities_all(whisker_ecs_entities *entities);
 
 // entity management functions
 whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities);
