@@ -11,6 +11,7 @@
 
 #include "check.h"
 #include "whisker_array.h"
+#include "whisker_ecs_v1.h"
 #include "generics/whisker_generic_array_int.h"
 
 START_TEST(test_whisker_arr_create_and_free)

@@ -8,6 +8,7 @@
 
 #include "../whisker_std.h"
 #include "../whisker_array.h"
+#include "../whisker_ecs_v1.h"
 #include "../whisker_ecs_types_base.h"
 #include "whisker_generics.h"
 
