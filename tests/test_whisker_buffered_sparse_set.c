@@ -15,18 +15,16 @@
 
 START_TEST(test_whisker_buffered_sparse_set_creation)
 {
-	whisker_buffered_sparse_set *bss;
-	whisker_bss_create_f(&bss, 2, 0);
+	whisker_buffered_sparse_set *bss = whisker_bss_create_and_init_f(2, 0);
 
-	whisker_bss_free(bss);
+	whisker_bss_free_all(bss);
 }
 END_TEST
 
 START_TEST(test_whisker_buffered_sparse_set_set_and_get_correct_buffer)
 {
 	// create a buffered sparse set
-	whisker_buffered_sparse_set *bss;
-	whisker_bss_create_t(&bss, 2, uint64_t);
+	whisker_buffered_sparse_set *bss = whisker_bss_create_and_init_t(2, uint64_t);
 
 	// set: sets data on the current back buffer
 	uint64_t val = 1234;
@@ -47,15 +45,14 @@ START_TEST(test_whisker_buffered_sparse_set_set_and_get_correct_buffer)
 	ck_assert_int_eq(false, whisker_ss_contains(bss->back_buffer, 11));
 
 	// free
-	whisker_bss_free(bss);
+	whisker_bss_free_all(bss);
 }
 END_TEST
 
 START_TEST(test_whisker_buffered_sparse_set_sync_and_swap)
 {
 	// create a buffered sparse set
-	whisker_buffered_sparse_set *bss;
-	whisker_bss_create_t(&bss, 2, uint64_t);
+	whisker_buffered_sparse_set *bss = whisker_bss_create_and_init_t(2, uint64_t);
 
 	// frame 0: set some initial values
 	// this populates the current back buffer and front buffer is empty
@@ -85,7 +82,7 @@ START_TEST(test_whisker_buffered_sparse_set_sync_and_swap)
 
 
 	// free
-	whisker_bss_free(bss);
+	whisker_bss_free_all(bss);
 }
 END_TEST
 

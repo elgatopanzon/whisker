@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
+#include "whisker_array.h"
 #include "generics/whisker_generic_array_whisker_sparse_set.h"
 
 /* whisker_buffered_sparse_set
@@ -20,16 +21,6 @@
 #ifndef WHISKER_BUFFERED_SPARSE_SET_H
 #define WHISKER_BUFFERED_SPARSE_SET_H
 
-// errors
-typedef enum E_WHISKER_BSS  
-{
-	E_WHISKER_BSS_OK = 0,
-	E_WHISKER_BSS_UNKNOWN = 1,
-	E_WHISKER_BSS_MEM = 2,
-	E_WHISKER_BSS_ARR = 3,
-} E_WHISKER_BSS;
-extern const char* E_WHISKER_BSS_STR[];
-
 typedef enum WHISKER_BSS_SORT_MODE { 
 	WHISKER_BSS_SORT_MODE_ALL,
 	WHISKER_BSS_SORT_MODE_FRONT,
@@ -39,15 +30,17 @@ typedef enum WHISKER_BSS_SORT_MODE {
 
 typedef struct whisker_buffered_sparse_set
 {
-	whisker_arr_whisker_sparse_set_ptr *sparse_sets;
+	whisker_arr_declare(whisker_sparse_set *, sparse_sets);
 	whisker_sparse_set *front_buffer;
 	whisker_sparse_set *back_buffer;
 	size_t buffer_count;
 	size_t element_size;
 } whisker_buffered_sparse_set;
 
-#define whisker_bss_create_t(ss, b, t) whisker_bss_create_f(ss, b, sizeof(t))
-#define whisker_bss_create_s(ss, b, s) whisker_bss_create_f(ss, b, s)
+#define whisker_bss_create_t(b, t) whisker_bss_create_f(b, sizeof(t))
+#define whisker_bss_create_s(b, s) whisker_bss_create_f(b, s)
+#define whisker_bss_create_and_init_t(b, t) whisker_bss_create_and_init_f(b, sizeof(t))
+#define whisker_bss_create_and_init_s(b, s) whisker_bss_create_and_init_f(b, s)
 
 // short macros
 #define wbss_create_t whisker_bss_create_t
@@ -59,21 +52,24 @@ typedef struct whisker_buffered_sparse_set
 #define wbss_contains whisker_bss_contains
 
 // management functions
-E_WHISKER_BSS whisker_bss_create_f(whisker_buffered_sparse_set **bss, size_t buffer_count, size_t element_size);
+whisker_buffered_sparse_set *whisker_bss_create_f();
+void whisker_bss_init_f(whisker_buffered_sparse_set *bss, size_t buffer_count, size_t element_size);
+whisker_buffered_sparse_set *whisker_bss_create_and_init_f(size_t buffer_count, size_t element_size);
 void whisker_bss_free(whisker_buffered_sparse_set *bss);
+void whisker_bss_free_all(whisker_buffered_sparse_set *bss);
 
 // operation functions
-E_WHISKER_SS whisker_bss_set(whisker_buffered_sparse_set *bss, uint64_t index, void *value);
+void whisker_bss_set(whisker_buffered_sparse_set *bss, uint64_t index, void *value);
 void* whisker_bss_get(whisker_buffered_sparse_set *bss, uint64_t index);
-E_WHISKER_SS whisker_bss_remove(whisker_buffered_sparse_set *bss, uint64_t index);
+void whisker_bss_remove(whisker_buffered_sparse_set *bss, uint64_t index);
 bool whisker_bss_contains(whisker_buffered_sparse_set *bss, uint64_t index);
 
 void whisker_bss_sort(whisker_buffered_sparse_set *bss, WHISKER_BSS_SORT_MODE sort_mode);
 
 // buffer operations
-E_WHISKER_BSS whisker_bss_sync(whisker_buffered_sparse_set *bss);
-E_WHISKER_BSS whisker_bss_swap(whisker_buffered_sparse_set *bss);
-E_WHISKER_BSS whisker_bss_sync_and_swap(whisker_buffered_sparse_set *bss);
+void whisker_bss_sync(whisker_buffered_sparse_set *bss);
+void whisker_bss_swap(whisker_buffered_sparse_set *bss);
+void whisker_bss_sync_and_swap(whisker_buffered_sparse_set *bss);
 
 #endif /* WHISKER_BUFFERED_SPARSE_SET_H */
 
