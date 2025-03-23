@@ -20,16 +20,6 @@
 #define WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE (1024 / sizeof(uint64_t))
 #define WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER 16384
 
-// errors
-typedef enum E_WHISKER_SS  
-{
-	E_WHISKER_SS_OK = 0,
-	E_WHISKER_SS_UNKNOWN = 1,
-	E_WHISKER_SS_MEM = 2,
-	E_WHISKER_SS_ARR = 3,
-} E_WHISKER_SS;
-extern const char* E_WHISKER_SS_STR[];
-
 typedef struct whisker_sparse_set
 {
 	whisker_arr_declare(uint64_t, sparse);
@@ -41,8 +31,8 @@ typedef struct whisker_sparse_set
 	size_t *length;
 } whisker_sparse_set;
 
-#define whisker_ss_create_t(ss, t) whisker_ss_create_f(ss, sizeof(t))
-#define whisker_ss_create_s(ss, s) whisker_ss_create_f(ss, s)
+#define whisker_ss_create_t(t) whisker_ss_create_and_init_f(sizeof(t))
+#define whisker_ss_create_s(s) whisker_ss_create_and_init_f(s)
 
 // short macros
 #define wss_create_t whisker_ss_create_t
@@ -54,17 +44,20 @@ typedef struct whisker_sparse_set
 #define wss_contains whisker_ss_contains
 
 // management functions
-E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size);
+whisker_sparse_set *whisker_ss_create_and_init_f(size_t element_size);
+void whisker_ss_init_f(whisker_sparse_set *ss, size_t element_size);
+whisker_sparse_set *whisker_ss_create_f();
 void whisker_ss_free(whisker_sparse_set *ss);
+void whisker_ss_free_all(whisker_sparse_set *ss);
 
 // operation functions
-E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value);
+void whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value);
 void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index);
-E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index);
+void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index);
 bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index);
 
-E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index);
-E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index);
+void whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index);
+void whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index);
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index);
 
 void whisker_ss_sort(whisker_sparse_set *ss);

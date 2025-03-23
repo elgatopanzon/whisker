@@ -42,8 +42,7 @@ void whisker_bss_init_f(whisker_buffered_sparse_set *bss, size_t buffer_count, s
 	// create sparse sets for each buffer
 	for (int i = 0; i < buffer_count; ++i)
 	{
-		whisker_sparse_set *ss;
-		whisker_ss_create_f(&ss, element_size);
+		whisker_sparse_set *ss = whisker_ss_create_and_init_f(element_size);
 		bss->sparse_sets[bss->sparse_sets_length++] = ss;
 	}
 
@@ -60,7 +59,7 @@ void whisker_bss_free(whisker_buffered_sparse_set *bss)
 {
 	for (int bi = 0; bi < bss->buffer_count; ++bi)
 	{
-		whisker_ss_free(bss->sparse_sets[bi]);
+		whisker_ss_free_all(bss->sparse_sets[bi]);
 	}
 
 	free(bss->sparse_sets);

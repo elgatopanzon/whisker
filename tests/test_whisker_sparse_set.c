@@ -15,17 +15,15 @@
 
 START_TEST(test_whisker_sparse_set_create)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_get_nonexistant_sparse_index)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// try to get a non-existant sparse index
 	uint64_t dense_index = whisker_ss_get_dense_index(ss, 123);
@@ -35,14 +33,13 @@ START_TEST(test_whisker_sparse_set_get_nonexistant_sparse_index)
 	uint64_t dense_index2 = whisker_ss_get_dense_index(ss, 4294967296871282);
 	ck_assert_uint_eq(dense_index2, UINT64_MAX);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_contains)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// check for index which doesn't exist
 	ck_assert_int_eq(false, whisker_ss_contains(ss, 123456));
@@ -58,14 +55,13 @@ START_TEST(test_whisker_sparse_set_contains)
 	uint64_t dense_index2 = whisker_ss_get_dense_index(ss, 4294967296871282);
 	ck_assert_uint_eq(dense_index2, UINT64_MAX);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_get_and_remove)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// set a value
 	int created = 123;
@@ -117,27 +113,25 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 	int *created_again = whisker_ss_get(ss, 1);
 	ck_assert_ptr_eq(NULL, created_again);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_get_and_create_large)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// get a value with a large index
 	int *created = whisker_ss_get(ss, 4294967296);
 	ck_assert_ptr_eq(NULL, created);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_set)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// set a value
 	int val = 12312;
@@ -146,14 +140,13 @@ START_TEST(test_whisker_sparse_set_set)
 	int *created = whisker_ss_get(ss, 4294967296);
 	ck_assert_int_eq(12312, *created);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_sort_by_index)
 {
-	whisker_sparse_set *ss;
-	whisker_ss_create_t(&ss, int);
+	whisker_sparse_set *ss = whisker_ss_create_t(int);
 
 	// set some values
 	whisker_ss_set(ss, 1, &(int){7});
@@ -205,7 +198,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 	int *val4 = whisker_ss_get(ss, 100);
 	ck_assert_int_eq(4, *val4);
 
-	whisker_ss_free(ss);
+	whisker_ss_free_all(ss);
 }
 END_TEST
 

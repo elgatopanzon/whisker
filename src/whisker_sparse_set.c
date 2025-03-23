@@ -15,34 +15,52 @@
 *  management functions  *
 ************************/
 // allocate a new sparse set
-E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
+whisker_sparse_set *whisker_ss_create()
 {
 	// allocate the ss struct
 	whisker_sparse_set *ss_new = whisker_mem_xcalloc_t(1, *ss_new);
 
+	return ss_new;
+}
+
+// allocate and init new sparse set
+void whisker_ss_init_f(whisker_sparse_set *ss, size_t element_size)
+{
 	// allocate sparse array
-	whisker_arr_init_t(ss_new->sparse, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
-	whisker_arr_init_t(ss_new->sparse_index, WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE);
+	whisker_arr_init_t(ss->sparse, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
+	whisker_arr_init_t(ss->sparse_index, WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE);
 
 	// allocate dense array
-	ss_new->dense = whisker_mem_xcalloc(1, WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER);
-	ss_new->dense_size = WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER;
+	ss->dense = whisker_mem_xcalloc(1, WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER);
+	ss->dense_size = WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER;
 
 	// allocate root trie node
-	ss_new->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
+	ss->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
 
-	ss_new->element_size = element_size;
-	ss_new->swap_buffer = whisker_mem_xcalloc(1, element_size);
+	ss->element_size = element_size;
+	ss->swap_buffer = whisker_mem_xcalloc(1, element_size);
 
 	// link the length to the sparse_index->length
-	ss_new->length = &ss_new->sparse_index_length;
+	ss->length = &ss->sparse_index_length;
+}
 
-	*ss = ss_new;
-
-	return E_WHISKER_SS_OK;
+// allocate and init new sparse set
+whisker_sparse_set *whisker_ss_create_and_init_f(size_t element_size)
+{
+	// allocate the ss struct
+	whisker_sparse_set *ss_new = whisker_ss_create();
+	whisker_ss_init_f(ss_new, element_size);
+	return ss_new;
 }
 
 // free a sparse set
+void whisker_ss_free_all(whisker_sparse_set *ss)
+{
+	whisker_ss_free(ss);
+	free(ss);
+}
+
+// free sparse set allocations
 void whisker_ss_free(whisker_sparse_set *ss)
 {
 	free(ss->sparse);
@@ -50,14 +68,13 @@ void whisker_ss_free(whisker_sparse_set *ss)
 	free(ss->dense);
 	whisker_trie_free_all(ss->sparse_trie);
 	free(ss->swap_buffer);
-	free(ss);
 }
 
 /***************************
 *  operational functions  *
 ***************************/
 // set an element in the sparse set with the given index
-E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
+void whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 {
 	// if the index exists already we can update it
 	if (whisker_ss_contains(ss, index))
@@ -65,7 +82,7 @@ E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
     	uint64_t dense_index = whisker_ss_get_dense_index(ss, index);
 		memcpy(ss->dense + dense_index * ss->element_size, value, ss->element_size);
 
-		return E_WHISKER_SS_OK;
+		return;
 	}
 
 	// if it doesn't exist, lets create it
@@ -95,8 +112,6 @@ E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 	{
     	whisker_ss_sort(ss);
 	}
-
-    return E_WHISKER_SS_OK;
 }
 
 // get an element from the sparse set by index, or NULL if it doesn't exist
@@ -111,9 +126,9 @@ void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index) {
 }
 
 // remove an element from the sparse set by index
-E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
+void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     uint64_t dense_index = whisker_ss_get_dense_index(ss, index);
-    if (dense_index == UINT64_MAX) return E_WHISKER_SS_OK;
+    if (dense_index == UINT64_MAX) return;
 
 
 	// last into the dense and sparse_index array
@@ -125,18 +140,10 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     size_t element_size = ss->element_size;
 	ss->sparse_index[dense_index] = sparse_index_last;
     memcpy(ss->dense + dense_index * element_size, ss->dense + dense_index_last * element_size, element_size);
-    E_WHISKER_SS err = whisker_ss_set_dense_index(ss, sparse_index_last, dense_index);
-    if (err != E_WHISKER_SS_OK)
-    {
-    	return err;
-    }
+    whisker_ss_set_dense_index(ss, sparse_index_last, dense_index);
 
 	// clear out old index
-    err = whisker_ss_set_dense_index(ss, index, UINT64_MAX);
-    if (err != E_WHISKER_SS_OK)
-    {
-    	return err;
-    }
+    whisker_ss_set_dense_index(ss, index, UINT64_MAX);
     ss->dense_length--;
     ss->sparse_index_length--;
 
@@ -144,8 +151,6 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
 	{
     	whisker_ss_sort(ss);
 	}
-
-    return E_WHISKER_SS_OK;
 }
 
 // check if the sparse set contains the index
@@ -160,7 +165,7 @@ bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index)
 }
 
 // set the dense index for the given index
-E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index)
+void whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index)
 {
     if (index > UINT_MAX) {
         whisker_trie *node = whisker_trie_search_node_(ss->sparse_trie, &index, sizeof(index), 0, false);
@@ -170,24 +175,17 @@ E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, 
         uint64_t *dense_index_value = whisker_mem_xmalloc_t(*dense_index_value);
         if (dense_index_value) {
             *dense_index_value = dense_index;
-            if (!whisker_trie_set_value(ss->sparse_trie, &index, sizeof(index), dense_index_value))
-            {
-            	return E_WHISKER_SS_ARR;
-            }
+            whisker_trie_set_value(ss->sparse_trie, &index, sizeof(index), dense_index_value);
         }
     } else {
-    	E_WHISKER_SS init_err = whisker_ss_init_dense_index(ss, index);
-    	if (init_err != E_WHISKER_SS_OK)
-    	{
-    		return init_err;
-    	}
+    	whisker_ss_init_dense_index(ss, index);
     	ss->sparse[index] = dense_index;
     }
-    return E_WHISKER_SS_OK;
+    return;
 }
 
 // init the dense index for the given index
-E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
+void whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
 {
 	if (ss->sparse_length < index + 1)
 	{
@@ -206,7 +204,7 @@ E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
 		}
 	}
 
-	return E_WHISKER_SS_OK;
+	return;
 }
 
 // get the dense index for the given index
@@ -217,14 +215,7 @@ uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
         return dense_index ? *dense_index : UINT64_MAX;
     }
 
-    E_WHISKER_SS err = whisker_ss_init_dense_index(ss, index);
-    if (err != E_WHISKER_SS_OK)
-    {
-    	// TODO: panic here
-    	// for now just return invalid ID if it fails
-    	return UINT64_MAX;
-    }
-
+    whisker_ss_init_dense_index(ss, index);
     return ss->sparse[index];
 }
 

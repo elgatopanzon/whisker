@@ -56,7 +56,7 @@ whisker_ecs_system_context *whisker_ecs_s_create_system_context(whisker_ecs_syst
 	whisker_ecs_system_context *c = whisker_mem_xcalloc(1, sizeof(*c));
 
 	// create iterators sparse set
-	whisker_ss_create_t(&c->iterators, whisker_ecs_iterator);
+	c->iterators = whisker_ss_create_t(whisker_ecs_iterator);
 
 	// set system pointers
 	c->components = system->components;
@@ -136,7 +136,7 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 			whisker_ecs_s_free_iterator(&itor);
 		}
 
-		whisker_ss_free(context->iterators);
+		whisker_ss_free_all(context->iterators);
 	}
 
 	free(context);
@@ -296,17 +296,17 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 	whisker_ecs_iterator *itor;
 
 	// check if iterator index is set
-	if (!wss_contains(context->iterators, itor_index))
+	if (!whisker_ss_contains(context->iterators, itor_index))
 	{
 		itor = whisker_ecs_s_create_iterator();
-		wss_set(context->iterators, itor_index, itor);
+		whisker_ss_set(context->iterators, itor_index, itor);
 
 		free(itor);
-		itor = wss_get(context->iterators, itor_index);
+		itor = whisker_ss_get(context->iterators, itor_index);
 		whisker_ecs_s_init_iterator(context, itor, read_components, write_components, optional_components);
 	}
 
-	itor = wss_get(context->iterators, itor_index);
+	itor = whisker_ss_get(context->iterators, itor_index);
 	if (itor == NULL)
 	{
 		// TODO: panic here
