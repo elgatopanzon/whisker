@@ -24,15 +24,11 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	whisker_arr_init_t(ss_new->sparse, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
 	whisker_arr_init_t(ss_new->sparse_index, WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE);
 
-	E_WHISKER_ARR arr_err2 = whisker_arr_create_f(element_size, 0, (void**)&ss_new->dense);
-	if (arr_err2 != E_WHISKER_ARR_OK)
-	{
-		free(ss_new->sparse);
-		free(ss_new);
+	// allocate dense array
+	ss_new->dense = whisker_mem_xcalloc(1, WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER);
+	ss_new->dense_size = WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER;
 
-		return E_WHISKER_SS_ARR;
-	}
-
+	// allocate root trie node
 	ss_new->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	ss_new->element_size = element_size;
@@ -51,7 +47,7 @@ void whisker_ss_free(whisker_sparse_set *ss)
 {
 	free(ss->sparse);
 	free(ss->sparse_index);
-	whisker_arr_free(ss->dense);
+	free(ss->dense);
 	whisker_trie_free_all(ss->sparse_trie);
 	free(ss->swap_buffer);
 	free(ss);
@@ -75,24 +71,17 @@ E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 	// if it doesn't exist, lets create it
     whisker_ss_set_dense_index(ss, index, ss->sparse_index_length);
 
-	whisker_array_header *header = whisker_arr_header(ss->dense);
-	size_t dense_length = header->length;
-	if (header->element_size * index > header->size)
+	// increase size if dense array if new length exceeds current size
+	if (ss->dense_size <= (ss->dense_length + 1) * ss->element_size)
 	{
-		E_WHISKER_ARR resize_err = whisker_arr_resize(&ss->dense, (dense_length + 1) * WHISKER_SPARSE_SET_RESIZE_RATIO);
-		if (resize_err != E_WHISKER_ARR_OK)
-		{
-			// TODO: panic here
-			return E_WHISKER_SS_ARR;
-		}
-		whisker_arr_header(ss->dense)->length = dense_length;
+    	size_t new_size = ss->dense_size + WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER;
+    	ss->dense = whisker_mem_xrecalloc(ss->dense, ss->dense_size, new_size);
+    	ss->dense_size = new_size;
 	}
 
-    E_WHISKER_ARR push_err = whisker_arr_push(&ss->dense, value);
-    if (push_err != E_WHISKER_ARR_OK)
-    {
-        return E_WHISKER_SS_ARR;
-    }
+	// set dense value
+	memcpy(ss->dense + ss->dense_length * ss->element_size, value, ss->element_size);
+	ss->dense_length++;
 
 	// set sparse index
 	whisker_arr_ensure_alloc_block_size(
@@ -148,7 +137,7 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     {
     	return err;
     }
-    whisker_arr_header(ss->dense)->length--;
+    ss->dense_length--;
     ss->sparse_index_length--;
 
 	if (WHISKER_SPARSE_SET_AUTOSORT)

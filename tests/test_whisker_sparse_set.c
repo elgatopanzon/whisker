@@ -190,7 +190,7 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 
 	// validate dense order
 	int expected_dense_sorted[] = {9, 7, 3, 4};
-	for (int i = 0; i < whisker_arr_length(ss->dense); ++i)
+	for (int i = 0; i < ss->dense_length; ++i)
 	{
 		ck_assert_uint_eq(expected_dense_sorted[i], ((int*)ss->dense)[i]);
 	}
