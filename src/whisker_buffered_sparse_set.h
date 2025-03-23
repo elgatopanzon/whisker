@@ -7,7 +7,6 @@
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
 #include "whisker_array.h"
-#include "generics/whisker_generic_array_whisker_sparse_set.h"
 
 /* whisker_buffered_sparse_set
  * this data structure holds multiple sparse set buffers offering up functions

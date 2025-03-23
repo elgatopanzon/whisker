@@ -12,7 +12,6 @@
 #include "check.h"
 #include "whisker_array.h"
 #include "whisker_ecs_v1.h"
-#include "generics/whisker_generic_array_int.h"
 
 START_TEST(test_whisker_arr_create_and_free)
 {
@@ -306,149 +305,6 @@ START_TEST(test_whisker_arr_grow_get)
 }
 END_TEST
 
-START_TEST(test_whisker_arr_generic_create)
-{
-	// create int array
-	whisker_arr_int *arr; whisker_arr_create_int(&arr, 10);
-
-	// free int array
-	whisker_arr_free_int(arr);
-}
-END_TEST
-
-START_TEST(test_whisker_arr_generic_resize)
-{
-	// create int array
-	whisker_arr_int *arr; whisker_arr_create_int(&arr, 10);
-
-	arr->arr[5] = 123;
-
-	ck_assert_int_eq(10, arr->length);
-	ck_assert_int_eq(sizeof(int) * 10, arr->alloc_size);
-	ck_assert_int_eq(123, arr->arr[5]);
-
-	// resize to 20 elements
-	whisker_arr_resize_int(arr, 20, true);
-
-	arr->arr[15] = 456;
-
-	ck_assert_int_eq(20, arr->length);
-	ck_assert_int_eq(sizeof(int) * 20, arr->alloc_size);
-	ck_assert_int_eq(123, arr->arr[5]);
-	ck_assert_int_eq(456, arr->arr[15]);
-
-	// test soft resize
-	whisker_arr_resize_int(arr, 10, true);
-
-	ck_assert_int_eq(10, arr->length);
-	ck_assert_int_eq(sizeof(int) * 20, arr->alloc_size);
-
-	// resize back to alloc size shouldn't increase alloc size
-	whisker_arr_resize_int(arr, 20, true);
-
-	ck_assert_int_eq(20, arr->length);
-	ck_assert_int_eq(sizeof(int) * 20, arr->alloc_size);
-
-	// free int array
-	whisker_arr_free_int(arr);
-}
-END_TEST
-
-START_TEST(test_whisker_arr_generic_push_and_pop)
-{
-	// create an empty int array
-	whisker_arr_int *arr; whisker_arr_create_int(&arr, 0);
-
-	ck_assert_int_eq(0, arr->length);
-	ck_assert_int_eq(sizeof(int) * 0, arr->alloc_size);
-
-	// push a value to it
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_push_int(arr, 123));
-	ck_assert_int_eq(123, arr->arr[0]);
-	ck_assert_int_eq(1, arr->length);
-	ck_assert_int_eq(sizeof(int) * 1, arr->alloc_size);
-
-	// pop the value from it
-	int popped;
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_pop_int(arr, &popped));
-	ck_assert_int_eq(123, popped);
-	ck_assert_int_eq(0, arr->length);
-
-	// pop on empty array
-	ck_assert_int_eq(E_WHISKER_ARR_OUT_OF_BOUNDS, whisker_arr_pop_int(arr, &popped));
-
-	// free int array
-	whisker_arr_free_int(arr);
-}
-END_TEST
-
-START_TEST(test_whisker_arr_generic_swap)
-{
-	// create an empty int array
-	whisker_arr_int *arr; whisker_arr_create_int(&arr, 0);
-
-	ck_assert_int_eq(0, arr->length);
-	ck_assert_int_eq(sizeof(int) * 0, arr->alloc_size);
-
-	// push some values
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_push_int(arr, 123));
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_push_int(arr, 456));
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_push_int(arr, 789));
-
-	int expected[] = {123, 456, 789};
-	for (int i = 0; i < arr->length; ++i)
-	{
-		ck_assert_int_eq(expected[i], arr->arr[i]);
-	}
-
-	// swap index 0 with 2
-	whisker_arr_swap_int(arr, 0, 2);
-
-	int expected_swapped[] = {789, 456, 123};
-	for (int i = 0; i < arr->length; ++i)
-	{
-		ck_assert_int_eq(expected_swapped[i], arr->arr[i]);
-	}
-
-	// check swap buffer clear
-	ck_assert_int_eq(0, arr->swap_buffer);
-
-	// free int array
-	whisker_arr_free_int(arr);
-}
-END_TEST
-
-START_TEST(test_whisker_arr_generic_compact)
-{
-	// create an empty int array
-	whisker_arr_int *arr; whisker_arr_create_int(&arr, 0);
-
-	ck_assert_int_eq(0, arr->length);
-	ck_assert_int_eq(sizeof(int) * 0, arr->alloc_size);
-
-	// push a value to it
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_push_int(arr, 123));
-	ck_assert_int_eq(123, arr->arr[0]);
-	ck_assert_int_eq(1, arr->length);
-	ck_assert_int_eq(sizeof(int) * 1, arr->alloc_size);
-
-	// pop the value from it
-	int popped;
-	ck_assert_int_eq(E_WHISKER_ARR_OK, whisker_arr_pop_int(arr, &popped));
-	ck_assert_int_eq(123, popped);
-
-	// verify alloc size is the same
-	ck_assert_int_eq(sizeof(int) * 1, arr->alloc_size);
-	ck_assert_int_eq(0, arr->length);
-
-	// compact down to size
-	whisker_arr_compact_int(arr);
-	ck_assert_int_eq(sizeof(int) * 0, arr->alloc_size);
-
-	// free int array
-	whisker_arr_free_int(arr);
-}
-END_TEST
 Suite* whisker_array_suite(void)
 {
 	Suite *s;
@@ -471,11 +327,6 @@ Suite* whisker_array_suite(void)
 	tcase_add_test(tc_core, test_whisker_arr_try_insert);
 	tcase_add_test(tc_core, test_whisker_arr_strings);
 	tcase_add_test(tc_core, test_whisker_arr_grow_get);
-	tcase_add_test(tc_core, test_whisker_arr_generic_create);
-	tcase_add_test(tc_core, test_whisker_arr_generic_resize);
-	tcase_add_test(tc_core, test_whisker_arr_generic_push_and_pop);
-	tcase_add_test(tc_core, test_whisker_arr_generic_swap);
-	tcase_add_test(tc_core, test_whisker_arr_generic_compact);
 
 	suite_add_tcase(s, tc_core);
 

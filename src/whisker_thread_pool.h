@@ -9,7 +9,6 @@
 #include "whisker_memory.h"
 #include "whisker_array.h"
 #include "whisker_debug.h"
-#include "generics/whisker_generic_array_void_.h"
 
 #ifndef WHISKER_THREAD_POOL_H
 #define WHISKER_THREAD_POOL_H

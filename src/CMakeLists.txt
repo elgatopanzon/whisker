@@ -16,10 +16,6 @@ target_include_directories(whisker
     PUBLIC
         ${PROJECT_SOURCE_DIR}/src
 )
-target_include_directories(whisker
-    PUBLIC
-        ${PROJECT_SOURCE_DIR}/src/generics
-)
 #
 # set_property(TARGET whisker
 #     PROPERTY

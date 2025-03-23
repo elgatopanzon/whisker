@@ -6,7 +6,6 @@
 
 #include "whisker_std.h"
 #include "whisker_array.h"
-#include "generics/whisker_generic_array_uint64_t.h"
 #include "whisker_trie.h"
 
 #ifndef WHISKER_SPARSE_SET_H

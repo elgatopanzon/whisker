@@ -11,13 +11,6 @@
 #include "whisker_time.h"
 #include "whisker_thread_pool.h"
 #include "whisker_ecs_types_base.h"
-#include "generics/whisker_generic_array_whisker_ecs_entity.h"
-#include "generics/whisker_generic_array_whisker_ecs_entity_id.h"
-#include "generics/whisker_generic_array_whisker_ecs_entity_index.h"
-#include "generics/whisker_generic_array_whisker_ecs_entity_deferred_action.h"
-#include "generics/whisker_generic_array_whisker_ecs_system_process_phase.h"
-#include "generics/whisker_generic_array_pthread_t.h"
-#include "generics/whisker_generic_array_void_.h"
 
 #ifndef WHISKER_ECS_TYPES_H
 #define WHISKER_ECS_TYPES_H
