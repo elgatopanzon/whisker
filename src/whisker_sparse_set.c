@@ -18,32 +18,17 @@
 E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 {
 	// allocate the ss struct
-	whisker_sparse_set *ss_new = whisker_mem_xmalloc_t(*ss_new);
+	whisker_sparse_set *ss_new = whisker_mem_xcalloc_t(1, *ss_new);
 
 	// allocate sparse array
-	E_WHISKER_ARR arr_err = whisker_arr_create_uint64_t(&ss_new->sparse, 0);
-	if (arr_err != E_WHISKER_ARR_OK)
-	{
-		free(ss_new);
-
-		return E_WHISKER_SS_ARR;
-	}
+	whisker_arr_init_t(ss_new->sparse, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
+	whisker_arr_init_t(ss_new->sparse_index, WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE);
 
 	E_WHISKER_ARR arr_err2 = whisker_arr_create_f(element_size, 0, (void**)&ss_new->dense);
 	if (arr_err2 != E_WHISKER_ARR_OK)
 	{
-		whisker_arr_free_uint64_t(ss_new->sparse);
+		free(ss_new->sparse);
 		free(ss_new);
-
-		return E_WHISKER_SS_ARR;
-	}
-
-	E_WHISKER_ARR arr_err3 = whisker_arr_create_uint64_t(&ss_new->sparse_index, 0);
-	if (arr_err3 != E_WHISKER_ARR_OK)
-	{
-		whisker_arr_free_uint64_t(ss_new->sparse);
-		free(ss_new);
-		whisker_arr_free(ss_new->dense);
 
 		return E_WHISKER_SS_ARR;
 	}
@@ -51,10 +36,10 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 	ss_new->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
 
 	ss_new->element_size = element_size;
-	ss_new->swap_buffer = whisker_arr_header(ss_new->dense)->swap_buffer;
+	ss_new->swap_buffer = whisker_mem_xcalloc(1, element_size);
 
 	// link the length to the sparse_index->length
-	ss_new->length = &ss_new->sparse_index->length;
+	ss_new->length = &ss_new->sparse_index_length;
 
 	*ss = ss_new;
 
@@ -64,10 +49,11 @@ E_WHISKER_SS whisker_ss_create_f(whisker_sparse_set **ss, size_t element_size)
 // free a sparse set
 void whisker_ss_free(whisker_sparse_set *ss)
 {
-	whisker_arr_free_uint64_t(ss->sparse);
-	whisker_arr_free_uint64_t(ss->sparse_index);
+	free(ss->sparse);
+	free(ss->sparse_index);
 	whisker_arr_free(ss->dense);
 	whisker_trie_free_all(ss->sparse_trie);
+	free(ss->swap_buffer);
 	free(ss);
 }
 
@@ -87,12 +73,7 @@ E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 	}
 
 	// if it doesn't exist, lets create it
-    E_WHISKER_SS set_err = whisker_ss_set_dense_index(ss, index, ss->sparse_index->length);
-
-    if (set_err != E_WHISKER_SS_OK)
-    {
-        return E_WHISKER_SS_ARR;
-    }
+    whisker_ss_set_dense_index(ss, index, ss->sparse_index_length);
 
 	whisker_array_header *header = whisker_arr_header(ss->dense);
 	size_t dense_length = header->length;
@@ -113,22 +94,13 @@ E_WHISKER_SS whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
         return E_WHISKER_SS_ARR;
     }
 
-	size_t sparse_index_length = ss->sparse_index->length;
-	if (sizeof(uint64_t) * index > ss->sparse_index->alloc_size)
-	{
-		E_WHISKER_ARR sparse_resize_err = whisker_arr_resize_uint64_t(ss->sparse_index, sparse_index_length * WHISKER_SPARSE_SET_RESIZE_RATIO, false);
-		if (sparse_resize_err != E_WHISKER_ARR_OK)
-		{
-			// TODO: panic here
-			return E_WHISKER_SS_ARR;
-		}
-		ss->sparse_index->length = sparse_index_length;
-	}
-    push_err = whisker_arr_push_uint64_t(ss->sparse_index, index);
-    if (push_err != E_WHISKER_ARR_OK)
-    {
-        return E_WHISKER_SS_ARR;
-    }
+	// set sparse index
+	whisker_arr_ensure_alloc_block_size(
+		ss->sparse_index, 
+		(ss->sparse_index_length + 1),
+		WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE
+	);
+	ss->sparse_index[ss->sparse_index_length++] = index;
 
 	if (WHISKER_SPARSE_SET_AUTOSORT)
 	{
@@ -156,13 +128,13 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
 
 
 	// last into the dense and sparse_index array
-    size_t last_index = ss->sparse_index->length - 1;
-    uint64_t sparse_index_last = ss->sparse_index->arr[last_index];
+    size_t last_index = ss->sparse_index_length - 1;
+    uint64_t sparse_index_last = ss->sparse_index[last_index];
     uint64_t dense_index_last = whisker_ss_get_dense_index(ss, sparse_index_last);
 
 	// swap end dense values and indexes
     size_t element_size = ss->element_size;
-	ss->sparse_index->arr[dense_index] = sparse_index_last;
+	ss->sparse_index[dense_index] = sparse_index_last;
     memcpy(ss->dense + dense_index * element_size, ss->dense + dense_index_last * element_size, element_size);
     E_WHISKER_SS err = whisker_ss_set_dense_index(ss, sparse_index_last, dense_index);
     if (err != E_WHISKER_SS_OK)
@@ -177,11 +149,7 @@ E_WHISKER_SS whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     	return err;
     }
     whisker_arr_header(ss->dense)->length--;
-    E_WHISKER_ARR resize_err = whisker_arr_decrement_size_uint64_t(ss->sparse_index);
-    if (resize_err != E_WHISKER_ARR_OK)
-    {
-    	return E_WHISKER_SS_ARR;
-    }
+    ss->sparse_index_length--;
 
 	if (WHISKER_SPARSE_SET_AUTOSORT)
 	{
@@ -199,7 +167,7 @@ bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index)
 		return whisker_ss_get_dense_index(ss, index) != UINT64_MAX;
 	}
 
-    return ss->sparse->length >= index + 1 && ss->sparse->arr[index] != UINT64_MAX && ss->sparse_index->arr[ss->sparse->arr[index]] == index;
+    return ss->sparse_length >= index + 1 && ss->sparse[index] != UINT64_MAX && ss->sparse_index[ss->sparse[index]] == index;
 }
 
 // set the dense index for the given index
@@ -224,7 +192,7 @@ E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, 
     	{
     		return init_err;
     	}
-    	ss->sparse->arr[index] = dense_index;
+    	ss->sparse[index] = dense_index;
     }
     return E_WHISKER_SS_OK;
 }
@@ -232,19 +200,20 @@ E_WHISKER_SS whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, 
 // init the dense index for the given index
 E_WHISKER_SS whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
 {
-	if (ss->sparse->length < index + 1)
+	if (ss->sparse_length < index + 1)
 	{
-		uint64_t sparse_length = ss->sparse->length;
+		uint64_t sparse_length = ss->sparse_length;
 
-		E_WHISKER_ARR err = whisker_arr_resize_uint64_t(ss->sparse, (index + 1) * WHISKER_SPARSE_SET_RESIZE_RATIO, true);
-		if (err != E_WHISKER_ARR_OK)
-		{
-			return E_WHISKER_SS_MEM;
-		}
+		whisker_arr_ensure_alloc_block_size(
+			ss->sparse, 
+			(index + 1),
+			WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE
+		);
+		ss->sparse_length = index + 1;
 
-		for (int i = sparse_length; i < ss->sparse->length; ++i)
+		for (int i = sparse_length; i < ss->sparse_length; ++i)
 		{
-			ss->sparse->arr[i] = UINT64_MAX;
+			ss->sparse[i] = UINT64_MAX;
 		}
 	}
 
@@ -267,15 +236,15 @@ uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
     	return UINT64_MAX;
     }
 
-    return ss->sparse->arr[index];
+    return ss->sparse[index];
 }
 
 // sort the sparse set by sparse index ascending
 void whisker_ss_sort(whisker_sparse_set *ss)
 {
-    uint64_t *dense_index = ss->sparse_index->arr;
+    uint64_t *dense_index = ss->sparse_index;
     void *dense = ss->dense;
-    size_t n = ss->sparse_index->length;
+    size_t n = ss->sparse_index_length;
     size_t element_size = ss->element_size;
     void* temp_dense = ss->swap_buffer;
 
@@ -294,8 +263,8 @@ void whisker_ss_sort(whisker_sparse_set *ss)
                 dense_index[j] = dense_index[j + 1];
                 dense_index[j + 1] = temp_index;
 
-    			ss->sparse->arr[temp_index] = j + 1;
-    			ss->sparse->arr[temp_index2] = j;
+    			ss->sparse[temp_index] = j + 1;
+    			ss->sparse[temp_index2] = j;
 
                 memcpy(temp_dense, (char *)dense + j * element_size, element_size);
                 memcpy((char *)dense + j * element_size, (char *)dense + (j + 1) * element_size, element_size);

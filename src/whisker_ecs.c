@@ -156,17 +156,17 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	}
 
 	// process and sort changed components
-	while (ecs->components->changed_components->sparse_index->length > 0) 
+	while (ecs->components->changed_components->sparse_index_length > 0) 
 	{
-		for (int i = 0; i < ecs->components->changed_components->sparse_index->length; ++i)
+		for (int i = 0; i < ecs->components->changed_components->sparse_index_length; ++i)
 		{
-			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index->arr[i]};
+			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index[i]};
 
 			whisker_ecs_c_sort_component_array(ecs->components, component_id);
 			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
 		}
 
-		ecs->components->changed_components->sparse_index->length = 0;
+		ecs->components->changed_components->sparse_index_length = 0;
     	whisker_arr_header(ecs->components->changed_components->dense)->length = 0;
 	}
 	

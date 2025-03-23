@@ -182,10 +182,10 @@ START_TEST(test_whisker_sparse_set_sort_by_index)
 
 	// validate dense index order
 	int expected_sorted[] = {0,1,10,100};
-	for (int i = 0; i < ss->sparse_index->length; ++i)
+	for (int i = 0; i < ss->sparse_index_length; ++i)
 	{
-		ck_assert_uint_eq(expected_sorted[i], ss->sparse_index->arr[i]);
-		printf("ss sorted dense index %d: %zu:%zu\n", i, ss->sparse_index->arr[i], ((int*)ss->dense)[i]);
+		ck_assert_uint_eq(expected_sorted[i], ss->sparse_index[i]);
+		printf("ss sorted dense index %d: %zu:%zu\n", i, ss->sparse_index[i], ((int*)ss->dense)[i]);
 	}
 
 	// validate dense order

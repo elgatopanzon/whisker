@@ -42,7 +42,7 @@ START_TEST(test_whisker_ecs_component_get_component_array)
 	whisker_sparse_set *component_array = whisker_ecs_c_get_component_array(c, component_id);
 
 	// verify length
-	ck_assert_uint_eq(1, component_array->sparse_index->length);
+	ck_assert_uint_eq(1, component_array->sparse_index_length);
 
 	// free
 	whisker_ecs_c_free_components_all(c);

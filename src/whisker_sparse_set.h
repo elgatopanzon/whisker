@@ -16,6 +16,9 @@
 #define WHISKER_SPARSE_SET_AUTOSORT false
 
 #define WHISKER_SPARSE_SET_RESIZE_RATIO 1.61803398875
+#define WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE (1024 / sizeof(uint64_t))
+#define WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE (1024 / sizeof(uint64_t))
+#define WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER 16384
 
 // errors
 typedef enum E_WHISKER_SS  
@@ -29,8 +32,8 @@ extern const char* E_WHISKER_SS_STR[];
 
 typedef struct whisker_sparse_set
 {
-	whisker_arr_uint64_t *sparse;
-	whisker_arr_uint64_t *sparse_index;
+	whisker_arr_declare(uint64_t, sparse);
+	whisker_arr_declare(uint64_t, sparse_index);
 	whisker_trie *sparse_trie;
 	void *dense;
 	void *swap_buffer;

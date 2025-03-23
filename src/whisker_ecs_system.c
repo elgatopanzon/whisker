@@ -129,7 +129,7 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 {
 	if (context->iterators != NULL)
 	{
-		for (int i = 0; i < context->iterators->sparse_index->length; ++i)
+		for (int i = 0; i < context->iterators->sparse_index_length; ++i)
 		{
 			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)context->iterators->dense)[i];
 
@@ -340,9 +340,9 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 			component_array = itor->component_arrays[i];
 		}
 
-		if (component_array->sparse_index->length < itor->count || itor->count == 0)
+		if (component_array->sparse_index_length < itor->count || itor->count == 0)
 		{
-			itor->count = component_array->sparse_index->length;
+			itor->count = component_array->sparse_index_length;
 			itor->cursor_max = itor->count;
 			itor->master_index = i;
 		}
@@ -493,7 +493,7 @@ bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iter
 
 	// set the master components
 	whisker_sparse_set *master_set = itor->component_arrays[itor->master_index];
-	itor->entity_id.id = master_set->sparse_index->arr[itor->cursor];
+	itor->entity_id.id = master_set->sparse_index[itor->cursor];
 	/* itor->read->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size); */
 	/* itor->write->arr[itor->master_index] = master_set->dense + (itor->cursor * master_set->element_size); */
 
@@ -518,7 +518,7 @@ bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iter
 	{
 		// get current set for component
 		whisker_sparse_set *set = itor->component_arrays[ci];
-		whisker_ecs_entity_id_raw cursor_entity = set->sparse_index->arr[itor->cursor];
+		whisker_ecs_entity_id_raw cursor_entity = set->sparse_index[itor->cursor];
 
 		// check if cursor entity matches, if so set the component data
 		if (cursor_entity == itor->entity_id.id)
@@ -546,10 +546,10 @@ bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iter
 		// look for the next matching entity
 		// note: it's possible we need a need check for coming to the end of a
 		// list to also set the state invalid
-		size_t set_length = set->sparse_index->length;
+		size_t set_length = set->sparse_index_length;
 		for (int i = itor->cursor; i < set_length; ++i)
 		{
-			cursor_entity = set->sparse_index->arr[i];
+			cursor_entity = set->sparse_index[i];
 
 			// check if cursor entity matches, if so set the component data
 			if (cursor_entity == itor->entity_id.id)
