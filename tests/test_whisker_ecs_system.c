@@ -64,7 +64,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(88), &val3, true);
 
 	// request an iterator with the created components
-	whisker_ecs_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
 	whisker_sparse_set *comp2_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw[1]);

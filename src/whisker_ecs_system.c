@@ -55,7 +55,7 @@ whisker_ecs_system_context *whisker_ecs_s_create_system_context(whisker_ecs_syst
 	whisker_ecs_system_context *c = whisker_mem_xcalloc(1, sizeof(*c));
 
 	// create iterators sparse set
-	c->iterators = whisker_ss_create_t(whisker_ecs_iterator);
+	c->iterators = whisker_ss_create_t(whisker_ecs_system_iterator);
 
 	// set system pointers
 	c->components = system->components;
@@ -125,7 +125,7 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 	{
 		for (int i = 0; i < context->iterators->sparse_index_length; ++i)
 		{
-			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)context->iterators->dense)[i];
+			whisker_ecs_system_iterator itor = ((whisker_ecs_system_iterator*)context->iterators->dense)[i];
 
 			whisker_ecs_s_free_iterator(&itor);
 		}
@@ -155,7 +155,7 @@ void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_enti
 		// update all systems in the process phase by update count
 		for (int ui = 0; ui < update_count; ++ui)
 		{
-			whisker_ecs_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities[process_phase->id.index].name, "");
+			whisker_ecs_system_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities[process_phase->id.index].name, "");
 
 			while (whisker_ecs_s_iterate(default_context, system_itor)) 
 			{
@@ -258,9 +258,9 @@ void whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems)
 *  iterator functions   *
 *************************/
 // create and init an iterator instance
-whisker_ecs_iterator *whisker_ecs_s_create_iterator()
+whisker_ecs_system_iterator *whisker_ecs_s_create_iterator()
 {
-	whisker_ecs_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
+	whisker_ecs_system_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
 
 	// create sparse sets for component pointers
 	whisker_arr_init_t(itor_new->read, 1);
@@ -272,7 +272,7 @@ whisker_ecs_iterator *whisker_ecs_s_create_iterator()
 }
 
 // free instance of iterator and all data
-void whisker_ecs_s_free_iterator(whisker_ecs_iterator *itor)
+void whisker_ecs_s_free_iterator(whisker_ecs_system_iterator *itor)
 {
 	free_null(itor->read);
 	free_null(itor->write);
@@ -285,9 +285,9 @@ void whisker_ecs_s_free_iterator(whisker_ecs_iterator *itor)
 
 // get an iterator instance with the given itor_index
 // note: this will init the iterator if one does not exist at the index
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
+whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
 {
-	whisker_ecs_iterator *itor;
+	whisker_ecs_system_iterator *itor;
 
 	// check if iterator index is set
 	if (!whisker_ss_contains(context->iterators, itor_index))
@@ -393,7 +393,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 }
 
 // init the provided iterator and cache the given components
-void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components)
+void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
 	// convert read and write component names to component sparse sets
 	char *combined_components;
@@ -474,7 +474,7 @@ void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ec
 
 // iterate one step with the provided iterator
 // note: iteration returns true while the iteration is still on-going
-bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iterator *itor)
+bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor)
 {
 	// if the master index is invalid then there is nothing to iterate
 	bool iteration_active = (itor->master_index != UINT64_MAX && itor->count > 0);

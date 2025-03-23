@@ -67,7 +67,7 @@
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
 #endif
 
-typedef struct whisker_ecs_iterator
+typedef struct whisker_ecs_system_iterator
 {
 	// the master index points to the sparse set we're currently iterating
 	size_t master_index;
@@ -91,7 +91,7 @@ typedef struct whisker_ecs_iterator
 	whisker_arr_declare(void *, write);
 	whisker_arr_declare(void *, opt);
 
-} whisker_ecs_iterator;
+} whisker_ecs_system_iterator;
 
 typedef struct whisker_ecs_system_context
 {
@@ -180,11 +180,11 @@ void whisker_ecs_s_init_component_cache(whisker_ecs_system *system, char *name, 
 int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* component_names, char* component_name);
 
 // system iterator functions
-whisker_ecs_iterator *whisker_ecs_s_create_iterator();
-whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components);
-void whisker_ecs_s_free_iterator(whisker_ecs_iterator *itor);
-bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_iterator *itor);
-void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_iterator *itor, char *read_components, char *write_components, char *optional_components);
+whisker_ecs_system_iterator *whisker_ecs_s_create_iterator();
+whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components);
+void whisker_ecs_s_free_iterator(whisker_ecs_system_iterator *itor);
+bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor);
+void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components);
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 
