@@ -51,7 +51,7 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 }
 
 // create and init an instance of a system context
-void whisker_ecs_s_create_system_context(whisker_ecs_system_context **context, whisker_ecs_system *system)
+whisker_ecs_system_context *whisker_ecs_s_create_system_context(whisker_ecs_system *system)
 {
 	whisker_ecs_system_context *c = whisker_mem_xcalloc(1, sizeof(*c));
 
@@ -68,7 +68,7 @@ void whisker_ecs_s_create_system_context(whisker_ecs_system_context **context, w
 	c->thread_id = 0;
 	c->thread_max = 0;
 
-	*context = c;
+	return c;
 }
 
 // regiser a system in the systems container
@@ -90,8 +90,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	// thread's context
 	for (int i = 0; i < system.thread_count + 1; ++i)
 	{
-		whisker_ecs_system_context *c;
-		whisker_ecs_s_create_system_context(&c, &system);
+		whisker_ecs_system_context *c = whisker_ecs_s_create_system_context(&system);
 		c->thread_id = i;
 		c->thread_max = system.thread_count;
 		system.thread_contexts[system.thread_contexts_length++] = c;
@@ -133,35 +132,8 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 		for (int i = 0; i < context->iterators->sparse_index->length; ++i)
 		{
 			whisker_ecs_iterator itor = ((whisker_ecs_iterator*)context->iterators->dense)[i];
-			if (itor.read != NULL)
-			{
-				free(itor.read);
-			}
-			if (itor.write != NULL)
-			{
-				free(itor.write);
-			}
-			if (itor.opt != NULL)
-			{
-				free(itor.opt);
-			}
 
-			if (itor.component_ids_rw != NULL)
-			{
-				free(itor.component_ids_rw);
-			}
-			if (itor.component_ids_w != NULL)
-			{
-				free(itor.component_ids_w);
-			}
-			if (itor.component_ids_opt != NULL)
-			{
-				free(itor.component_ids_opt);
-			}
-			if (itor.component_arrays != NULL)
-			{
-				free(itor.component_arrays);
-			}
+			whisker_ecs_s_free_iterator(&itor);
 		}
 
 		whisker_ss_free(context->iterators);
@@ -292,7 +264,7 @@ void whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems)
 *  iterator functions   *
 *************************/
 // create and init an iterator instance
-void whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
+whisker_ecs_iterator *whisker_ecs_s_create_iterator()
 {
 	whisker_ecs_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
 
@@ -302,7 +274,19 @@ void whisker_ecs_s_create_iterator(whisker_ecs_iterator **itor)
 	whisker_arr_init_t(itor_new->opt, 1);
 	whisker_arr_init_t(itor_new->component_arrays, 1);
 
-	*itor = itor_new;
+	return itor_new;
+}
+
+// free instance of iterator and all data
+void whisker_ecs_s_free_iterator(whisker_ecs_iterator *itor)
+{
+	free_null(itor->read);
+	free_null(itor->write);
+	free_null(itor->opt);
+	free_null(itor->component_ids_rw);
+	free_null(itor->component_ids_w);
+	free_null(itor->component_ids_opt);
+	free_null(itor->component_arrays);
 }
 
 // get an iterator instance with the given itor_index
@@ -314,7 +298,7 @@ whisker_ecs_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *con
 	// check if iterator index is set
 	if (!wss_contains(context->iterators, itor_index))
 	{
-		whisker_ecs_s_create_iterator(&itor);
+		itor = whisker_ecs_s_create_iterator();
 		wss_set(context->iterators, itor_index, itor);
 
 		free(itor);
