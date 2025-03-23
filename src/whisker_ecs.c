@@ -8,7 +8,6 @@
 
 #include "whisker_debug.h"
 #include "whisker_array.h"
-#include "whisker_block_array.h"
 #include "whisker_ecs.h"
 
 // create and initialise an instance of whisker_ecs to hold the ECS's world

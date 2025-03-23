@@ -5,7 +5,6 @@
  */
 
 #include "whisker_std.h"
-#include "whisker_block_array.h"
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"

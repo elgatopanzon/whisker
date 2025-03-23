@@ -7,7 +7,6 @@
 #include "whisker_std.h"
 #include "whisker_dict.h"
 #include "whisker_debug.h"
-#include "whisker_block_array.h"
 #include "whisker_sparse_set.h"
 
 #include "whisker_ecs.h"

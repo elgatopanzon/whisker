@@ -6,7 +6,6 @@
 
 #include "whisker_std.h"
 #include "whisker_memory.h"
-/* #include "whisker_block_array.h" */
 #include "whisker_array.h"
 #include "whisker_trie.h"
 
