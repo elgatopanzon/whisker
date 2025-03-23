@@ -210,7 +210,7 @@ void *whisker_tp_worker_func_(void *arg)
 	whisker_thread_pool *tp = context->thread_pool;
 	whisker_thread_pool_work *work;
 
-	debug_printf("thread pool: thread %zu ready\n", context->thread_id);
+	debug_log(DEBUG, thread pool, "thread %zu ready", context->thread_id);
 
 	// infinitely loop looking for and executing work
 	while (true) 
@@ -258,7 +258,7 @@ void *whisker_tp_worker_func_(void *arg)
 	pthread_cond_signal(&tp->thread_working_signal);
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
 
-	debug_printf("thread pool: thread %zu stopping\n", context->thread_id);
+	debug_log(DEBUG, thread pool, "thread %zu stopping", context->thread_id);
 
 	return NULL;
 }

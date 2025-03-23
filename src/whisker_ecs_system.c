@@ -80,7 +80,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	{
 		system.thread_count = whisker_tp_system_core_count();
 	}
-	debug_printf("sys: e %zu creating %zu thread contexts\n", system.entity_id, system.thread_count);
+	debug_log(DEBUG, ecs:register_system, "sys e %zu creating %zu thread contexts", system.entity_id, system.thread_count);
 
 	// create system context array
 	whisker_arr_init_t(system.thread_contexts, (system.thread_count + 1));

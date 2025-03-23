@@ -160,7 +160,7 @@ void asteroids_system_velocity_2d(whisker_ecs_system_context *context)
 		Vector2 *vel_2d = itor->read[0];
 		Vector2 *pos_2d = itor->write[1];
 
-		/* debug_printf("velocity_2d %zu pos %fx%f vel %fx%f\n", itor->entity_id, pos_2d->x, pos_2d->y, vel_2d->x, vel_2d->y); */
+		/* debug_log(DEBUG, velocity_2d, "velocity_2d %zu pos %fx%f vel %fx%f", itor->entity_id, pos_2d->x, pos_2d->y, vel_2d->x, vel_2d->y); */
 
 		pos_2d->x += vel_2d->x * context->delta_time;
 		pos_2d->y += vel_2d->y * context->delta_time;
@@ -229,7 +229,7 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
     		whisker_ecs_set_tag(context->components, itor->component_ids_opt[7], e);
     		whisker_ecs_set_tag(context->components, itor->component_ids_opt[8], e);
 
-			debug_printf("spawn_asteroid:entity %d size %d at %fx%f\n", e.index, size, position.x, position.y);
+			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f", e.index, size, position.x, position.y);
 		}
 	}
 }
@@ -331,7 +331,7 @@ void asteroids_system_screen_wrap(whisker_ecs_system_context *context)
 				pos_2d->y > asteroids_screen_height
 				)
 		{
-			debug_printf("system:screen_wrap:e = %d\n", itor->entity_id.index);
+			debug_log(DEBUG, system:screen_wrap, "e = %d", itor->entity_id.index);
 
 			if (pos_2d->x < 0)
 			{
@@ -363,7 +363,7 @@ void asteroids_system_player_death_on_life_depleted(whisker_ecs_system_context *
 		ASTEROIDS_PLAYER_STATE *p_state = itor->read[2];
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_DEFAULT && *life <= 0) {
-			debug_printf("system:player_death_on_life_depleted\n");
+			debug_log(DEBUG, system:player_death_on_life_depleted, "");
 			/* whisker_ecs_remove_component(asteroids_ecs, "vel_2d", sizeof(Vector2), system.entity_id); */
 			*p_state = ASTEROIDS_PLAYER_STATE_DEAD;
 		}
@@ -380,7 +380,7 @@ void asteroids_system_player_hit_cooldown(whisker_ecs_system_context *context)
 		ASTEROIDS_PLAYER_STATE *p_state = itor->read[2];
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && *hit_time + PLAYER_HIT_COOLDOWN < GetTime()) {
-			debug_printf("system:player_hit_cooldown:returning to default state\n");
+			debug_log(DEBUG, system:player_hit_cooldown, "returning to default state");
 			*p_state = ASTEROIDS_PLAYER_STATE_DEFAULT;
 		}
 	}
@@ -473,7 +473,7 @@ void asteroids_system_destroy_offscreen(whisker_ecs_system_context *context)
 			pos_2d->y > (asteroids_screen_height + ASTEROID_OFF_SCREEN_PAD)
 			)
 		{
-			debug_printf("system:destroy_offscreen:e = %zu %fx%f\n", itor->entity_id.id, pos_2d->x, pos_2d->y);
+			debug_log(DEBUG, system:destroy_offscreen, "e = %zu %fx%f", itor->entity_id.id, pos_2d->x, pos_2d->y);
 			/* whisker_ecs_c_set_component(system->components, itor->component_ids_opt[0], sizeof(bool), itor->entity_id, &(bool){false}); */
 			whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], itor->entity_id);
 		}
@@ -493,7 +493,7 @@ void asteroids_system_projectile_collide_destroy(whisker_ecs_system_context *con
 			continue;
 		}
 
-		debug_printf("system:projectile_collide_destroy:%zu hit asteroid %zu\n", collision->entity_a, collision->entity_b);
+		debug_log(DEBUG, system:projectile_collide_destroy, "%zu hit asteroid %zu", collision->entity_a, collision->entity_b);
 
 		// destroy existing asteroid and projectile
 		whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], collision->entity_a);    
@@ -526,7 +526,7 @@ void asteroids_system_asteroid_respawn_on_hit(whisker_ecs_system_context *contex
 				break;
 		}
 
-		debug_printf("system:asteroid_respawn_on_destroy:spawn count %d from size %d\n", spawn_count, *ast_size);
+		debug_log(DEBUG, system:asteroid_respawn_on_destroy, "spawn count %d from size %d", spawn_count, *ast_size);
 
 		// note: the add asteroids triggers a component realloc leaving *pos_2d
 		// invalid after the first loop
@@ -534,7 +534,7 @@ void asteroids_system_asteroid_respawn_on_hit(whisker_ecs_system_context *contex
 		ASTEROIDS_ASTEROID_SIZE asteroid_size = *ast_size;
 		for (int ii = 0; ii < spawn_count; ++ii)
 		{
-			debug_printf("system:asteroid_respawn_on_destroy:spawning (from %d) size %d\n", itor->entity_id.index, asteroid_size);
+			debug_log(DEBUG, system:asteroid_respawn_on_destroy, "spawning (from %d) size %d", itor->entity_id.index, asteroid_size);
 
 			asteroids_add_asteroid(spawn_pos, (Vector2) {GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2)), GetRandomValue(-(ASTEROID_VELOCITY_MAX / 2), (ASTEROID_VELOCITY_MAX / 2))}, GetRandomValue(-360, 360) * DEG2RAD, GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX), new_size);
 		}
@@ -643,7 +643,7 @@ void asteroids_system_player_hit_asteroid(whisker_ecs_system_context *context)
 		float* rotation_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[6], collision->entity_a);		
 		*rotation_velocity += (GetRandomValue(-270, 270));
 
-		debug_printf("system:player_damage:%zu hit player %zu (%d damage)\n", collision->entity_a, collision->entity_b, damage);
+		debug_log(DEBUG, system:player_damage, "%zu hit player %zu (%d damage)", collision->entity_a, collision->entity_b, damage);
 
 		*player_life -= damage;
 		if (*player_life <= 0) {
@@ -665,7 +665,7 @@ void asteroids_system_player_hit_nudge(whisker_ecs_system_context *context)
 		Vector2 *vel_2d = itor->write[5];
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
-			debug_printf("system:player_hit_nudge:nudging player from the hit\n");
+			debug_log(DEBUG, system:player_hit_nudge, "nudging player from the hit");
 
 			Vector2 *hit_by_position = whisker_ecs_get(context->components, itor->component_ids_rw[3], hit_collision->entity_a);		
 
@@ -673,10 +673,10 @@ void asteroids_system_player_hit_nudge(whisker_ecs_system_context *context)
 
 			*rot_v += (GetRandomValue(-270, 270));
 
-			debug_printf("system:player_hit_nudge:velocity before %fx%f\n", vel_2d->x, vel_2d->y);
+			debug_log(DEBUG, system:player_hit_nudge, "velocity before %fx%f", vel_2d->x, vel_2d->y);
 			*vel_2d = Vector2Scale(nudge_direction, PLAYER_HIT_NUDGE_FORCE);
 
-			debug_printf("system:player_hit_nudge:velocity after %fx%f\n", vel_2d->x, vel_2d->y);
+			debug_log(DEBUG, system:player_hit_nudge, "velocity after %fx%f", vel_2d->x, vel_2d->y);
 		}
 	}
 }
@@ -690,7 +690,7 @@ void asteroids_system_player_hit_to_recover(whisker_ecs_system_context *context)
 		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
-			debug_printf("system:player_hit_to_recover\n");
+			debug_log(DEBUG, system:player_hit_to_recover, "");
 			*p_state = ASTEROIDS_PLAYER_STATE_COOLDOWN;
 		}
 	}
@@ -1114,7 +1114,7 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 	whisker_ecs_set_named_tag(asteroids_ecs->entities, asteroids_ecs->components, t_ast, e);    
 	whisker_ecs_set_named_tag(asteroids_ecs->entities, asteroids_ecs->components, t_screen_cull, e);    
 
-	debug_printf("add_asteroid:entity %d size %d at %fx%f\n", e.index, size, position.x, position.y);
+	debug_log(DEBUG, add_asteroid, "entity %d size %d at %fx%f", e.index, size, position.x, position.y);
 }
 
 void asteroids_add_projectile(Vector2 position, float rotation)
@@ -1137,5 +1137,5 @@ void asteroids_add_projectile(Vector2 position, float rotation)
 	whisker_ecs_set_named_tag(asteroids_ecs->entities, asteroids_ecs->components, t_move_dir, e);    
 	whisker_ecs_set_named_tag(asteroids_ecs->entities, asteroids_ecs->components, t_screen_cull, e);    
 
-	debug_printf("add_projectile:rot %f at %fx%f\n", rotation, position.x, position.y);
+	debug_log(DEBUG, add_projectile, "rot %f at %fx%f", rotation, position.x, position.y);
 }

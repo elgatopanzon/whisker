@@ -332,7 +332,7 @@ struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ec
 			// create/get entity ID for name
 			whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, entity_names + search_index);
 
-			debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index);
+			/* debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index); */
 
 			// add the entity id to the final list, and reset name array
 			whisker_arr_ensure_alloc(entities_new->arr, entities_new->arr_length + 1);

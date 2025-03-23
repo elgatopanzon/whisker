@@ -69,7 +69,7 @@ void whisker_ecs_c_create_component_array(whisker_ecs_components *components, wh
 
 	// create array
 	whisker_sparse_set *ss;
-	debug_printf("creating component sparse set %zu size %zu\n", component_id.id, component_size);
+	debug_log(DEBUG, ecs:create_component_array, "creating component sparse set %zu size %zu", component_id.id, component_size);
 	ss = whisker_ss_create_s(component_size);
 
 	components->components[component_id.index] = ss;

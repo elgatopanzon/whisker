@@ -80,7 +80,7 @@ void whisker_ecs_free(whisker_ecs *ecs)
 // note: the process phase group has to be registered or it will not be scheduled for execution
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count)
 {
-	debug_printf("ecs:registering system: %s process phase %s\n", system_name, process_phase_name);
+	debug_log(DEBUG, ecs:register_system, "registering system %s process phase %s", system_name, process_phase_name);
 
 	// get the entity for the process phase
 	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->entities, process_phase_name);
