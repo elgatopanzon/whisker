@@ -15,20 +15,6 @@
 
 #define WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT 2
 
-// errors
-typedef enum E_WHISKER_TP  
-{
-	E_WHISKER_TP_OK = 0,
-	E_WHISKER_TP_UNKNOWN = 1,
-	E_WHISKER_TP_MEM = 2,
-	E_WHISKER_TP_ARR = 3,
-	E_WHISKER_TP_THREAD = 4,
-	E_WHISKER_TP_WORK = 5,
-	E_WHISKER_TP_MUTEX = 6,
-} E_WHISKER_TP;
-extern const char* E_WHISKER_TP_STR[];
-
-
 typedef void (*whisker_thread_pool_func)(void *arg);
 
 typedef struct whisker_thread_pool_work
@@ -65,11 +51,14 @@ typedef struct whisker_thread_pool_context
 int whisker_tp_system_core_count();
 
 // management functions
-E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count);
+whisker_thread_pool *whisker_tp_create();
+whisker_thread_pool *whisker_tp_create_and_init(size_t count);
+void whisker_tp_init(whisker_thread_pool *tp, size_t count);
 void whisker_tp_free(whisker_thread_pool *tp);
+void whisker_tp_free_all(whisker_thread_pool *tp);
 
 // operation functions
-E_WHISKER_TP whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg);
+void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg);
 void whisker_tp_wait_work(whisker_thread_pool *tp);
 
 // thread work functions

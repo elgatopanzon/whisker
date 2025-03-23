@@ -96,12 +96,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	}
 
 	// create thread pool
-	E_WHISKER_TP tp_err = whisker_tp_create_f(&system.thread_pool, system.thread_count);
-	if (tp_err != E_WHISKER_TP_OK)
-	{
-		return NULL;
-	}
-
+	system.thread_pool = whisker_tp_create_and_init(system.thread_count);
 	
 	// add system to main systems list
 	whisker_arr_ensure_alloc(systems->systems, (systems->systems_length + 1));
@@ -120,7 +115,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 
 	free(system->thread_contexts);
 	whisker_tp_wait_work(system->thread_pool);
-	whisker_tp_free(system->thread_pool);
+	whisker_tp_free_all(system->thread_pool);
 }
 
 // deallocate a system context instance

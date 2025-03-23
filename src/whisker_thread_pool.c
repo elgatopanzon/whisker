@@ -29,7 +29,24 @@ int whisker_tp_system_core_count() {
 }
 
 // create and init a thread pool instance with the given thread count
-E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
+whisker_thread_pool *whisker_tp_create()
+{
+	whisker_thread_pool *tp_new = whisker_mem_xcalloc_t(1, *tp_new);
+
+	return tp_new;
+}
+
+// create and init a thread pool instance with the given thread count
+whisker_thread_pool *whisker_tp_create_and_init(size_t count)
+{
+	whisker_thread_pool *tp_new = whisker_tp_create();
+	whisker_tp_init(tp_new, count);
+
+	return tp_new;
+}
+
+// init an instance of a thread pool
+void whisker_tp_init(whisker_thread_pool *tp, size_t count)
 {
 	whisker_thread_pool *tp_new = whisker_mem_xcalloc_t(1, *tp_new);
 
@@ -49,7 +66,7 @@ E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 	    pthread_cond_init(&tp_new->thread_working_signal, NULL) != 0)
 	{
 		free(tp_new);
-		return E_WHISKER_TP_MUTEX;
+		return;
 	}
 
 	// create thread context array
@@ -67,18 +84,15 @@ E_WHISKER_TP whisker_tp_create_f(whisker_thread_pool **tp, size_t count)
 
 		if (pthread_create(&thread, NULL, whisker_tp_worker_func_, &tp_new->thread_contexts[i]) != 0)
 		{
-			whisker_tp_free(tp_new);
-			return E_WHISKER_TP_THREAD;
+			whisker_tp_free_all(tp_new);
+			return;
 		}
 		pthread_detach(thread);
 	}
-
-	*tp = tp_new;
-	return E_WHISKER_TP_OK;
 }
 
 // deallocate a thread pool instance
-void whisker_tp_free(whisker_thread_pool *tp)
+void whisker_tp_free_all(whisker_thread_pool *tp)
 {
 	if (tp == NULL)
 	{
@@ -108,17 +122,17 @@ void whisker_tp_free(whisker_thread_pool *tp)
 }
 
 // queue a function to run in the thread pool
-E_WHISKER_TP whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg)
+void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg)
 {
 	if (tp == NULL || func == NULL)
 	{
-		return E_WHISKER_TP_WORK;
+		return;
 	}
 
 	whisker_thread_pool_work *work = whisker_tp_create_work(func, arg);
 	if (work == NULL)
 	{
-		return E_WHISKER_TP_WORK;
+		return;
 	}
 
 	pthread_mutex_lock(&tp->thread_mutex_worker);
@@ -135,8 +149,6 @@ E_WHISKER_TP whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_
 
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
-
-	return E_WHISKER_TP_OK;
 }
 
 // wait for the thread pool to finish executing work
