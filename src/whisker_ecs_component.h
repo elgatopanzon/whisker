@@ -6,7 +6,6 @@
 
 #include "whisker_std.h"
 #include "whisker_sparse_set.h"
-#include "whisker_ecs_types.h"
 #include "whisker_ecs_entity.h"
 
 #ifndef WHISKER_ECS_COMPONENT_H
@@ -14,6 +13,12 @@
 
 #define WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE (256 / sizeof(whisker_sparse_set *))
 #define WHISKER_ECS_COMPONENT_REALLOC_BLOCK_SIZE_MULTIPLIER 1024
+
+typedef struct whisker_ecs_components
+{
+	whisker_arr_declare(whisker_sparse_set *, components);
+	whisker_sparse_set *changed_components;
+} whisker_ecs_components;
 
 // components struct management
 whisker_ecs_components * whisker_ecs_c_create_components();

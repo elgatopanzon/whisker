@@ -8,7 +8,6 @@
 #include "whisker_std.h"
 #include "whisker_array.h"
 #include "whisker_trie.h"
-#include "whisker_ecs_types.h"
 
 #ifndef WHISKER_ECS_ENTITY_H
 #define WHISKER_ECS_ENTITY_H
@@ -17,7 +16,89 @@
 #define WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_index))
 #define WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_deferred_action))
 
+// the main entity index is a uint32
+typedef uint32_t whisker_ecs_entity_index;
+// the raw entity ID is a uint64
+typedef uint64_t whisker_ecs_entity_id_raw;
+
+// main struct provides access to various forms of the unit64 ID
+typedef struct whisker_ecs_entity_id
+{
+    union {
+    	// the full raw uint64 ID
+        whisker_ecs_entity_id_raw id;
+
+        // the entity index + generation version
+        // this is used for implementing alive checks
+        struct {
+            whisker_ecs_entity_index index;
+            whisker_ecs_entity_index version;
+        };
+
+        // the relationship style A + B
+        struct {
+            whisker_ecs_entity_index entity_a;
+            whisker_ecs_entity_index entity_b;
+        };
+
+        // currently reserved and subject to change
+        struct {
+            uint16_t short1;
+            uint16_t short2;
+            uint16_t short3;
+            uint16_t short4;
+        };
+    };
+} whisker_ecs_entity_id;
+
+// the struct used for an individual entity within the entities array
+typedef struct whisker_ecs_entity
+{
+	// the full id
+    whisker_ecs_entity_id id;
+
+    // set when this entity is currently destroyed
+    // note: this is not used for alive checks
+    bool destroyed;
+
+    // pointer to current name, if any
+    char* name;
+} whisker_ecs_entity;
+
+
+// enum specifying the deferred actions possible when doing deferred processing
+typedef enum WHISKER_ECS_ENTITY_DEFERRED_ACTION  
+{
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE,
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY,
+} WHISKER_ECS_ENTITY_DEFERRED_ACTION;
+
+
+// struct to hold the deferred action
+typedef struct whisker_ecs_entity_deferred_action
+{
+	whisker_ecs_entity_id id;
+	WHISKER_ECS_ENTITY_DEFERRED_ACTION action;
+	
+} whisker_ecs_entity_deferred_action;
+
 whisker_arr_declare_struct(whisker_ecs_entity_id, whisker_ecs_entity_id_array);
+
+// the main entities struct
+typedef struct whisker_ecs_entities
+{
+	// current list of entities used by the system
+	whisker_arr_declare(whisker_ecs_entity, entities);
+
+	// stack of destroyed entities, used when recycling
+	whisker_arr_declare(whisker_ecs_entity_index, destroyed_entities);
+
+	// dictionary of entity names mapping to indexes
+	whisker_trie *entity_names;
+
+	// stack of deferred actions to process
+	whisker_arr_declare(whisker_ecs_entity_deferred_action, deferred_actions);
+} whisker_ecs_entities;
 
 // entity struct management functions
 whisker_ecs_entities *whisker_ecs_e_create_and_init_entities();
