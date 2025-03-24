@@ -28,6 +28,9 @@ void whisker_ecs_c_init_components(whisker_ecs_components *components)
 
 	// create sparse set for changed components
 	components->changed_components = whisker_ss_create_t(whisker_ecs_entity_id);
+
+	// pthread mutexes
+	pthread_mutex_init(&components->grow_components_mutex, NULL);
 }
 
 // create and init instance of components container
@@ -56,6 +59,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 	}
 	free(components->components);
 	whisker_ss_free_all(components->changed_components);
+	pthread_mutex_destroy(&components->grow_components_mutex);
 }
 
 /******************************************
@@ -78,14 +82,21 @@ void whisker_ecs_c_create_component_array(whisker_ecs_components *components, wh
 // grow components array size if required to the nearest block size
 void whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t capacity)
 {
-	whisker_arr_ensure_alloc_block_size(
-		components->components, 
-		(capacity), 
-		(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
-	);
-	if (capacity > components->components_length)
+	if (components->components_length < capacity)
 	{
-		components->components_length = capacity;
+		pthread_mutex_lock(&components->grow_components_mutex);
+
+		whisker_arr_ensure_alloc_block_size(
+			components->components, 
+			(capacity), 
+			(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
+		);
+		if (capacity > components->components_length)
+		{
+			components->components_length = capacity;
+		}
+
+		pthread_mutex_unlock(&components->grow_components_mutex);
 	}
 }
 

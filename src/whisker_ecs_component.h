@@ -18,6 +18,7 @@ typedef struct whisker_ecs_components
 {
 	whisker_arr_declare(whisker_sparse_set *, components);
 	whisker_sparse_set *changed_components;
+	pthread_mutex_t grow_components_mutex;
 } whisker_ecs_components;
 
 // components struct management
