@@ -136,67 +136,97 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 	free(context);
 }
 
+
+/*****************************
+*  system update functions  *
+*****************************/
+static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
+static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase *process_phase);
+static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities);
+static void system_update_queue_system_work(whisker_ecs_system *system);
+static void system_update_execute_system(whisker_ecs_system *system);
+static void system_update_set_context_values(whisker_ecs_system_context *context, whisker_ecs_system *system);
+static void system_update_execute_system(whisker_ecs_system *system);
+static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
+
 // run an update on the registered systems
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
-	whisker_ecs_system *default_system = &systems->systems[systems->system_id];
-	whisker_ecs_system_context *default_context = default_system->thread_contexts[0];
+    whisker_ecs_system *default_system = &systems->systems[systems->system_id];
+    whisker_ecs_system_context *default_context = default_system->thread_contexts[0];
 
-	// loop over each registered process phase
-	for (int i = 0; i < systems->process_phases_length; ++i)
-	{
-		whisker_ecs_system_process_phase *process_phase = &systems->process_phases[i];
+    for (int i = 0; i < systems->process_phases_length; ++i)
+    {
+        whisker_ecs_system_process_phase *process_phase = &systems->process_phases[i];
 
-		// advance the process phase time step
-		int update_count = whisker_time_step_step_get_update_count(&process_phase->time_step);
-
-		/* printf("update count for phase: %d delta %.10f ms/f %s\n", update_count, process_phase->time_step.delta_time_variable * 1000, entities->entities->arr[process_phase->id.index].name); */
-
-		// update all systems in the process phase by update count
-		for (int ui = 0; ui < update_count; ++ui)
-		{
-			whisker_ecs_system_iterator *system_itor = whisker_ecs_s_get_iterator(default_context, process_phase->id.index, "w_ecs_system_idx", entities->entities[process_phase->id.index].name, "");
-
-			while (whisker_ecs_s_iterate(system_itor)) 
-			{
-				int *system_idx = whisker_ecs_itor_get(system_itor, 0);
-				whisker_ecs_system *system = &systems->systems[*system_idx];
-
-				system->delta_time = process_phase->time_step.delta_time_fixed;
-				system->process_phase_time_step = &process_phase->time_step;
-
-				if (system->thread_count > 0)
-				{
-					for (int ti = 0; ti < system->thread_count; ++ti)
-					{
-						// set current system context values before update
-						whisker_ecs_system_context *context = system->thread_contexts[ti];
-
-						context->process_phase_time_step = system->process_phase_time_step;
-						context->delta_time = system->delta_time;
-						context->system_ptr = system->system_ptr;
-
-						// queue system work with thread pool
-						whisker_tp_queue_work(system->thread_pool, whisker_ecs_s_update_system_thread_, context);
-					}
-
-					// wait for thread pool work before continuing
-					whisker_tp_wait_work(system->thread_pool);
-				}
-				else
-				{
-					// set current system context values before update
-					whisker_ecs_system_context *context = system->thread_contexts[0];
-
-					context->process_phase_time_step = system->process_phase_time_step;
-					context->delta_time = system->delta_time;
-					context->system_ptr = system->system_ptr;
-					context->system_ptr(context);
-				}
-			}
-		}
-	}
+        system_update_process_phase(systems, entities, process_phase, default_context);
+    }
 }
+
+static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase *process_phase)
+{
+    return whisker_time_step_step_get_update_count(&process_phase->time_step);
+}
+
+static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities)
+{
+    return whisker_ecs_s_get_iterator(default_context, index, "w_ecs_system_idx", entities->entities[index].name, "");
+}
+
+static void system_update_set_context_values(whisker_ecs_system_context *context, whisker_ecs_system *system)
+{
+    context->process_phase_time_step = system->process_phase_time_step;
+    context->delta_time = system->delta_time;
+    context->system_ptr = system->system_ptr;
+}
+
+static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
+{
+    int update_count = system_update_advance_process_phase_time_step(process_phase);
+
+    for (int ui = 0; ui < update_count; ++ui)
+    {
+        whisker_ecs_system_iterator *system_itor = system_update_get_system_iterator(default_context, process_phase->id.index, entities);
+
+        while (whisker_ecs_s_iterate(system_itor))
+        {
+            int *system_idx = whisker_ecs_itor_get(system_itor, 0);
+            whisker_ecs_system *system = &systems->systems[*system_idx];
+
+            system->delta_time = process_phase->time_step.delta_time_fixed;
+            system->process_phase_time_step = &process_phase->time_step;
+
+            if (system->thread_count > 0)
+            {
+                system_update_queue_system_work(system);
+            }
+            else
+            {
+                system_update_execute_system(system);
+            }
+        }
+    }
+}
+
+static void system_update_execute_system(whisker_ecs_system *system)
+{
+    whisker_ecs_system_context *context = system->thread_contexts[0];
+    system_update_set_context_values(context, system);
+    context->system_ptr(context);
+}
+
+
+static void system_update_queue_system_work(whisker_ecs_system *system)
+{
+    for (int ti = 0; ti < system->thread_count; ++ti)
+    {
+        whisker_ecs_system_context *context = system->thread_contexts[ti];
+        system_update_set_context_values(context, system);
+        whisker_tp_queue_work(system->thread_pool, whisker_ecs_s_update_system_thread_, context);
+    }
+    whisker_tp_wait_work(system->thread_pool);
+}
+
 
 void whisker_ecs_s_update_system_thread_(void *context)
 {
@@ -257,6 +287,12 @@ void whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems)
 /*************************
 *  iterator functions   *
 *************************/
+static bool itor_is_iteration_active(whisker_ecs_system_iterator *itor);
+static void itor_increment_cursor(whisker_ecs_system_iterator *itor);
+static void itor_set_master_components(whisker_ecs_system_iterator *itor);
+static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor);
+static void itor_update_master_index(whisker_ecs_system_iterator *itor);
+
 // create and init an iterator instance
 whisker_ecs_system_iterator *whisker_ecs_s_create_iterator()
 {
@@ -468,11 +504,6 @@ void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ec
 	}
 }
 
-static bool itor_is_iteration_active(whisker_ecs_system_iterator *itor);
-static void itor_increment_cursor(whisker_ecs_system_iterator *itor);
-static void itor_set_master_components(whisker_ecs_system_iterator *itor);
-static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor);
-static void itor_update_master_index(whisker_ecs_system_iterator *itor);
 
 // step through an iterator incrementing the cursor
 // note: returns false to indicate the iteration has reached the end
