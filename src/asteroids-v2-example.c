@@ -12,8 +12,8 @@
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
 
-const int asteroids_screen_width = 600;
-const int asteroids_screen_height = 600;
+const int asteroids_screen_width = 800;
+const int asteroids_screen_height = 800;
 const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (float) asteroids_screen_height / 2};
 #define DRAW_FPS false
 #define DRAW_FPS_AVG_SAMPLES 20
