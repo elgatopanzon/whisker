@@ -13,21 +13,34 @@
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
 
+struct whisker_ecs_component_sort_request 
+{
+	whisker_ecs_components *components;
+	whisker_ecs_entity_id component_id;
+};
+
 typedef struct whisker_ecs
 {
 	whisker_ecs_entities *entities;
 	whisker_ecs_components *components;
 	whisker_ecs_systems *systems;
 	whisker_thread_pool *general_thread_pool;
+	whisker_arr_declare(struct whisker_ecs_component_sort_request *, component_sort_requests);
 } whisker_ecs;
+
 
 whisker_ecs *whisker_ecs_create();
 void whisker_ecs_free(whisker_ecs *ecs);
 
 // system functions
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count);
-void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec);
+
+// system update functions
+void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
+void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs);
+void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs);
+void whisker_ecs_sort_component_thread_func_(void *component_sort_request);
 
 // entity shortcut functions
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities);

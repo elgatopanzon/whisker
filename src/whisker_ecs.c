@@ -60,6 +60,7 @@ whisker_ecs *whisker_ecs_create()
 
 	// create thread pool for general work tasks
 	new->general_thread_pool = whisker_tp_create_and_init(0, "ecs_general_tasks");
+	whisker_arr_init_t(new->component_sort_requests, 32);
 
 	return new;
 }
@@ -74,6 +75,7 @@ void whisker_ecs_free(whisker_ecs *ecs)
 
 	// free thread pool
 	whisker_tp_free_all(ecs->general_thread_pool);
+	free(ecs->component_sort_requests);
 
 	free(ecs);
 }
@@ -130,6 +132,22 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	return system;
 }
 
+// register a process phase for use by the system scheduler
+// note: update_rate_sec set to 0 = uncapped processing with variable delta time
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec)
+{
+	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
+
+	// add component ID to system's process phase list
+	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
+
+	return component_id;
+}
+
+
+/*****************************
+*  system update functions  *
+*****************************/
 // issue an update of all registered systems on all matching world entities
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
@@ -137,6 +155,12 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
 
 	// process deferred actions
+	whisker_ecs_update_process_deferred_actions(ecs);
+}
+
+// process any deferred actions queued since the previous update
+void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
+{
 	// for each deferred deleted entity remove all its components
 	for (size_t i = 0; i < ecs->entities->deferred_actions_length; ++i)
 	{
@@ -162,35 +186,52 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	}
 
 	// process and sort changed components
-	while (ecs->components->changed_components->sparse_index_length > 0) 
-	{
-		for (int i = 0; i < ecs->components->changed_components->sparse_index_length; ++i)
-		{
-			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index[i]};
-
-			whisker_ecs_c_sort_component_array(ecs->components, component_id);
-			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
-		}
-
-		ecs->components->changed_components->sparse_index_length = 0;
-    	ecs->components->changed_components->dense_length = 0;
-	}
+	whisker_ecs_update_process_changed_components_(ecs);
 	
 	// process entity actions
 	whisker_ecs_e_process_deferred(ecs->entities);
 }
 
-// register a process phase for use by the system scheduler
-// note: update_rate_sec set to 0 = uncapped processing with variable delta time
-whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec)
+void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
+	if (ecs->components->changed_components->sparse_index_length > 0) 
+	{
+		whisker_arr_ensure_alloc(ecs->component_sort_requests, ecs->components->changed_components->sparse_index_length);
 
-	// add component ID to system's process phase list
-	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
+		for (int i = 0; i < ecs->components->changed_components->sparse_index_length; ++i)
+		{
+			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index[i]};
 
-	return component_id;
+			struct whisker_ecs_component_sort_request *sort_request = whisker_mem_xcalloc_t(1, *sort_request);
+			sort_request->components = ecs->components;
+			sort_request->component_id = component_id;
+			ecs->component_sort_requests[ecs->component_sort_requests_length++] = sort_request;
+
+			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
+
+			whisker_tp_queue_work(ecs->general_thread_pool, whisker_ecs_sort_component_thread_func_, sort_request);
+		}
+
+		whisker_tp_wait_work(ecs->general_thread_pool);
+
+		ecs->components->changed_components->sparse_index_length = 0;
+    	ecs->components->changed_components->dense_length = 0;
+
+    	// free all sort requests
+    	for (int i = 0; i < ecs->component_sort_requests_length; ++i)
+    	{
+    		free(ecs->component_sort_requests[i]);
+    	}
+    	ecs->component_sort_requests_length = 0;
+	}
 }
+
+void whisker_ecs_sort_component_thread_func_(void *component_sort_request)
+{
+	struct whisker_ecs_component_sort_request *sort_request = component_sort_request;
+	whisker_ecs_c_sort_component_array(sort_request->components, sort_request->component_id);
+}
+
 
 /*******************************
 *  entity shortcut functions  *
