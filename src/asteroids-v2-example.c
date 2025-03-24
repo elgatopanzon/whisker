@@ -12,8 +12,8 @@
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
 
-const int asteroids_screen_width = 800;
-const int asteroids_screen_height = 800;
+const int asteroids_screen_width = 2000;
+const int asteroids_screen_height = 2000;
 const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (float) asteroids_screen_height / 2};
 #define DRAW_FPS false
 #define DRAW_FPS_AVG_SAMPLES 20
@@ -52,7 +52,7 @@ typedef enum ASTEROIDS_PLAYER_STATE
 #define ASTEROID_VELOCITY_MAX 300
 #define ASTEROID_RANDOM_ANGLE 30 * DEG2RAD
 #define ASTEROID_OFF_SCREEN_PAD 128 
-#define ASTEROID_SPAWN_RATE 0.6f 
+#define ASTEROID_SPAWN_RATE 0.01f 
 #define ASTEROID_SPAWN_START 4
 #define ASTEROID_RADIUS 16 
 #define ASTEROID_SCORE 10 
@@ -155,10 +155,10 @@ void asteroids_system_velocity_2d(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "vel_2d", "pos_2d", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		Vector2 *vel_2d = itor->read[0];
-		Vector2 *pos_2d = itor->write[1];
+		Vector2 *vel_2d = whisker_ecs_itor_get(itor, 0);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 1);
 
 		/* debug_log(DEBUG, velocity_2d, "velocity_2d %zu pos %fx%f vel %fx%f", itor->entity_id, pos_2d->x, pos_2d->y, vel_2d->x, vel_2d->y); */
 
@@ -171,9 +171,9 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "system_asteroid_spawn", "system_asteroid_spawn_time", "pos_2d,vel_2d,ast_size,radius,rot,rot_v,ctime,t_ast,t_screen_cull");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		double *system_asteroid_spawn_time = itor->read[1];
+		double *system_asteroid_spawn_time = whisker_ecs_itor_get(itor, 1);
 
 		double time = GetTime();
 
@@ -238,10 +238,10 @@ void asteroids_system_rotation_velocity(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "rot_v", "rot", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		float *rot_v = itor->read[0];
-		float *rot = itor->write[1];
+		float *rot_v = whisker_ecs_itor_get(itor, 0);
+		float *rot = whisker_ecs_itor_get(itor, 1);
 
 		*rot += *rot_v * context->delta_time;
 	}
@@ -251,10 +251,10 @@ void asteroids_system_movement_direction(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_move_dir,rot", "pos_2d", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		float *rot = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
+		float *rot = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
 
 		float radians = DEG2RAD * (*rot + 90.0f);
 		pos_2d->x += PROJECTILE_VELOCITY * cos(radians) * context->delta_time;
@@ -266,14 +266,14 @@ void asteroids_system_player_controller(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,p_state,pos_2d", "rot,rot_v,vel_2d,fire_time", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
-		float *rot = itor->write[3];
-		float *rot_v = itor->write[4];
-		Vector2 *vel_2d = itor->write[5];
-		double *fire_time = itor->write[6];
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
+		float *rot = whisker_ecs_itor_get(itor, 3);
+		float *rot_v = whisker_ecs_itor_get(itor, 4);
+		Vector2 *vel_2d = whisker_ecs_itor_get(itor, 5);
+		double *fire_time = whisker_ecs_itor_get(itor, 6);
 
 		if (IsKeyPressed(KEY_R)) {
 			asteroids_game_state = ASTEROIDS_GAME_STATE_END;
@@ -320,9 +320,9 @@ void asteroids_system_screen_wrap(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_screen_wrap", "pos_2d", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		Vector2 *pos_2d = itor->write[1];
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 1);
 
 		if (
 				pos_2d->x < 0 ||
@@ -357,10 +357,10 @@ void asteroids_system_player_death_on_life_depleted(whisker_ecs_system_context *
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,life", "p_state", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		int *life = itor->read[1];
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[2];
+		int *life = whisker_ecs_itor_get(itor, 1);
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 2);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_DEFAULT && *life <= 0) {
 			debug_log(DEBUG, system:player_death_on_life_depleted, "");
@@ -374,10 +374,10 @@ void asteroids_system_player_hit_cooldown(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,hit_time,p_state", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		double *hit_time = itor->read[1];
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[2];
+		double *hit_time = whisker_ecs_itor_get(itor, 1);
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 2);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_COOLDOWN && *hit_time + PLAYER_HIT_COOLDOWN < GetTime()) {
 			debug_log(DEBUG, system:player_hit_cooldown, "returning to default state");
@@ -399,10 +399,10 @@ void asteroids_system_collision(whisker_ecs_system_context *context)
 	size_t count = 0;
 	struct asteroids_system_collision_entity entities[entity_count];
 
-	while (whisker_ecs_s_iterate(context, itor_outer)) 
+	while (whisker_ecs_s_iterate(itor_outer)) 
 	{
-		Vector2 *pos_2d = itor_outer->read[0];
-		float *radius = itor_outer->read[1];
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor_outer, 0);
+		float *radius = whisker_ecs_itor_get(itor_outer, 1);
 		entities[count] = (struct asteroids_system_collision_entity) {
 			.id = itor_outer->entity_id,
 			.pos_2d = pos_2d,
@@ -453,7 +453,7 @@ void asteroids_system_collision_cull(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "collision", "", "t_cull");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
 		whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], itor->entity_id);
 	}
@@ -463,9 +463,9 @@ void asteroids_system_destroy_offscreen(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_screen_cull,pos_2d", "", "t_cull");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		Vector2 *pos_2d = itor->read[1];
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 1);
 
 		if (pos_2d->x < -(ASTEROID_OFF_SCREEN_PAD) ||
 			pos_2d->y < -(ASTEROID_OFF_SCREEN_PAD) ||
@@ -484,9 +484,9 @@ void asteroids_system_projectile_collide_destroy(whisker_ecs_system_context *con
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "collision", "", "t_cull,t_ast_hit,t_bullet,t_ast");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		asteroids_component_collision *collision = itor->read[0];
+		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
 		if (!whisker_ecs_has(context->components, itor->component_ids_opt[2], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[3], collision->entity_b))
 		{
@@ -506,10 +506,10 @@ void asteroids_system_asteroid_respawn_on_hit(whisker_ecs_system_context *contex
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_ast_hit,ast_size,pos_2d", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_ASTEROID_SIZE *ast_size = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
+		ASTEROIDS_ASTEROID_SIZE *ast_size = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
 
 		int spawn_count = 0;
 
@@ -545,9 +545,9 @@ void asteroids_system_asteroid_hit_asteroid(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "collision", "", "t_ast,vel_2d,rot_v,pos_2d");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		asteroids_component_collision *collision = itor->read[0];
+		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
 		if (!whisker_ecs_has(context->components, itor->component_ids_opt[0], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[0], collision->entity_b))
 		{
@@ -586,18 +586,18 @@ void asteroids_system_asteroid_score(whisker_ecs_system_context *context)
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_ast_hit,ast_size", "", "score");
 
 	int add_score = 0;
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_ASTEROID_SIZE *ast_size = itor->read[1];
+		ASTEROIDS_ASTEROID_SIZE *ast_size = whisker_ecs_itor_get(itor, 1);
 
 		add_score += (int)*ast_size * ASTEROID_SCORE;
 	}
 
 	whisker_ecs_system_iterator *itor_score = whisker_ecs_s_get_iterator(context, 1, "score", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor_score)) 
+	while (whisker_ecs_s_iterate(itor_score)) 
 	{
-		int *score = itor_score->read[0];
+		int *score = whisker_ecs_itor_get(itor_score, 0);
 		*score += add_score;
 	}
 }
@@ -606,9 +606,9 @@ void asteroids_system_player_hit_asteroid(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "collision", "", "p_state,hit_time,hit_collision,life,ast_size,vel_2d,rot_v,t_ast,t_player");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		asteroids_component_collision *collision = itor->read[0];
+		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
 		if (!whisker_ecs_has(context->components, itor->component_ids_opt[7], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[8], collision->entity_b))
 		{
@@ -656,13 +656,13 @@ void asteroids_system_player_hit_nudge(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,p_state,hit_collision,pos_2d", "rot_v,vel_2d", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
-		asteroids_component_collision *hit_collision = itor->read[2];
-		Vector2 *pos_2d = itor->read[3];
-		float *rot_v = itor->write[4];
-		Vector2 *vel_2d = itor->write[5];
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 1);
+		asteroids_component_collision *hit_collision = whisker_ecs_itor_get(itor, 2);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 3);
+		float *rot_v = whisker_ecs_itor_get(itor, 4);
+		Vector2 *vel_2d = whisker_ecs_itor_get(itor, 5);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
 			debug_log(DEBUG, system:player_hit_nudge, "nudging player from the hit");
@@ -685,9 +685,9 @@ void asteroids_system_player_hit_to_recover(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,p_state", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 1);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
 			debug_log(DEBUG, system:player_hit_to_recover, "");
@@ -700,7 +700,7 @@ void asteroids_system_entity_deferred_destroy(whisker_ecs_system_context *contex
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_cull", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
 		/* debug_printf("destroying entity %zu %d\n", itor->entity_id); */
 
@@ -712,11 +712,11 @@ void asteroids_system_draw_asteroid(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_ast,rot,pos_2d,ast_size", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		float *rot = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
-		ASTEROIDS_ASTEROID_SIZE *ast_size = itor->read[3];
+		float *rot = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
+		ASTEROIDS_ASTEROID_SIZE *ast_size = whisker_ecs_itor_get(itor, 3);
 
 		// skip offscreen asteroids from drawing
 		if (pos_2d->x < -(ASTEROID_OFF_SCREEN_PAD) ||
@@ -738,10 +738,10 @@ void asteroids_system_draw_projectile(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_bullet,rot,pos_2d", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		float *rot = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
+		float *rot = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
 
 		Rectangle rect = {};
 		rect.x = pos_2d->x;
@@ -759,12 +759,12 @@ void asteroids_system_draw_player(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,rot,pos_2d,hit_time,p_state", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		float *rot = itor->read[1];
-		Vector2 *pos_2d = itor->read[2];
-		double *hit_time = itor->read[3];
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[4];
+		float *rot = whisker_ecs_itor_get(itor, 1);
+		Vector2 *pos_2d = whisker_ecs_itor_get(itor, 2);
+		double *hit_time = whisker_ecs_itor_get(itor, 3);
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 4);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD)
 		{
@@ -807,11 +807,11 @@ void asteroids_system_draw_hud(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,p_state,score,life", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
-		int *score = itor->read[2];
-		int *life = itor->read[3];
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 1);
+		int *score = whisker_ecs_itor_get(itor, 2);
+		int *life = whisker_ecs_itor_get(itor, 3);
 
 		const int font_size = 64;
 		const Color black = Fade(BLACK, 0.8f);
@@ -851,13 +851,13 @@ void asteroids_system_draw_game_over(whisker_ecs_system_context *context)
 {
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_player,p_state,score,life,hit_time,ctime", "", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
-		ASTEROIDS_PLAYER_STATE *p_state = itor->read[1];
-		int *score = itor->read[2];
-		int *life = itor->read[3];
-		double *hit_time = itor->read[4];
-		double *ctime = itor->read[5];
+		ASTEROIDS_PLAYER_STATE *p_state = whisker_ecs_itor_get(itor, 1);
+		int *score = whisker_ecs_itor_get(itor, 2);
+		int *life = whisker_ecs_itor_get(itor, 3);
+		double *hit_time = whisker_ecs_itor_get(itor, 4);
+		double *ctime = whisker_ecs_itor_get(itor, 5);
 
 		if (*p_state == ASTEROIDS_PLAYER_STATE_DEAD)
 		{
@@ -885,10 +885,10 @@ void asteroids_system_draw_frame_time(whisker_ecs_system_context *context)
 
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 1, "system_draw_frame_time", "frametime", "");
 
-	while (whisker_ecs_s_iterate(context, itor)) 
+	while (whisker_ecs_s_iterate(itor)) 
 	{
 		float current_frametime = context->delta_time * 1000;
-		asteroids_component_frametime *frametime = itor->write[1];
+		asteroids_component_frametime *frametime = whisker_ecs_itor_get(itor, 1);
 
 		// update frametime samples
 		frametime->samples[frametime->index] = current_frametime;
@@ -948,7 +948,7 @@ void asteroids_system_draw_frame_time(whisker_ecs_system_context *context)
 	}
 }
 
-#define NEARBLACK CLITERAL(Color){15, 15, 15, 266} 
+#define NEARBLACK CLITERAL(Color){15, 15, 15, 10} 
 void asteroids_system_raylib_start_drawing(whisker_ecs_system_context *context)
 {
 	BeginDrawing();
@@ -993,7 +993,7 @@ void asteroids_game_init()
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
 
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
+	/* whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0); */
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);

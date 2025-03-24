@@ -85,12 +85,7 @@ typedef struct whisker_ecs_system_iterator
 
 	// component arrays, including read/write/optional
 	whisker_arr_declare(whisker_sparse_set *, component_arrays);
-
-	// read/write arrays for the components of the current iteration step
-	whisker_arr_declare(void *, read);
-	whisker_arr_declare(void *, write);
-	whisker_arr_declare(void *, opt);
-
+	whisker_arr_declare(size_t, component_arrays_cursors);
 } whisker_ecs_system_iterator;
 
 typedef struct whisker_ecs_system_context
@@ -183,8 +178,10 @@ int whisker_ecs_s_get_component_name_index(whisker_ecs_system *system, char* com
 whisker_ecs_system_iterator *whisker_ecs_s_create_iterator();
 whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components);
 void whisker_ecs_s_free_iterator(whisker_ecs_system_iterator *itor);
-bool whisker_ecs_s_iterate(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor);
+bool whisker_ecs_s_iterate(whisker_ecs_system_iterator *itor);
 void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components);
+
+#define whisker_ecs_itor_get(itor, idx) itor->component_arrays[idx]->dense + itor->component_arrays_cursors[idx] * itor->component_arrays[idx]->element_size
 
 #endif /* WHISKER_ECS_SYSTEM_H */
 
