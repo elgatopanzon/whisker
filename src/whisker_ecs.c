@@ -202,14 +202,13 @@ void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 		{
 			whisker_ecs_entity_id component_id = {.id = ecs->components->changed_components->sparse_index[i]};
 
-			struct whisker_ecs_component_sort_request *sort_request = whisker_mem_xcalloc_t(1, *sort_request);
-			sort_request->components = ecs->components;
-			sort_request->component_id = component_id;
-			ecs->component_sort_requests[ecs->component_sort_requests_length++] = sort_request;
+			size_t sort_request_idx = ecs->component_sort_requests_length++;
+			ecs->component_sort_requests[sort_request_idx].components = ecs->components;
+			ecs->component_sort_requests[sort_request_idx].component_id = component_id;
 
 			whisker_ss_set_dense_index(ecs->components->changed_components, component_id.id, UINT64_MAX);
 
-			whisker_tp_queue_work(ecs->general_thread_pool, whisker_ecs_sort_component_thread_func_, sort_request);
+			whisker_tp_queue_work(ecs->general_thread_pool, whisker_ecs_sort_component_thread_func_, &ecs->component_sort_requests[sort_request_idx]);
 		}
 
 		whisker_tp_wait_work(ecs->general_thread_pool);
@@ -217,11 +216,6 @@ void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 		ecs->components->changed_components->sparse_index_length = 0;
     	ecs->components->changed_components->dense_length = 0;
 
-    	// free all sort requests
-    	for (int i = 0; i < ecs->component_sort_requests_length; ++i)
-    	{
-    		free(ecs->component_sort_requests[i]);
-    	}
     	ecs->component_sort_requests_length = 0;
 	}
 }

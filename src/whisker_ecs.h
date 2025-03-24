@@ -25,7 +25,7 @@ typedef struct whisker_ecs
 	whisker_ecs_components *components;
 	whisker_ecs_systems *systems;
 	whisker_thread_pool *general_thread_pool;
-	whisker_arr_declare(struct whisker_ecs_component_sort_request *, component_sort_requests);
+	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
 } whisker_ecs;
 
 
