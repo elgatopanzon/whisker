@@ -175,11 +175,6 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 				if (whisker_ecs_c_has_component(ecs->components, component_id, action->id))
 				{
 					whisker_ecs_c_remove_component(ecs->components, component_id, action->id, false);
-
-					if (!whisker_ss_contains(ecs->components->changed_components, component_id.id))
-					{
-						whisker_ss_set(ecs->components->changed_components, component_id.id, &component_id);
-					}
 				}
 			}
 		}
@@ -370,23 +365,12 @@ void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_
 void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
 	whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
-
-	if (!whisker_ss_contains(components->changed_components, component_id.id))
-	{
-		whisker_ss_set(components->changed_components, component_id.id, &component_id);
-	}
-
 	return value;
 }
 
 // remove the component by ID from the given entity
 void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
-	if (!whisker_ss_contains(components->changed_components, component_id.id))
-	{
-		whisker_ss_set(components->changed_components, component_id.id, &component_id);
-	}
-
 	whisker_ecs_c_remove_component(components, component_id, entity_id, false);
 }
 

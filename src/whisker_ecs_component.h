@@ -33,6 +33,7 @@ void whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t c
 whisker_sparse_set *whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 void whisker_ecs_c_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
+void whisker_ecs_c_set_component_array_changed(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 
 // component management
 void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);

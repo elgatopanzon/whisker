@@ -112,6 +112,16 @@ void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whis
 	whisker_ss_sort(whisker_ecs_c_get_component_array(components, component_id));
 }
 
+// mark a component array as having been changed
+// note: this is used to process deferred actions e.g. sort
+void whisker_ecs_c_set_component_array_changed(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
+{
+	if (!whisker_ss_contains(components->changed_components, component_id.id))
+	{
+		whisker_ss_set(components->changed_components, component_id.id, &component_id);
+	}
+}
+
 /************************************
 *  component management functions  *
 ************************************/
@@ -143,6 +153,7 @@ void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs
 
 	// set the component
 	whisker_ss_set(component_array, entity_id.index, component);
+	whisker_ecs_c_set_component_array_changed(components, component_id);
 
 	if (sort_required)
 	{
@@ -168,6 +179,7 @@ void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_
 
 	// remove component
 	whisker_ss_remove(component_array, entity_id.index);
+	whisker_ecs_c_set_component_array_changed(components, component_id);
 
 	if (sort)
 	{
