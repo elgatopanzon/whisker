@@ -67,7 +67,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_sort_component_array(c, comp6);
 
 	// request an iterator with the created components
-	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
 	whisker_sparse_set *comp2_ss = whisker_ecs_c_get_component_array(c, itor->component_ids_rw[1]);
@@ -126,7 +126,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_c_sort_component_array(c, comp6);
 
 	// get the iterator again
-	itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = whisker_ecs_s_get_iterator(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	whisker_ecs_entity_id expected_entities[] = {10,15,19};
 	while (whisker_ecs_s_iterate(itor)) 
@@ -137,7 +137,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	printf("itor test: iteration ended\n");
 
 	// test iterator reset
-	itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = whisker_ecs_s_get_iterator(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	while (whisker_ecs_s_iterate(itor)) 
 	{
@@ -145,7 +145,7 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	}
 
 	// get another iterator with a single component
-	itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 1, "comp1", "", "");
+	itor = whisker_ecs_s_get_iterator(&sys->thread_contexts[0], 1, "comp1", "", "");
 
 	whisker_ecs_entity_id expected_entities_smaller[] = {10,11,15,16,19};
 	while (whisker_ecs_s_iterate(itor)) 

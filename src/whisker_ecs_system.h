@@ -130,7 +130,7 @@ typedef struct whisker_ecs_system
 	whisker_ecs_entities *entities;
 	// whisker_sparse_set *iterators;
 
-	whisker_arr_declare(whisker_ecs_system_context *, thread_contexts);
+	whisker_arr_declare(whisker_ecs_system_context, thread_contexts);
 	whisker_thread_pool *thread_pool;
 } whisker_ecs_system;
 
@@ -154,8 +154,12 @@ whisker_ecs_systems * whisker_ecs_s_create_and_init_systems();
 void whisker_ecs_s_free_systems(whisker_ecs_systems *systems);
 void whisker_ecs_s_free_systems_all(whisker_ecs_systems *systems);
 
-whisker_ecs_system_context *whisker_ecs_s_create_system_context(whisker_ecs_system *system);
+// system context functions
+whisker_ecs_system_context *whisker_ecs_s_create_system_context();
+whisker_ecs_system_context *whisker_ecs_s_create_and_init_system_context(whisker_ecs_system *system);
+void whisker_ecs_s_init_system_context(whisker_ecs_system_context *context, whisker_ecs_system *system);
 void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context);
+void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context);
 
 // system operation functions
 whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system);

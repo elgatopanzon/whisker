@@ -49,27 +49,63 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 	free(systems->process_phases);
 }
 
+
+/******************************
+*  system context functions  *
+******************************/
 // create and init an instance of a system context
-whisker_ecs_system_context *whisker_ecs_s_create_system_context(whisker_ecs_system *system)
+whisker_ecs_system_context *whisker_ecs_s_create_and_init_system_context(whisker_ecs_system *system)
 {
 	whisker_ecs_system_context *c = whisker_mem_xcalloc(1, sizeof(*c));
-
-	// create iterators sparse set
-	c->iterators = whisker_ss_create_t(whisker_ecs_system_iterator);
-
-	// set system pointers
-	c->components = system->components;
-	c->entities = system->entities;
-	c->process_phase_time_step = system->process_phase_time_step;
-	c->system_entity_id = system->entity_id;
-
-	c->delta_time = 0;
-	c->thread_id = 0;
-	c->thread_max = 0;
+	whisker_ecs_s_init_system_context(c, system);
 
 	return c;
 }
 
+// init an instance of a system context
+void whisker_ecs_s_init_system_context(whisker_ecs_system_context *context, whisker_ecs_system *system)
+{
+	// create iterators sparse set
+	context->iterators = whisker_ss_create_t(whisker_ecs_system_iterator);
+
+	// set system pointers
+	context->components = system->components;
+	context->entities = system->entities;
+	context->process_phase_time_step = system->process_phase_time_step;
+	context->system_entity_id = system->entity_id;
+
+	context->delta_time = 0;
+	context->thread_id = 0;
+	context->thread_max = 0;
+}
+
+// deallocate data for system context instance
+void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
+{
+	if (context->iterators != NULL)
+	{
+		for (int i = 0; i < context->iterators->sparse_index_length; ++i)
+		{
+			whisker_ecs_system_iterator itor = ((whisker_ecs_system_iterator*)context->iterators->dense)[i];
+
+			whisker_ecs_s_free_iterator(&itor);
+		}
+
+		whisker_ss_free_all(context->iterators);
+	}
+}
+
+// deallocate a system context instance
+void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context)
+{
+	whisker_ecs_s_free_system_context(context);
+	free(context);
+}
+
+
+/********************************
+*  system operation functions  *
+********************************/
 // regiser a system in the systems container
 whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
 {
@@ -89,10 +125,10 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 	// thread's context
 	for (int i = 0; i < system.thread_count + 1; ++i)
 	{
-		whisker_ecs_system_context *c = whisker_ecs_s_create_system_context(&system);
-		c->thread_id = i;
-		c->thread_max = system.thread_count;
-		system.thread_contexts[system.thread_contexts_length++] = c;
+		size_t thread_context_idx = system.thread_contexts_length++;
+		whisker_ecs_s_init_system_context(&system.thread_contexts[thread_context_idx], &system);
+		system.thread_contexts[thread_context_idx].thread_id = i;
+		system.thread_contexts[thread_context_idx].thread_max = system.thread_count;
 	}
 
 	// create thread pool if we want threads for this system
@@ -113,7 +149,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 {
 	for (int i = 0; i < system->thread_contexts_length; ++i)
 	{
-		whisker_ecs_s_free_system_context(system->thread_contexts[i]);
+		whisker_ecs_s_free_system_context(&system->thread_contexts[i]);
 	}
 
 	free(system->thread_contexts);
@@ -124,23 +160,6 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 	}
 }
 
-// deallocate a system context instance
-void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
-{
-	if (context->iterators != NULL)
-	{
-		for (int i = 0; i < context->iterators->sparse_index_length; ++i)
-		{
-			whisker_ecs_system_iterator itor = ((whisker_ecs_system_iterator*)context->iterators->dense)[i];
-
-			whisker_ecs_s_free_iterator(&itor);
-		}
-
-		whisker_ss_free_all(context->iterators);
-	}
-
-	free(context);
-}
 
 
 /*****************************
@@ -159,7 +178,7 @@ static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ec
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
     whisker_ecs_system *default_system = &systems->systems[systems->system_id];
-    whisker_ecs_system_context *default_context = default_system->thread_contexts[0];
+    whisker_ecs_system_context *default_context = &default_system->thread_contexts[0];
 
     for (int i = 0; i < systems->process_phases_length; ++i)
     {
@@ -216,7 +235,7 @@ static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ec
 
 static void system_update_execute_system(whisker_ecs_system *system)
 {
-    whisker_ecs_system_context *context = system->thread_contexts[0];
+    whisker_ecs_system_context *context = &system->thread_contexts[0];
     system_update_set_context_values(context, system);
     context->system_ptr(context);
 }
@@ -226,7 +245,7 @@ static void system_update_queue_system_work(whisker_ecs_system *system)
 {
     for (int ti = 0; ti < system->thread_count; ++ti)
     {
-        whisker_ecs_system_context *context = system->thread_contexts[ti];
+        whisker_ecs_system_context *context = &system->thread_contexts[ti];
         system_update_set_context_values(context, system);
         whisker_tp_queue_work(system->thread_pool, whisker_ecs_s_update_system_thread_, context);
     }
