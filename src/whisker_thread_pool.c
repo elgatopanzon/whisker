@@ -37,19 +37,27 @@ whisker_thread_pool *whisker_tp_create()
 }
 
 // create and init a thread pool instance with the given thread count
-whisker_thread_pool *whisker_tp_create_and_init(size_t count)
+whisker_thread_pool *whisker_tp_create_and_init(size_t count, char *name)
 {
 	whisker_thread_pool *tp_new = whisker_tp_create();
-	whisker_tp_init(tp_new, count);
+	whisker_tp_init(tp_new, count, name);
 
 	return tp_new;
 }
 
 // init an instance of a thread pool
-void whisker_tp_init(whisker_thread_pool *tp, size_t count)
+void whisker_tp_init(whisker_thread_pool *tp, size_t count, char *name)
 {
 	// create the work array
 	whisker_arr_init_t(tp->work_queue, WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE);
+
+	// set default thread pool name if NULL
+	if (!name)
+	{
+		name = "default_thread_pool";
+	}
+	tp->name = whisker_mem_xcalloc(1, strlen(name) + 1);
+	strncpy(tp->name, name, strlen(name));
 
 	// set minimum to 1 thread
 	if (count == 0)
@@ -109,6 +117,7 @@ void whisker_tp_free_all(whisker_thread_pool *tp)
 		free(tp->work_queue[i]);
 	}
 
+	free(tp->name);
 	free(tp->work_queue);
 	free(tp->thread_contexts);
 	free(tp);
@@ -200,7 +209,7 @@ void *whisker_tp_worker_func_(void *arg)
 	whisker_thread_pool *tp = context->thread_pool;
 	whisker_thread_pool_work *work;
 
-	debug_log(DEBUG, thread pool, "thread %zu ready", context->thread_id);
+	debug_log(DEBUG, thread_pool, "%s: thread %zu ready", tp->name, context->thread_id);
 
 	// infinitely loop looking for and executing work
 	while (true) 
@@ -244,7 +253,7 @@ void *whisker_tp_worker_func_(void *arg)
 	}
 
 	// remove thread from thread pool
-	debug_log(DEBUG, thread pool, "thread %zu stopping", context->thread_id);
+	debug_log(DEBUG, thread_pool, "%s: thread %zu stopping", tp->name, context->thread_id);
 
 	tp->thread_count--;
 	pthread_cond_signal(&tp->thread_working_signal);

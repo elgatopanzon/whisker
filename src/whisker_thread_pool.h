@@ -25,6 +25,9 @@ typedef struct whisker_thread_pool_work
 
 typedef struct whisker_thread_pool
 {
+	// optional friendly name for the thread pool
+	char *name;
+
 	// thread count in pool
 	size_t thread_count;
 	size_t thread_count_working;
@@ -52,8 +55,8 @@ int whisker_tp_system_core_count();
 
 // management functions
 whisker_thread_pool *whisker_tp_create();
-whisker_thread_pool *whisker_tp_create_and_init(size_t count);
-void whisker_tp_init(whisker_thread_pool *tp, size_t count);
+whisker_thread_pool *whisker_tp_create_and_init(size_t count, char *name);
+void whisker_tp_init(whisker_thread_pool *tp, size_t count, char *name);
 void whisker_tp_free(whisker_thread_pool *tp);
 void whisker_tp_free_all(whisker_thread_pool *tp);
 
