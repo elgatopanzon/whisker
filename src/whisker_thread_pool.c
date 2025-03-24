@@ -97,8 +97,8 @@ void whisker_tp_init(whisker_thread_pool *tp, size_t count, char *name)
 	}
 }
 
-// deallocate a thread pool instance
-void whisker_tp_free_all(whisker_thread_pool *tp)
+// stop a thread pool instance and deallocate
+void whisker_tp_free(whisker_thread_pool *tp)
 {
 	pthread_mutex_lock(&tp->thread_mutex_worker);
 	tp->stop = true;
@@ -120,6 +120,12 @@ void whisker_tp_free_all(whisker_thread_pool *tp)
 	free(tp->name);
 	free(tp->work_queue);
 	free(tp->thread_contexts);
+}
+
+// deallocate a thread pool instance and stop all threads
+void whisker_tp_free_all(whisker_thread_pool *tp)
+{
+	whisker_tp_free(tp);
 	free(tp);
 }
 
