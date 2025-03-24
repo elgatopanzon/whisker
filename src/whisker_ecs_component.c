@@ -136,7 +136,7 @@ void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ec
 }
 
 // set a component by ID on the given entity
-void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component, bool sort)
+void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
 {
 	// grow array of sparse sets if required
 	whisker_ecs_c_grow_components_(components, component_id.index + 1);
@@ -149,16 +149,10 @@ void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs
 
 	// get the component array
 	whisker_sparse_set* component_array = whisker_ecs_c_get_component_array(components, component_id);
-	bool sort_required = (sort && !whisker_ss_contains(component_array, entity_id.index));
 
 	// set the component
 	whisker_ss_set(component_array, entity_id.index, component);
 	whisker_ecs_c_set_component_array_changed(components, component_id);
-
-	if (sort_required)
-	{
-		whisker_ecs_c_sort_component_array(components, component_id);
-	}
 }
 
 // check if the provided entity has a component by ID
@@ -172,7 +166,7 @@ bool whisker_ecs_c_has_component(whisker_ecs_components *components, whisker_ecs
 }
 
 // remove a component by ID from an entity
-void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, bool sort)
+void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	// get component array
 	whisker_sparse_set* component_array = whisker_ecs_c_get_component_array(components, component_id);
@@ -180,9 +174,18 @@ void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_
 	// remove component
 	whisker_ss_remove(component_array, entity_id.index);
 	whisker_ecs_c_set_component_array_changed(components, component_id);
+}
 
-	if (sort)
+// remove all of the components on an entity
+void whisker_ecs_c_remove_all_components(whisker_ecs_components *components, whisker_ecs_entity_id entity_id)
+{
+	for (int ci = 0; ci < components->components_length; ++ci)
 	{
-		whisker_ecs_c_sort_component_array(components, component_id);
+		whisker_ecs_entity_id component_id = whisker_ecs_e_id(ci);
+
+		if (components->components[ci] != NULL)
+		{
+			whisker_ecs_c_remove_component(components, component_id, entity_id);
+		}
 	}
 }

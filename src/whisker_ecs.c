@@ -168,15 +168,7 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 
 		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
 		{
-			for (int ci = 0; ci < ecs->components->components_length; ++ci)
-			{
-				whisker_ecs_entity_id component_id = whisker_ecs_e_id(ci);
-
-				if (whisker_ecs_c_has_component(ecs->components, component_id, action->id))
-				{
-					whisker_ecs_c_remove_component(ecs->components, component_id, action->id, false);
-				}
-			}
+			whisker_ecs_c_remove_all_components(ecs->components, action->id);
 		}
 	}
 
@@ -364,14 +356,14 @@ void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_
 // note: this will handle the creation of the underlying component array
 void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value, false);
+	whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value);
 	return value;
 }
 
 // remove the component by ID from the given entity
 void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_c_remove_component(components, component_id, entity_id, false);
+	whisker_ecs_c_remove_component(components, component_id, entity_id);
 }
 
 // check if an entity has the given component by ID

@@ -57,11 +57,14 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_entity_id comp6 = whisker_ecs_e_create_named(e, "comp6");
 
 	int val1 = 4345;
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(12), &val1, true);
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(12), &val1);
+	whisker_ecs_c_sort_component_array(c, comp2);
 	int val2 = 98798;
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(54), &val2, true);
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(54), &val2);
+	whisker_ecs_c_sort_component_array(c, comp5);
 	int val3 = 321;
-	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(88), &val3, true);
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(88), &val3);
+	whisker_ecs_c_sort_component_array(c, comp6);
 
 	// request an iterator with the created components
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
@@ -81,39 +84,46 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	ck_assert_int_eq(321, val3_obtained);
 
 	// set some more components and do a demo iteration
-	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(10), &(int){ 123 });
 
-	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 	/* whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }); */
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp6, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 });
 
-	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(15), &(int){ 123 });
 
-	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 });
 	/* whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 	/* whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 	/* whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 
-	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 }, true);
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp1, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp2, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 });
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(19), &(int){ 123 });
 
-	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(20), &(int){ 123 }, true);
+	whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(20), &(int){ 123 });
+
+	whisker_ecs_c_sort_component_array(c, comp1);
+	whisker_ecs_c_sort_component_array(c, comp2);
+	whisker_ecs_c_sort_component_array(c, comp3);
+	whisker_ecs_c_sort_component_array(c, comp4);
+	whisker_ecs_c_sort_component_array(c, comp5);
+	whisker_ecs_c_sort_component_array(c, comp6);
 
 	// get the iterator again
 	itor = whisker_ecs_s_get_iterator(sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
