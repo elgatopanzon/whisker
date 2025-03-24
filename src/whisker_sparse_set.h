@@ -27,7 +27,7 @@ typedef struct whisker_sparse_set
 	whisker_arr_declare(void, dense);
 	void *swap_buffer;
 	size_t element_size;
-	size_t *length;
+	_Atomic size_t *length;
 } whisker_sparse_set;
 
 #define whisker_ss_create_t(t) whisker_ss_create_and_init_f(sizeof(t))

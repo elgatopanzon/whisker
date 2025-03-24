@@ -4,9 +4,7 @@
  * @created     : Wednesday Feb 05, 2025 12:38:49 CST
  */
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include "whisker_std.h"
 #include "whisker_debug.h"
 #include "whisker_memory.h"
 
@@ -15,10 +13,10 @@
 
 // helper macros
 #define whisker_arr_declare(t, name) \
-	t *name; size_t name##_size; size_t name##_length;
+	t *name; _Atomic size_t name##_size; _Atomic size_t name##_length;
 
 #define whisker_arr_declare_struct(t, name) \
-	struct name { t *arr; size_t arr_size; size_t arr_length; };
+	struct name { t *arr; _Atomic size_t arr_size; _Atomic size_t arr_length; };
 
 #define whisker_arr_init_t(name, count) \
 	name = whisker_mem_xcalloc_t((count), *name); \

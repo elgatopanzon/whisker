@@ -53,6 +53,10 @@ void whisker_ecs_e_init_entities(whisker_ecs_entities *entities)
 
 	// create entity names trie
 	entities->entity_names = whisker_mem_xcalloc_t(1, *entities->entity_names);
+
+	// init pthread mutexes
+	pthread_mutex_init(&entities->deferred_actions_mutex, NULL);
+	pthread_mutex_init(&entities->create_entity_mutex, NULL);
 }
 
 // free arrays on instance of entities container
@@ -73,6 +77,8 @@ void whisker_ecs_e_free_entities(whisker_ecs_entities *entities)
 	whisker_trie_free_nodes(entities->entity_names);
 	free(entities->entity_names);
 	free(entities->deferred_actions);
+	pthread_mutex_destroy(&entities->deferred_actions_mutex);
+	pthread_mutex_destroy(&entities->create_entity_mutex);
 }
 
 // free entity container and containing arrays
@@ -88,7 +94,13 @@ void whisker_ecs_e_free_entities_all(whisker_ecs_entities *entities)
 // request a new entity
 whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
 {
-	return whisker_ecs_e_create_(entities);
+	pthread_mutex_lock(&entities->create_entity_mutex);
+
+	whisker_ecs_entity_id e = whisker_ecs_e_create_(entities);
+
+	pthread_mutex_unlock(&entities->create_entity_mutex);
+
+	return e;
 }
 
 // creates and sets an entity, either new or recycled
@@ -149,7 +161,13 @@ void whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_
 // create entity with a name, or return an existing entity with the same name
 whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities, char *name)
 {
-	return whisker_ecs_e_create_named_(entities, name);
+	pthread_mutex_lock(&entities->create_entity_mutex);
+
+	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, name);
+
+	pthread_mutex_unlock(&entities->create_entity_mutex);
+
+	return e;
 }
 
 // create a new entity with the given name
@@ -211,12 +229,22 @@ void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id
 // note: typically it would be the end of an update
 void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
 {
-	whisker_arr_ensure_alloc_block_size(
-		entities->deferred_actions, 
-		(entities->deferred_actions_length + 1),
-		WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
-	);
-	entities->deferred_actions[entities->deferred_actions_length++] = action;
+	size_t deferred_action_idx = atomic_fetch_add(&entities->deferred_actions_length, 1);
+
+	if((deferred_action_idx + 1) * sizeof(*entities->deferred_actions) > entities->deferred_actions_size)
+	{
+		pthread_mutex_lock(&entities->deferred_actions_mutex);
+
+		whisker_arr_ensure_alloc_block_size(
+			entities->deferred_actions, 
+			(deferred_action_idx + 1),
+			WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+		);
+
+		pthread_mutex_unlock(&entities->deferred_actions_mutex);
+	}
+	
+	entities->deferred_actions[deferred_action_idx] = action;
 }
 
 // process the deferred actions stack
@@ -330,7 +358,7 @@ struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ec
 		if (entity_names[i] == 0x0)
 		{
 			// create/get entity ID for name
-			whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, entity_names + search_index);
+			whisker_ecs_entity_id e = whisker_ecs_e_create_named(entities, entity_names + search_index);
 
 			/* debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index); */
 

@@ -5,6 +5,7 @@
  */
 
 #include <pthread.h>
+#include <stdatomic.h>
 #include "whisker_std.h"
 #include "whisker_array.h"
 #include "whisker_trie.h"
@@ -98,6 +99,10 @@ typedef struct whisker_ecs_entities
 
 	// stack of deferred actions to process
 	whisker_arr_declare(whisker_ecs_entity_deferred_action, deferred_actions);
+
+	// mutexes
+	pthread_mutex_t deferred_actions_mutex;
+	pthread_mutex_t create_entity_mutex;
 } whisker_ecs_entities;
 
 // entity struct management functions

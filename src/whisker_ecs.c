@@ -116,18 +116,18 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	// add the system index component to the system entity
 	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
 
-	// HACK: do a single execution of the system to initialise the iterator
-	// why: this ensures the system's iterators initialise their component
-	// strings and underlying entities in a thread-safe way before
-	// multi-threading the system execution
-	whisker_ecs_system_context *exec_context = &system->thread_contexts[0];
-	exec_context->system_ptr = system->system_ptr;
-	exec_context->entities = system->entities;
-	exec_context->components = system->components;
-	uint64_t thread_max_back = exec_context->thread_max;
-	exec_context->thread_max = UINT64_MAX;
-	whisker_ecs_s_update_system(system, exec_context);
-	exec_context->thread_max = thread_max_back;
+	/* // HACK: do a single execution of the system to initialise the iterator */
+	/* // why: this ensures the system's iterators initialise their component */
+	/* // strings and underlying entities in a thread-safe way before */
+	/* // multi-threading the system execution */
+	/* whisker_ecs_system_context *exec_context = &system->thread_contexts[0]; */
+	/* exec_context->system_ptr = system->system_ptr; */
+	/* exec_context->entities = system->entities; */
+	/* exec_context->components = system->components; */
+	/* uint64_t thread_max_back = exec_context->thread_max; */
+	/* exec_context->thread_max = UINT64_MAX; */
+	/* whisker_ecs_s_update_system(system, exec_context); */
+	/* exec_context->thread_max = thread_max_back; */
 
 	return system;
 }
@@ -220,14 +220,14 @@ void whisker_ecs_sort_component_thread_func_(void *component_sort_request)
 // request an entity ID to be created or recycled
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities)
 {
-	return whisker_ecs_e_create_(entities);
+	return whisker_ecs_e_create(entities);
 }
 
 // request an entity ID to be created or recycled, providing a name
 // note: names are unique, creating an entity with the same name returns the existing entity if it exists
 whisker_ecs_entity_id whisker_ecs_create_named_entity(whisker_ecs_entities *entities, char* name)
 {
-	return whisker_ecs_e_create_named_(entities, name);
+	return whisker_ecs_e_create_named(entities, name);
 }
 
 // immediately destroy the given entity ID
@@ -246,7 +246,7 @@ bool whisker_ecs_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id 
 // request to create an entity, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *entities)
 {
-	whisker_ecs_entity_id e = whisker_ecs_create_entity(entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create(entities);
 	if (e.id == 0)
 	{
 		return e;
@@ -262,7 +262,7 @@ whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *e
 // request to create an entity with a name, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entities *entities, char* name)
 {
-	whisker_ecs_entity_id e = whisker_ecs_create_entity(entities);
+	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(entities, name);
 	if (e.id == 0)
 	{
 		return e;
@@ -309,7 +309,7 @@ void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ec
 // note: this will handle the creation of the underlying component array
 void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named_(entities, component_name);;
+	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(entities, component_name);;
 	if (component_id.id == 0)
 	{
 		// TODO: panic here
