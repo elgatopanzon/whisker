@@ -12,8 +12,8 @@
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
 
-const int asteroids_screen_width = 2000;
-const int asteroids_screen_height = 2000;
+const int asteroids_screen_width = 600;
+const int asteroids_screen_height = 600;
 const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (float) asteroids_screen_height / 2};
 #define DRAW_FPS false
 #define DRAW_FPS_AVG_SAMPLES 20
@@ -52,7 +52,7 @@ typedef enum ASTEROIDS_PLAYER_STATE
 #define ASTEROID_VELOCITY_MAX 300
 #define ASTEROID_RANDOM_ANGLE 30 * DEG2RAD
 #define ASTEROID_OFF_SCREEN_PAD 128 
-#define ASTEROID_SPAWN_RATE 0.01f 
+#define ASTEROID_SPAWN_RATE 0.6f 
 #define ASTEROID_SPAWN_START 4
 #define ASTEROID_RADIUS 16 
 #define ASTEROID_SCORE 10 
@@ -987,13 +987,13 @@ void asteroids_game_init()
 
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller", WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE, 0);
 
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, -1);
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, -1);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_movement_direction, "system_movement_direction", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
 
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	/* whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0); */
+	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
 	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
