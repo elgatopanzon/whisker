@@ -58,6 +58,9 @@ whisker_ecs *whisker_ecs_create()
 
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_PHASE_FINAL_RATE);
 
+	// create thread pool for general work tasks
+	new->general_thread_pool = whisker_tp_create_and_init(0, "ecs_general_tasks");
+
 	return new;
 }
 
@@ -68,6 +71,9 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	whisker_ecs_e_free_entities_all(ecs->entities);
 	whisker_ecs_c_free_components_all(ecs->components);
 	whisker_ecs_s_free_systems_all(ecs->systems);
+
+	// free thread pool
+	whisker_tp_free_all(ecs->general_thread_pool);
 
 	free(ecs);
 }
