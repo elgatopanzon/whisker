@@ -13,7 +13,7 @@
 #ifndef WHISKER_THREAD_POOL_H
 #define WHISKER_THREAD_POOL_H
 
-#define WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT 2
+#define WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE 16384 / sizeof(whisker_thread_pool_work)
 
 typedef void (*whisker_thread_pool_func)(void *arg);
 

@@ -16,13 +16,13 @@
 START_TEST(test_whisker_thread_pool_create_and_destroy)
 {
 	// create thread pool using default thread count
-	whisker_thread_pool *tp = whisker_tp_create(0);
+	whisker_thread_pool *tp = whisker_tp_create_and_init(0);
 
 	// threads should be alive
 	ck_assert_int_eq(whisker_tp_system_core_count(), tp->thread_count);
 	
 	// destroy and wait for pool to stop
-	whisker_tp_free(tp);
+	whisker_tp_free_all(tp);
 }
 END_TEST
 
@@ -36,7 +36,7 @@ void whisker_thread_pool_test_work_func(void *arg)
 START_TEST(test_whisker_thread_pool_work_test)
 {
 	// create thread pool using default thread count
-	whisker_thread_pool *tp = whisker_tp_create(0);
+	whisker_thread_pool *tp = whisker_tp_create_and_init(0);
 
 	// create work items
 	int work_item_count = 100;
@@ -46,9 +46,7 @@ START_TEST(test_whisker_thread_pool_work_test)
 	{
 		values[i] = i * 100;
 		values_expected[i] = values[i] + 1;
-	}
-	for (int i = 0; i < work_item_count; ++i)
-	{
+
 		whisker_tp_queue_work(tp, whisker_thread_pool_test_work_func, &values[i]);
 	}
 
@@ -62,7 +60,7 @@ START_TEST(test_whisker_thread_pool_work_test)
 	}
 
 	// stop all threads and free pool
-	whisker_tp_free(tp);
+	whisker_tp_free_all(tp);
 }
 END_TEST
 

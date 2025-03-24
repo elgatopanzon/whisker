@@ -48,43 +48,41 @@ whisker_thread_pool *whisker_tp_create_and_init(size_t count)
 // init an instance of a thread pool
 void whisker_tp_init(whisker_thread_pool *tp, size_t count)
 {
-	whisker_thread_pool *tp_new = whisker_mem_xcalloc_t(1, *tp_new);
-
 	// create the work array
-	whisker_arr_init_t(tp_new->work_queue, WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT);
+	whisker_arr_init_t(tp->work_queue, WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE);
 
 	// set minimum to 1 thread
 	if (count == 0)
 	{
 		count = whisker_tp_system_core_count();
 	}
-	tp_new->thread_count = count;
+	tp->thread_count = count;
 
 	// init pthread mutex and conds
-	if (pthread_mutex_init(&tp_new->thread_mutex_worker, NULL) != 0 ||
-	    pthread_cond_init(&tp_new->thread_new_work_signal, NULL) != 0 ||
-	    pthread_cond_init(&tp_new->thread_working_signal, NULL) != 0)
+	if (pthread_mutex_init(&tp->thread_mutex_worker, NULL) != 0 ||
+	    pthread_cond_init(&tp->thread_new_work_signal, NULL) != 0 ||
+	    pthread_cond_init(&tp->thread_working_signal, NULL) != 0)
 	{
-		free(tp_new);
+		free(tp);
 		return;
 	}
 
 	// create thread context array
-	whisker_arr_init_t(tp_new->thread_contexts, count);
+	whisker_arr_init_t(tp->thread_contexts, count);
 
 	// create and detach threads
 	for (int i = 0; i < count; ++i)
 	{
 		pthread_t thread;
 		whisker_thread_pool_context context = {
-			.thread_pool = tp_new,
+			.thread_pool = tp,
 			.thread_id = i,
 		};
-		tp_new->thread_contexts[i] = context;
+		tp->thread_contexts[i] = context;
 
-		if (pthread_create(&thread, NULL, whisker_tp_worker_func_, &tp_new->thread_contexts[i]) != 0)
+		if (pthread_create(&thread, NULL, whisker_tp_worker_func_, &tp->thread_contexts[i]) != 0)
 		{
-			whisker_tp_free_all(tp_new);
+			whisker_tp_free_all(tp);
 			return;
 		}
 		pthread_detach(thread);
@@ -94,11 +92,6 @@ void whisker_tp_init(whisker_thread_pool *tp, size_t count)
 // deallocate a thread pool instance
 void whisker_tp_free_all(whisker_thread_pool *tp)
 {
-	if (tp == NULL)
-	{
-		return;
-	}
-
 	pthread_mutex_lock(&tp->thread_mutex_worker);
 	tp->stop = true;
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
@@ -137,14 +130,11 @@ void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func fun
 
 	pthread_mutex_lock(&tp->thread_mutex_worker);
 
-	size_t alloc_block_size = ((tp->work_queue_length + 1) * sizeof(*tp->work_queue) / WHISKER_THREAD_POOL_WORK_QUEUE_ALLOC_COUNT) + sizeof(*tp->work_queue);
-	printf("block alloc size %zu current size %zu\n", alloc_block_size, tp->work_queue_size);
-	if (tp->work_queue_size < alloc_block_size)
-	{
-		printf("realloc required\n");
-		whisker_arr_ensure_alloc(tp->work_queue, alloc_block_size / sizeof(*tp->work_queue));
-	}
-	printf("%zu\n", tp->work_queue_length);
+	whisker_arr_ensure_alloc_block_size(
+		tp->work_queue, 
+		tp->work_queue_length + 1, 
+		WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE
+	);
 	tp->work_queue[tp->work_queue_length++] = work;
 
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
@@ -254,11 +244,11 @@ void *whisker_tp_worker_func_(void *arg)
 	}
 
 	// remove thread from thread pool
+	debug_log(DEBUG, thread pool, "thread %zu stopping", context->thread_id);
+
 	tp->thread_count--;
 	pthread_cond_signal(&tp->thread_working_signal);
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
-
-	debug_log(DEBUG, thread pool, "thread %zu stopping", context->thread_id);
 
 	return NULL;
 }
