@@ -183,20 +183,20 @@ void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, wh
 			pthread_mutex_lock(&components->deferred_actions_mutex);
 
 			// double check to protect from stomping
-			if(components->deferred_actions_data_size + data_size < components->deferred_actions_data_size)
+			if(current_size_pos + data_size > components->deferred_actions_data_size)
 			{
 				components->deferred_actions_data = whisker_mem_xrecalloc(
 					components->deferred_actions_data,
 					components->deferred_actions_data_size,
-					WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE
+					((current_size_pos + data_size) + WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE)
 				);
-				components->deferred_actions_data_size += WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
+				components->deferred_actions_data_size = (current_size_pos + data_size) + WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
 			}
 
 			pthread_mutex_unlock(&components->deferred_actions_mutex);
 		}
 
-		void *next_data_pointer = components->deferred_actions_data + current_size_pos;
+		void *next_data_pointer = (char*)components->deferred_actions_data + current_size_pos;
 		memcpy(next_data_pointer, data, data_size);
 		components->deferred_actions[deferred_action_idx].data_ptr = next_data_pointer;
 	}
