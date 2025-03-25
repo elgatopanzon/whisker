@@ -36,6 +36,9 @@ typedef struct whisker_thread_pool
 	// work queue holds list of work items to execute on the thread
 	whisker_arr_declare(struct whisker_thread_pool_work *, work_queue)
 
+	// work pool holds unused work items recycled after being processed
+	whisker_arr_declare(struct whisker_thread_pool_work *, work_pool)
+
 	// mutex and thread conditions to signal working/not working
 	pthread_mutex_t thread_mutex_worker;
 	pthread_cond_t thread_new_work_signal;

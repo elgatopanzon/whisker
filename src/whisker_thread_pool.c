@@ -50,6 +50,7 @@ void whisker_tp_init(whisker_thread_pool *tp, size_t count, char *name)
 {
 	// create the work array
 	whisker_arr_init_t(tp->work_queue, WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE);
+	whisker_arr_init_t(tp->work_pool, WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE);
 
 	// set default thread pool name if NULL
 	if (!name)
@@ -116,9 +117,15 @@ void whisker_tp_free(whisker_thread_pool *tp)
 	{
 		free(tp->work_queue[i]);
 	}
+	// free all unused work
+	for (int i = 0; i < tp->work_pool_length; ++i)
+	{
+		free(tp->work_pool[i]);
+	}
 
 	free(tp->name);
 	free(tp->work_queue);
+	free(tp->work_pool);
 	free(tp->thread_contexts);
 }
 
@@ -137,13 +144,21 @@ void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func fun
 		return;
 	}
 
-	whisker_thread_pool_work *work = whisker_tp_create_work(func, arg);
-	if (work == NULL)
-	{
-		return;
-	}
+	whisker_thread_pool_work *work;
 
 	pthread_mutex_lock(&tp->thread_mutex_worker);
+
+	// pull off a work item from the pool
+	if (tp->work_pool_length == 0)
+	{
+		work = whisker_tp_create_work(func, arg);
+	}
+	else 
+	{
+		work = tp->work_pool[--tp->work_pool_length];
+		work->func = func;
+		work->arg = arg;
+	}
 
 	whisker_arr_ensure_alloc_block_size(
 		tp->work_queue, 
@@ -153,6 +168,21 @@ void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func fun
 	tp->work_queue[tp->work_queue_length++] = work;
 
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
+	pthread_mutex_unlock(&tp->thread_mutex_worker);
+}
+
+// return a used work item to the work pool
+void whisker_tp_return_work(whisker_thread_pool *tp, whisker_thread_pool_work *work)
+{
+	pthread_mutex_lock(&tp->thread_mutex_worker);
+
+	whisker_arr_ensure_alloc_block_size(
+		tp->work_pool, 
+		tp->work_pool_length + 1, 
+		WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE
+	);
+	tp->work_pool[tp->work_pool_length++] = work;
+
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
 }
 
@@ -243,7 +273,7 @@ void *whisker_tp_worker_func_(void *arg)
 		if (work != NULL)
 		{
 			work->func(work->arg);
-			whisker_tp_free_work(work);
+			whisker_tp_return_work(tp, work);
 		}
 
 		// decrease working count
