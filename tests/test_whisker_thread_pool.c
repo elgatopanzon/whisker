@@ -64,6 +64,60 @@ START_TEST(test_whisker_thread_pool_work_test)
 }
 END_TEST
 
+struct whisker_thread_pool_pinned_test
+{
+	size_t count;
+	double values[100];
+	size_t values_length;
+};
+
+void whisker_thread_pool_test_work_func_pinned(void *arg, whisker_thread_pool_context *t)
+{
+	struct whisker_thread_pool_pinned_test *pinned = arg;
+
+	for (int i = 0; i < pinned->count; ++i)
+	{
+		bool process = (t->thread_id == i % t->thread_pool->thread_max);
+		if (process)
+		{
+			pinned->values[i] += 1;
+		}
+	}
+}
+
+START_TEST(test_whisker_thread_pool_pinned_work_test)
+{
+	// create thread pool using default thread count
+	whisker_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_3");
+
+	struct whisker_thread_pool_pinned_test pinned = {0};
+	pinned.count = 100;
+
+	// create work items
+	double values_expected[pinned.count] = {};	
+	for (int i = 0; i < pinned.count; ++i)
+	{
+		pinned.values[i] = i * 100;
+		values_expected[i] = pinned.values[i] + 2;
+	}
+
+	whisker_tp_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
+	whisker_tp_wait_work(tp);
+
+	whisker_tp_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
+	whisker_tp_wait_work(tp);
+
+	// check all work items values
+	for (int i = 0; i < pinned.count; ++i)
+	{
+		ck_assert_double_eq(values_expected[i], pinned.values[i]);
+	}
+
+	// stop all threads and free pool
+	whisker_tp_free_all(tp);
+}
+END_TEST
+
 
 Suite* whisker_thread_pool_suite(void)
 {
@@ -78,6 +132,7 @@ Suite* whisker_thread_pool_suite(void)
 
 	tcase_add_test(tc_core, test_whisker_thread_pool_create_and_destroy);
 	tcase_add_test(tc_core, test_whisker_thread_pool_work_test);
+	tcase_add_test(tc_core, test_whisker_thread_pool_pinned_work_test);
 
 	suite_add_tcase(s, tc_core);
 
