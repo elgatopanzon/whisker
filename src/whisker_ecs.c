@@ -98,10 +98,12 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->entities, system_name);
 
 	// add process phase component to system
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0}, false);
+	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// set component of its type on itself
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0}, false);
+	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// register the system with the system scheduler
 	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
@@ -114,7 +116,8 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	});
 
 	// add the system index component to the system entity
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1}, false);
+	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	/* // HACK: do a single execution of the system to initialise the iterator */
 	/* // why: this ensures the system's iterators initialise their component */
@@ -168,15 +171,45 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 
 		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
 		{
-			whisker_ecs_c_remove_all_components(ecs->components, action->id);
+			/* whisker_ecs_c_remove_all_components(ecs->components, action->id); */
+			whisker_ecs_create_deferred_component_action(ecs->components, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL);
 		}
 	}
+
+	// process deferred component actions
+	whisker_ecs_update_process_deferred_component_actions_(ecs);
 
 	// process and sort changed components
 	whisker_ecs_update_process_changed_components_(ecs);
 	
 	// process entity actions
 	whisker_ecs_e_process_deferred(ecs->entities);
+}
+
+void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
+{
+	if (ecs->components->deferred_actions_length > 0) 
+	{
+		for (int i = 0; i < ecs->components->deferred_actions_length; ++i)
+		{
+			struct whisker_ecs_component_deferred_action action = ecs->components->deferred_actions[i];
+
+			switch (action.action) {
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
+					whisker_ecs_c_set_component(ecs->components, action.component_id, action.data_size, action.entity_id, action.data_ptr);
+					break;
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
+					whisker_ecs_c_remove_component(ecs->components, action.component_id, action.entity_id);
+					break;
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL:
+					whisker_ecs_c_remove_all_components(ecs->components, action.entity_id);
+					break;
+			}
+		}
+
+		ecs->components->deferred_actions_length = 0;
+		ecs->components->deferred_actions_data_length = 0;
+	}
 }
 
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
@@ -281,6 +314,9 @@ void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
 }
 
+
+
+
 /*************************
 *  component functions  *
 *************************/
@@ -307,7 +343,7 @@ void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ec
 
 // set a named component on an entity
 // note: this will handle the creation of the underlying component array
-void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
+void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(entities, component_name);;
 	if (component_id.id == 0)
@@ -316,11 +352,11 @@ void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ec
 		// for now just return a NULL
 		return NULL;
 	}
-	return whisker_ecs_set_component(components, component_id, component_size, entity_id, value);
+	return whisker_ecs_set_component(components, component_id, component_size, entity_id, value, deferred);
 }
 
 // remove a named component from an entity
-void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id, bool deferred)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 	if (component_id.id == 0)
@@ -329,7 +365,7 @@ void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_
 		return;
 	}
 
-	whisker_ecs_remove_component(components, component_id, entity_id);
+	whisker_ecs_remove_component(components, component_id, entity_id, deferred);
 }
 
 // check whether an entity has a named component attached
@@ -354,20 +390,55 @@ void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_
 
 // set the component by ID on the given entity
 // note: this will handle the creation of the underlying component array
-void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
+void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred)
 {
-	whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value);
+	if (deferred)
+	{
+		whisker_ecs_create_deferred_component_action(
+			components,
+			component_id,
+			component_size,
+			entity_id,
+			value,
+			WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET
+		);
+	}
+	else
+	{
+		whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value);
+	}
+
 	return value;
 }
 
 // remove the component by ID from the given entity
-void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, bool deferred)
 {
-	whisker_ecs_c_remove_component(components, component_id, entity_id);
+	if (deferred)
+	{
+		whisker_ecs_create_deferred_component_action(
+			components,
+			component_id,
+			0,
+			entity_id,
+			NULL,
+			WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE
+		);
+	}
+	else
+	{
+		whisker_ecs_c_remove_component(components, component_id, entity_id);
+	}
 }
 
 // check if an entity has the given component by ID
 bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	return whisker_ecs_c_has_component(components, component_id, entity_id);
+}
+
+// create a deferred component action to be processed later
+void whisker_ecs_create_deferred_component_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action)
+{
+	whisker_ecs_c_create_deferred_action(components, component_id, entity_id, action, value, component_size);
 }

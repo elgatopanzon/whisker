@@ -39,6 +39,7 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 // system update functions
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs);
+void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs);
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs);
 void whisker_ecs_sort_component_thread_func_(void *component_sort_request);
 
@@ -54,31 +55,44 @@ bool whisker_ecs_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id 
 // component functions
 whisker_ecs_entity_id whisker_ecs_component_id(whisker_ecs_entities *entities, char* component_name);
 void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id);
-void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value);
-void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id);
+void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred);
+void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id, bool deferred);
 bool whisker_ecs_has_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id);
 
 void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value);
-void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred);
+void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, bool deferred);
 bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void whisker_ecs_create_deferred_component_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action);
 
 // macros
-#define whisker_ecs_set_named(en, cm, n, t, e, v) whisker_ecs_set_named_component(en, cm, #n, sizeof(t), e, v)
+#define whisker_ecs_set_named(en, cm, n, t, e, v) whisker_ecs_set_named_component(en, cm, #n, sizeof(t), e, v, true)
 #define whisker_ecs_get_named(en, cm, n, e) whisker_ecs_get_named_component(en, cm, #n, e)
-#define whisker_ecs_remove_named(en, cm, n, t, e) (t*) whisker_ecs_remove_named_component(en, cm, #n, e)
+#define whisker_ecs_remove_named(en, cm, n, t, e) (t*) whisker_ecs_remove_named_component(en, cm, #n, e, true)
 #define whisker_ecs_has_named(en, cm, n, e) whisker_ecs_has_named_component(en, cm, #n, e)
 
-#define whisker_ecs_set_named_tag(en, cm, n, e) whisker_ecs_set_named_component(en, cm, #n, sizeof(bool), e, &(bool){0})
-#define whisker_ecs_remove_named_tag(en, cm, n, e) whisker_ecs_remove_named_component(en, cm, #n, e)
+#define whisker_ecs_set_named_tag(en, cm, n, e) whisker_ecs_set_named_component(en, cm, #n, sizeof(bool), e, &(bool){0}, true)
+#define whisker_ecs_remove_named_tag(en, cm, n, e) whisker_ecs_remove_named_component(en, cm, #n, e, true)
 
-#define whisker_ecs_set(cm, n, t, e, v) whisker_ecs_set_component(cm, n, sizeof(t), e, v)
+#define whisker_ecs_set(cm, n, t, e, v) whisker_ecs_set_component(cm, n, sizeof(t), e, v, true)
 #define whisker_ecs_get(cm, n, e) whisker_ecs_get_component(cm, n, e)
-#define whisker_ecs_remove(cm, n, t, e) (t*) whisker_ecs_remove_component(cm, n, e)
+#define whisker_ecs_remove(cm, n, t, e) (t*) whisker_ecs_remove_component(cm, n, e, true)
 
-#define whisker_ecs_set_tag(cm, n, e) whisker_ecs_set_component(cm, n, sizeof(bool), e, &(bool){0})
-#define whisker_ecs_remove_tag(cm, n, e) whisker_ecs_remove_component(cm, n, e)
+#define whisker_ecs_set_tag(cm, n, e) whisker_ecs_set_component(cm, n, sizeof(bool), e, &(bool){0}, true)
+#define whisker_ecs_remove_tag(cm, n, e) whisker_ecs_remove_component(cm, n, e, true)
 #define whisker_ecs_has(cm, n, e) whisker_ecs_has_component(cm, n, e)
+
+// non-deferred
+#define whisker_ecs_set_named_now(en, cm, n, t, e, v) whisker_ecs_set_named_component(en, cm, #n, sizeof(t), e, v, false)
+#define whisker_ecs_remove_named_now(en, cm, n, t, e) (t*) whisker_ecs_remove_named_component(en, cm, #n, e, false)
+#define whisker_ecs_set_named_tag_now(en, cm, n, e) whisker_ecs_set_named_component(en, cm, #n, sizeof(bool), e, &(bool){0}, false)
+#define whisker_ecs_remove_named_tag_now(en, cm, n, e) whisker_ecs_remove_named_component(en, cm, #n, e, false)
+
+#define whisker_ecs_set_now(cm, n, t, e, v) whisker_ecs_set_component(cm, n, sizeof(t), e, v, false)
+#define whisker_ecs_remove_now(cm, n, t, e) (t*) whisker_ecs_remove_component(cm, n, e, false)
+
+#define whisker_ecs_set_tag_now(cm, n, e) whisker_ecs_set_component(cm, n, sizeof(bool), e, &(bool){0}, false)
+#define whisker_ecs_remove_tag_now(cm, n, e) whisker_ecs_remove_component(cm, n, e, false)
 
 // short macros: general component
 #define wecs_set_n whisker_ecs_set_named

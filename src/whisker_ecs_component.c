@@ -29,8 +29,17 @@ void whisker_ecs_c_init_components(whisker_ecs_components *components)
 	// create sparse set for changed components
 	components->changed_components = whisker_ss_create_t(whisker_ecs_entity_id);
 
+	// create deferred actions array
+	whisker_arr_init_t(
+		components->deferred_actions, 
+		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+	);
+	components->deferred_actions_data = whisker_mem_xcalloc(1, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE);
+	components->deferred_actions_data_size = WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
+
 	// pthread mutexes
 	pthread_mutex_init(&components->grow_components_mutex, NULL);
+	pthread_mutex_init(&components->deferred_actions_mutex, NULL);
 }
 
 // create and init instance of components container
@@ -60,6 +69,9 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 	free(components->components);
 	whisker_ss_free_all(components->changed_components);
 	pthread_mutex_destroy(&components->grow_components_mutex);
+	pthread_mutex_destroy(&components->deferred_actions_mutex);
+	free(components->deferred_actions);
+	free(components->deferred_actions_data);
 }
 
 /******************************************
@@ -132,6 +144,64 @@ void whisker_ecs_c_set_component_array_changed(whisker_ecs_components *component
 		whisker_ss_set(components->changed_components, component_id.id, &component_id);
 	}
 }
+
+
+/******************************************
+*  component deferred actions functions  *
+******************************************/
+// add a deferred component action to the queue
+void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, void *data, size_t data_size)
+{
+	// increment and fetch a stable deferred action index
+	size_t deferred_action_idx = atomic_fetch_add(&components->deferred_actions_length, 1);
+
+	if((deferred_action_idx + 1) * sizeof(*components->deferred_actions) > components->deferred_actions_size)
+	{
+		pthread_mutex_lock(&components->deferred_actions_mutex);
+
+		whisker_arr_ensure_alloc_block_size(
+			components->deferred_actions, 
+			(deferred_action_idx + 1),
+			WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+		);
+
+		pthread_mutex_unlock(&components->deferred_actions_mutex);
+	}
+
+	components->deferred_actions[deferred_action_idx].component_id = component_id;
+	components->deferred_actions[deferred_action_idx].entity_id = entity_id;
+	components->deferred_actions[deferred_action_idx].data_size = data_size;
+	components->deferred_actions[deferred_action_idx].action = action;
+
+	if (data_size > 0)
+	{
+		size_t current_size_pos = atomic_fetch_add(&components->deferred_actions_data_length, data_size);
+
+		// reallocate the deferred actions data array if required
+		if(current_size_pos + data_size > components->deferred_actions_data_size)
+		{
+			pthread_mutex_lock(&components->deferred_actions_mutex);
+
+			// double check to protect from stomping
+			if(components->deferred_actions_data_size + data_size < components->deferred_actions_data_size)
+			{
+				components->deferred_actions_data = whisker_mem_xrecalloc(
+					components->deferred_actions_data,
+					components->deferred_actions_data_size,
+					WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE
+				);
+				components->deferred_actions_data_size += WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
+			}
+
+			pthread_mutex_unlock(&components->deferred_actions_mutex);
+		}
+
+		void *next_data_pointer = components->deferred_actions_data + current_size_pos;
+		memcpy(next_data_pointer, data, data_size);
+		components->deferred_actions[deferred_action_idx].data_ptr = next_data_pointer;
+	}
+}
+
 
 /************************************
 *  component management functions  *
