@@ -241,7 +241,7 @@ void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 	}
 }
 
-void whisker_ecs_sort_component_thread_func_(void *component_sort_request)
+void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisker_thread_pool_context *t)
 {
 	struct whisker_ecs_component_sort_request *sort_request = component_sort_request;
 	whisker_ecs_c_sort_component_array(sort_request->components, sort_request->component_id);

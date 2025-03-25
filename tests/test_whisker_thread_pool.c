@@ -27,7 +27,7 @@ START_TEST(test_whisker_thread_pool_create_and_destroy)
 END_TEST
 
 
-void whisker_thread_pool_test_work_func(void *arg)
+void whisker_thread_pool_test_work_func(void *arg, whisker_thread_pool_context *context)
 {
 	double *val = arg;
 	*val += 1;

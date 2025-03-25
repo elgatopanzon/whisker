@@ -65,6 +65,7 @@ void whisker_tp_init(whisker_thread_pool *tp, size_t count, char *name)
 	{
 		count = whisker_tp_system_core_count();
 	}
+	tp->thread_max = count;
 	tp->thread_count = count;
 
 	// init pthread mutex and conds
@@ -144,21 +145,14 @@ void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func fun
 		return;
 	}
 
-	whisker_thread_pool_work *work;
+	whisker_thread_pool_work *work = whisker_tp_get_new_work_item(tp, func, arg);
+	whisker_tp_queue_work_item(tp, work);
+}
 
+// add work item to the work queue
+void whisker_tp_queue_work_item(whisker_thread_pool *tp, whisker_thread_pool_work *work)
+{
 	pthread_mutex_lock(&tp->thread_mutex_worker);
-
-	// pull off a work item from the pool
-	if (tp->work_pool_length == 0)
-	{
-		work = whisker_tp_create_work(func, arg);
-	}
-	else 
-	{
-		work = tp->work_pool[--tp->work_pool_length];
-		work->func = func;
-		work->arg = arg;
-	}
 
 	whisker_arr_ensure_alloc_block_size(
 		tp->work_queue, 
@@ -169,6 +163,43 @@ void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func fun
 
 	pthread_cond_broadcast(&tp->thread_new_work_signal);
 	pthread_mutex_unlock(&tp->thread_mutex_worker);
+}
+
+// queue the same work item on all threads in the pool
+void whisker_tp_queue_work_all(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg)
+{
+	// create work for each thread and pin it to thread ID
+	for (int i = 0; i < tp->thread_max; ++i)
+	{
+		whisker_thread_pool_work *work = whisker_tp_get_new_work_item(tp, func, arg);
+		work->thread_id = i;
+
+		whisker_tp_queue_work_item(tp, work);
+	}
+}
+
+// get work item from the pool, or create a new item
+whisker_thread_pool_work *whisker_tp_get_new_work_item(whisker_thread_pool *tp, whisker_thread_pool_func func, void* arg)
+{
+	whisker_thread_pool_work *work;
+	pthread_mutex_lock(&tp->thread_mutex_worker);
+
+	// pull off a work item from the pool or create
+	if (tp->work_pool_length == 0)
+	{
+		work = whisker_tp_create_work(func, arg);
+	}
+	else 
+	{
+		work = tp->work_pool[--tp->work_pool_length];
+		work->func = func;
+		work->arg = arg;
+		work->thread_id = UINT64_MAX;
+	}
+
+	pthread_mutex_unlock(&tp->thread_mutex_worker);
+
+	return work;
 }
 
 // return a used work item to the work pool
@@ -218,6 +249,7 @@ whisker_thread_pool_work *whisker_tp_create_work(whisker_thread_pool_func func, 
 
 	work->func = func;
 	work->arg = arg;
+	work->thread_id = UINT64_MAX;
 
 	return work;
 }
@@ -266,13 +298,22 @@ void *whisker_tp_worker_func_(void *arg)
 
 		// get a work item and unlock the mutex
 		work = whisker_tp_get_work(tp);
+
+
 		tp->thread_count_working++;
 		pthread_mutex_unlock(&tp->thread_mutex_worker);
+
+		// re-queue if pinned and doesn't match thread id
+		if (work->thread_id != UINT64_MAX && work->thread_id != context->thread_id)
+		{
+			whisker_tp_queue_work_item(tp, work);
+			work = NULL;
+		}
 
 		// process work if it's not NULL
 		if (work != NULL)
 		{
-			work->func(work->arg);
+			work->func(work->arg, context);
 			whisker_tp_return_work(tp, work);
 		}
 

@@ -116,7 +116,7 @@ whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, 
 void whisker_ecs_s_free_system(whisker_ecs_system *system);
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
 void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);
-void whisker_ecs_s_update_system_thread_(void *context);
+void whisker_ecs_s_update_system_thread_(void *context, whisker_thread_pool_context *t);
 void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
 // system process phases functions

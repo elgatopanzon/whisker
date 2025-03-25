@@ -15,12 +15,14 @@
 
 #define WHISKER_THREAD_POOL_WORK_QUEUE_BLOCK_SIZE 16384 / sizeof(whisker_thread_pool_work)
 
-typedef void (*whisker_thread_pool_func)(void *arg);
+struct whisker_thread_pool_context;
+typedef void (*whisker_thread_pool_func)(void *arg, struct whisker_thread_pool_context *context);
 
 typedef struct whisker_thread_pool_work
 {
 	whisker_thread_pool_func func;
 	void *arg;
+	uint64_t thread_id;
 } whisker_thread_pool_work;
 
 typedef struct whisker_thread_pool
@@ -29,6 +31,7 @@ typedef struct whisker_thread_pool
 	char *name;
 
 	// thread count in pool
+	size_t thread_max;
 	size_t thread_count;
 	size_t thread_count_working;
 	whisker_arr_declare(struct whisker_thread_pool_context, thread_contexts)
@@ -65,10 +68,13 @@ void whisker_tp_free_all(whisker_thread_pool *tp);
 
 // operation functions
 void whisker_tp_queue_work(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg);
+void whisker_tp_queue_work_item(whisker_thread_pool *tp, whisker_thread_pool_work *work);
+void whisker_tp_queue_work_all(whisker_thread_pool *tp, whisker_thread_pool_func func, void *arg);
 void whisker_tp_wait_work(whisker_thread_pool *tp);
 
 // thread work functions
 whisker_thread_pool_work *whisker_tp_create_work(whisker_thread_pool_func func, void* arg);
+whisker_thread_pool_work *whisker_tp_get_new_work_item(whisker_thread_pool *tp, whisker_thread_pool_func func, void* arg);
 void whisker_tp_free_work(whisker_thread_pool_work *work);
 whisker_thread_pool_work *whisker_tp_get_work(whisker_thread_pool *tp);
 void *whisker_tp_worker_func_(void *arg);

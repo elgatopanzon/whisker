@@ -260,7 +260,7 @@ static void system_update_queue_system_work(whisker_ecs_system *system)
 }
 
 
-void whisker_ecs_s_update_system_thread_(void *context)
+void whisker_ecs_s_update_system_thread_(void *context, whisker_thread_pool_context *t)
 {
 	whisker_ecs_system_context *system_context = context;
 	system_context->system_ptr(system_context);
