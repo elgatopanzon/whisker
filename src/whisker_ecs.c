@@ -23,9 +23,7 @@ whisker_ecs *whisker_ecs_create()
 	// reserve 1 entity for system use
 	whisker_ecs_e_create(new->entities);
 
-	// create and register a dummy system to use by the system scheduler
-	// note: this is currently to use as a holder for the system iterator used
-	// in the scheduler
+	// create a dummy system to use by the system context
 	whisker_ecs_system system = {
 		.entity_id = 0,
 		.process_phase_id = 0,
@@ -36,11 +34,8 @@ whisker_ecs *whisker_ecs_create()
 		.entities = new->entities,
 		.components = new->components,
 	};
-	whisker_ecs_s_register_system(new->systems, new->components, system);
-
-	// note: for now the first system will be ID 0 and reserved for this dummy
-	// system instance
-	new->systems->system_id = 0;
+	// init the system update context
+	whisker_ecs_s_init_system_context(&new->system_update_context, &system);
 
 	// register default system process phases to allow bundled systems and
 	// modules and a standard default processing phase group set
@@ -72,6 +67,8 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	whisker_ecs_e_free_entities_all(ecs->entities);
 	whisker_ecs_c_free_components_all(ecs->components);
 	whisker_ecs_s_free_systems_all(ecs->systems);
+
+	whisker_ecs_s_free_system_context(&ecs->system_update_context);
 
 	// free thread pool
 	whisker_tp_free_all(ecs->general_thread_pool);
@@ -154,11 +151,15 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 // issue an update of all registered systems on all matching world entities
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 {
-	// run the actual system update
-	whisker_ecs_s_update_systems(ecs->systems, ecs->entities, delta_time);
+	// update each system phase then run deferred actions
+    whisker_ecs_system_context *update_context = &ecs->system_update_context;
 
-	// process deferred actions
-	whisker_ecs_update_process_deferred_actions(ecs);
+    for (int i = 0; i < ecs->systems->process_phases_length; ++i)
+    {
+        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[i], update_context);
+
+		whisker_ecs_update_process_deferred_actions(ecs);
+    }
 }
 
 // process any deferred actions queued since the previous update

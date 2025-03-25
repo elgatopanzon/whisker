@@ -13,6 +13,60 @@
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
 
+// default process phase groups and their suggested update rates
+#define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP "w_phase_on_startup"
+#ifndef WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE
+#define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE 60
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD "w_phase_pre_load"
+#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE
+#define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE 60
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE "w_phase_pre_update"
+#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE
+#define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE 60
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE "w_phase_on_update"
+#ifndef WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE
+#define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE 60
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE "w_phase_post_update"
+#ifndef WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE
+#define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE 60
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER "w_phase_pre_render"
+#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE
+#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE 0
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER "w_phase_on_render"
+#ifndef WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE
+#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE 0
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER "w_phase_post_render"
+#ifndef WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE
+#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE 0
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER "w_phase_final_render"
+#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE
+#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE 0
+#endif
+
+#define WHISKER_ECS_PROCESS_PHASE_FINAL "w_phase_final"
+#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RATE
+#define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
+#endif
+
+#define WHISKER_ECS_PROCESS_THREADED_AUTO -1
+#define WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD 0
+
 struct whisker_ecs_component_sort_request 
 {
 	whisker_ecs_components *components;
@@ -24,6 +78,7 @@ typedef struct whisker_ecs
 	whisker_ecs_entities *entities;
 	whisker_ecs_components *components;
 	whisker_ecs_systems *systems;
+	whisker_ecs_system_context system_update_context;
 	whisker_thread_pool *general_thread_pool;
 	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
 } whisker_ecs;

@@ -981,45 +981,263 @@ void asteroids_game_init()
 		asteroids_spawn_asteroid();
 	}
 
-	/* // register systems */
-	whisker_ecs_system *spawn_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_spawn, "system_asteroid_spawn", WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, 0);
-	whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, system_asteroid_spawn_time, double, spawn_sys->entity_id, &(double){GetTime()});
-
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_controller, "system_player_controller", WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE, 0);
-
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_velocity_2d, "system_velocity_2d", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, -1);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_rotation_velocity, "system_rotation_velocity", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, -1);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_movement_direction, "system_movement_direction", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision, "system_collision", WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 0);
-
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_screen_wrap, "system_screen_wrap", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_destroy_offscreen, "system_destroy_offscreen", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, -1);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_projectile_collide_destroy, "system_projectile_collide_destroy", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_respawn_on_hit, "system_asteroid_respawn_on_hit", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_score, "system_asteroid_score", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_asteroid_hit_asteroid, "system_asteroid_hit_asteroid", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_asteroid, "system_player_hit_asteroid", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_nudge, "system_player_hit_nudge", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_cooldown, "system_player_hit_cooldown", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_death_on_life_depleted, "system_player_death_on_life_depleted", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_player_hit_to_recover, "system_player_hit_to_recover", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_entity_deferred_destroy, "system_entity_deferred_destroy", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, -1);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_collision_cull, "system_collision_cull", WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, -1);
-
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_start_drawing, "system_raylib_start_drawing", WHISKER_ECS_PROCESS_PHASE_PRE_RENDER, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_asteroid, "system_draw_asteroid", WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_player, "system_draw_player", WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_projectile, "system_draw_projectile", WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_hud, "system_draw_hud", WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 0);
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_game_over, "system_draw_game_over", WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 0);
-
-	if (DRAW_FRAMETIME)
+	/*****************
+	*  phases: pre  *
+	*****************/
+	// pre_load phase
 	{
-		whisker_ecs_system *frametime_sys = whisker_ecs_register_system(asteroids_ecs, asteroids_system_draw_frame_time, "system_draw_frame_time", WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 0);
-		whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, frametime, asteroids_component_frametime, frametime_sys->entity_id, &(asteroids_component_frametime){});
+		whisker_ecs_system *spawn_sys = 
+    		whisker_ecs_register_system(
+        		asteroids_ecs, 
+        		asteroids_system_asteroid_spawn, 
+        		"system_asteroid_spawn", 
+        		WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, 
+        		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+    		);
+			whisker_ecs_set_named(
+    			asteroids_ecs->entities,
+    			asteroids_ecs->components,
+    			system_asteroid_spawn_time,
+    			double,
+    			spawn_sys->entity_id,
+    			&(double){GetTime()}
+			);
 	}
 
-	whisker_ecs_register_system(asteroids_ecs, asteroids_system_raylib_end_drawing, "system_raylib_end_drawing", WHISKER_ECS_PROCESS_PHASE_FINAL, 0);
+
+	/********************
+	*  phases: update  *
+	********************/
+	// pre_update phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_player_controller,
+    		"system_player_controller",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_velocity_2d,
+    		"system_velocity_2d",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_rotation_velocity,
+    		"system_rotation_velocity",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_movement_direction,
+    		"system_movement_direction",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_screen_wrap,
+    		"system_screen_wrap",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_collision,
+    		"system_collision",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+	}
+
+	// on_update phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_projectile_collide_destroy, 
+    		"system_projectile_collide_destroy", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_asteroid_respawn_on_hit, 
+    		"system_asteroid_respawn_on_hit", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_asteroid_score, 
+    		"system_asteroid_score", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_asteroid_hit_asteroid, 
+    		"system_asteroid_hit_asteroid", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_player_hit_asteroid, 
+    		"system_player_hit_asteroid", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_player_hit_nudge, 
+    		"system_player_hit_nudge", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_player_hit_cooldown, 
+    		"system_player_hit_cooldown", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_player_death_on_life_depleted, 
+    		"system_player_death_on_life_depleted", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_player_hit_to_recover, 
+    		"system_player_hit_to_recover", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+	}
+
+	// post_update phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_destroy_offscreen,
+    		"system_destroy_offscreen",
+    		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_collision_cull,
+    		"system_collision_cull",
+    		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+	}
+
+
+	/********************
+	*  phases: render  *
+	********************/
+	// pre_render phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_raylib_start_drawing,
+    		"system_raylib_start_drawing",
+    		WHISKER_ECS_PROCESS_PHASE_PRE_RENDER,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+	}
+
+	// on_render
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_asteroid, 
+    		"system_draw_asteroid", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_player, 
+    		"system_draw_player", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_projectile, 
+    		"system_draw_projectile", 
+    		WHISKER_ECS_PROCESS_PHASE_ON_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_hud, 
+    		"system_draw_hud", 
+    		WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_game_over, 
+    		"system_draw_game_over", 
+    		WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+
+#ifdef DRAW_FRAMETIME
+		whisker_ecs_system *frametime_sys = whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_draw_frame_time, 
+    		"system_draw_frame_time", 
+    		WHISKER_ECS_PROCESS_PHASE_POST_RENDER, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+
+		whisker_ecs_set_named(
+    		asteroids_ecs->entities, 
+    		asteroids_ecs->components, 
+    		frametime, 
+    		asteroids_component_frametime, 
+    		frametime_sys->entity_id, 
+    		&(asteroids_component_frametime){}
+		);
+#endif
+	}
+
+	// final_render phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_raylib_end_drawing,
+    		"system_raylib_end_drawing",
+    		WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+	}
+
+
+	/******************
+	*  phases: final  *
+	******************/
+	// final phase
+	{
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_entity_deferred_destroy,
+    		"system_entity_deferred_destroy",
+    		WHISKER_ECS_PROCESS_PHASE_FINAL,
+    		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+	}
 }
 
 void asteroids_game_end()

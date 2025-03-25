@@ -175,6 +175,7 @@ static void system_update_execute_system(whisker_ecs_system *system);
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
 // run an update on the registered systems
+// note: processes all phases without deferred actions
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
 {
     whisker_ecs_system *default_system = &systems->systems[systems->system_id];
@@ -203,6 +204,12 @@ static void system_update_set_context_values(whisker_ecs_system_context *context
     context->process_phase_time_step = system->process_phase_time_step;
     context->delta_time = system->delta_time;
     context->system_ptr = system->system_ptr;
+}
+
+// update all systems in the given process phase
+void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
+{
+	system_update_process_phase(systems, entities, process_phase, default_context);
 }
 
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)

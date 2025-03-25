@@ -16,56 +16,6 @@
 #ifndef WHISKER_ECS_SYSTEM_H
 #define WHISKER_ECS_SYSTEM_H
 
-// default process phase groups and their suggested update rates
-#define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP "w_phase_on_startup"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE 60
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD "w_phase_pre_load"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE 60
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE "w_phase_pre_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE 60
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE "w_phase_on_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE 60
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE "w_phase_post_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE 60
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER "w_phase_pre_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE 0
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER "w_phase_on_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE 0
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER "w_phase_post_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE 0
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER "w_phase_final_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE 0
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_FINAL "w_phase_final"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RATE
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
-#endif
 
 typedef struct whisker_ecs_system_iterator
 {
@@ -167,6 +117,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system);
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
 void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);
 void whisker_ecs_s_update_system_thread_(void *context);
+void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
 // system process phases functions
 void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec);
