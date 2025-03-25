@@ -27,7 +27,7 @@ struct whisker_ecs_component_deferred_action
 {
 	whisker_ecs_entity_id component_id;
 	whisker_ecs_entity_id entity_id;
-	void *data_ptr;
+	size_t data_offset;
 	size_t data_size;
 	enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action;
 };

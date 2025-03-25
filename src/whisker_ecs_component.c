@@ -171,6 +171,7 @@ void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, wh
 	components->deferred_actions[deferred_action_idx].component_id = component_id;
 	components->deferred_actions[deferred_action_idx].entity_id = entity_id;
 	components->deferred_actions[deferred_action_idx].data_size = data_size;
+	components->deferred_actions[deferred_action_idx].data_offset = 0;
 	components->deferred_actions[deferred_action_idx].action = action;
 
 	if (data_size > 0)
@@ -198,7 +199,7 @@ void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, wh
 
 		void *next_data_pointer = (char*)components->deferred_actions_data + current_size_pos;
 		memcpy(next_data_pointer, data, data_size);
-		components->deferred_actions[deferred_action_idx].data_ptr = next_data_pointer;
+		components->deferred_actions[deferred_action_idx].data_offset = current_size_pos;
 	}
 }
 

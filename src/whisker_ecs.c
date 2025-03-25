@@ -197,7 +197,7 @@ void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
 
 			switch (action.action) {
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
-					whisker_ecs_c_set_component(ecs->components, action.component_id, action.data_size, action.entity_id, action.data_ptr);
+					whisker_ecs_c_set_component(ecs->components, action.component_id, action.data_size, action.entity_id, ecs->components->deferred_actions_data + action.data_offset);
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
 					whisker_ecs_c_remove_component(ecs->components, action.component_id, action.entity_id);
