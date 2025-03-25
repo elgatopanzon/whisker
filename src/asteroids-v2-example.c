@@ -1065,13 +1065,6 @@ void asteroids_game_init()
 		);
 		whisker_ecs_register_system(
     		asteroids_ecs, 
-    		asteroids_system_asteroid_respawn_on_hit, 
-    		"system_asteroid_respawn_on_hit", 
-    		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
-    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
-		);
-		whisker_ecs_register_system(
-    		asteroids_ecs, 
     		asteroids_system_asteroid_score, 
     		"system_asteroid_score", 
     		WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, 
@@ -1123,6 +1116,14 @@ void asteroids_game_init()
 
 	// post_update phase
 	{
+		whisker_ecs_register_system(
+    		asteroids_ecs, 
+    		asteroids_system_asteroid_respawn_on_hit, 
+    		"system_asteroid_respawn_on_hit", 
+    		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, 
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
+		);
+
 		whisker_ecs_register_system(
     		asteroids_ecs,
     		asteroids_system_destroy_offscreen,
