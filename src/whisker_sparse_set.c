@@ -29,10 +29,13 @@ void whisker_ss_init_f(whisker_sparse_set *ss, size_t element_size)
 	// allocate sparse array
 	whisker_arr_init_t(ss->sparse, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
 	whisker_arr_init_t(ss->sparse_index, WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE);
-
+	
 	// allocate dense array
 	ss->dense = whisker_mem_xcalloc(1, WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER);
 	ss->dense_size = WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER;
+
+	// allocate mutations array
+	whisker_arr_init_t(ss->mutations, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
 
 	// allocate root trie node
 	ss->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
@@ -66,6 +69,7 @@ void whisker_ss_free(whisker_sparse_set *ss)
 	free(ss->sparse);
 	free(ss->sparse_index);
 	free(ss->dense);
+	free(ss->mutations);
 	whisker_trie_free_all(ss->sparse_trie);
 	free(ss->swap_buffer);
 }
@@ -108,6 +112,9 @@ void whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value)
 	);
 	ss->sparse_index[ss->sparse_index_length++] = index;
 
+	// create a mutation
+	whisker_ss_record_mutation(ss, index, ss->sparse_index_length - 1, WHISKER_SPARSE_SET_MUTATION_TYPE_ADD);
+
 	if (WHISKER_SPARSE_SET_AUTOSORT)
 	{
     	whisker_ss_sort(ss);
@@ -147,6 +154,10 @@ void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
     ss->dense_length--;
     ss->sparse_index_length--;
 
+	// create mutation
+	whisker_ss_record_mutation(ss, sparse_index_last, dense_index, WHISKER_SPARSE_SET_MUTATION_TYPE_ADD);
+	whisker_ss_record_mutation(ss, index, dense_index, WHISKER_SPARSE_SET_MUTATION_TYPE_SWAP);
+
 	if (WHISKER_SPARSE_SET_AUTOSORT)
 	{
     	whisker_ss_sort(ss);
@@ -163,6 +174,21 @@ bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index)
 
     return ss->sparse_length >= index + 1 && ss->sparse[index] != UINT64_MAX && ss->sparse_index[ss->sparse[index]] == index;
 }
+
+// record a mutation to be processed later during a sort
+void whisker_ss_record_mutation(whisker_sparse_set *ss, uint64_t index_mutated, uint64_t sparse_index_mutated, enum WHISKER_SPARSE_SET_MUTATION_TYPE mutation_type)
+{
+	whisker_arr_ensure_alloc_block_size(
+		ss->mutations, 
+		(ss->mutations_length + 1),
+		WHISKER_SPARSE_SET_BLOCK_SIZE
+	);
+	size_t mutation_idx = ss->mutations_length++;
+	ss->mutations[mutation_idx].mutated_index = index_mutated;
+	ss->mutations[mutation_idx].mutated_sparse_index = sparse_index_mutated;
+	ss->mutations[mutation_idx].mutation_type = mutation_type;
+}
+
 
 // set the dense index for the given index
 void whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index)
@@ -228,14 +254,24 @@ void whisker_ss_sort(whisker_sparse_set *ss)
     size_t element_size = ss->element_size;
     void* temp_dense = ss->swap_buffer;
 
+    size_t start = 0;
+    size_t end = n;
+
     if (n == 0)
     {
+    	ss->mutations_length = 0;
         return;
     }
 
-    for (size_t i = 0; i < n - 1; i++) {
+    if (ss->mutations_length == 0)
+    {
+		return;
+    }
+    ss->mutations_length = 0;
+
+    for (size_t i = start; i < end - 1; i++) {
         bool swapped = false;
-        for (size_t j = 0; j < n - i - 1; j++) {
+        for (size_t j = 0; j < end - i - 1; j++) {
             if (dense_index[j] > dense_index[j + 1]) {
                 uint64_t temp_index = dense_index[j];
                 uint64_t temp_index2 = dense_index[j + 1];

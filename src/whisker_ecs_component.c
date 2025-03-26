@@ -25,9 +25,10 @@ void whisker_ecs_c_init_components(whisker_ecs_components *components)
 		components->components, 
 		WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE
 	);
-
-	// create sparse set for changed components
-	components->changed_components = whisker_ss_create_t(whisker_ecs_entity_id);
+	whisker_arr_init_t(
+		components->component_ids, 
+		WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE
+	);
 
 	// create deferred actions array
 	whisker_arr_init_t(
@@ -67,7 +68,7 @@ void whisker_ecs_c_free_components(whisker_ecs_components *components)
 		}
 	}
 	free(components->components);
-	whisker_ss_free_all(components->changed_components);
+	free(components->component_ids);
 	pthread_mutex_destroy(&components->grow_components_mutex);
 	pthread_mutex_destroy(&components->deferred_actions_mutex);
 	free(components->deferred_actions);
@@ -87,6 +88,13 @@ void whisker_ecs_c_create_component_array(whisker_ecs_components *components, wh
 	whisker_sparse_set *ss;
 	debug_log(DEBUG, ecs:create_component_array, "creating component sparse set %zu size %zu", component_id.id, component_size);
 	ss = whisker_ss_create_s(component_size);
+
+	whisker_arr_ensure_alloc_block_size(
+		components->component_ids, 
+		(components->component_ids_length + 1), 
+		(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
+	);
+	components->component_ids[components->component_ids_length++] = component_id;
 
 	components->components[component_id.index] = ss;
 }
@@ -133,16 +141,6 @@ void whisker_ecs_c_free_component_array(whisker_ecs_components *components, whis
 void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
 {
 	whisker_ss_sort(whisker_ecs_c_get_component_array(components, component_id));
-}
-
-// mark a component array as having been changed
-// note: this is used to process deferred actions e.g. sort
-void whisker_ecs_c_set_component_array_changed(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
-{
-	if (!whisker_ss_contains(components->changed_components, component_id.id))
-	{
-		whisker_ss_set(components->changed_components, component_id.id, &component_id);
-	}
 }
 
 
@@ -234,7 +232,6 @@ void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs
 
 	// set the component
 	whisker_ss_set(component_array, entity_id.index, component);
-	whisker_ecs_c_set_component_array_changed(components, component_id);
 }
 
 // check if the provided entity has a component by ID
@@ -255,7 +252,6 @@ void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_
 
 	// remove component
 	whisker_ss_remove(component_array, entity_id.index);
-	whisker_ecs_c_set_component_array_changed(components, component_id);
 }
 
 // remove all of the components on an entity

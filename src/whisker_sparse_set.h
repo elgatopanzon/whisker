@@ -19,12 +19,27 @@
 #define WHISKER_SPARSE_SET_SPARSE_INDEX_BLOCK_SIZE (1024 / sizeof(uint64_t))
 #define WHISKER_SPARSE_SET_DENSE_REALLOC_BLOCK_SIZE_MULTIPLIER 16384
 
+enum WHISKER_SPARSE_SET_MUTATION_TYPE
+{ 
+	WHISKER_SPARSE_SET_MUTATION_TYPE_ADD,
+	WHISKER_SPARSE_SET_MUTATION_TYPE_REMOVE,
+	WHISKER_SPARSE_SET_MUTATION_TYPE_SWAP,
+};
+
+struct whisker_sparse_set_mutation
+{
+	uint64_t mutated_index;
+	uint64_t mutated_sparse_index;
+	enum WHISKER_SPARSE_SET_MUTATION_TYPE mutation_type;
+};
+
 typedef struct whisker_sparse_set
 {
 	whisker_arr_declare(uint64_t, sparse);
 	whisker_arr_declare(uint64_t, sparse_index);
 	whisker_trie *sparse_trie;
 	whisker_arr_declare(void, dense);
+	whisker_arr_declare(struct whisker_sparse_set_mutation, mutations);
 	void *swap_buffer;
 	size_t element_size;
 	_Atomic size_t *length;
@@ -54,6 +69,7 @@ void whisker_ss_set(whisker_sparse_set *ss, uint64_t index, void *value);
 void* whisker_ss_get(whisker_sparse_set *ss, uint64_t index);
 void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index);
 bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index);
+void whisker_ss_record_mutation(whisker_sparse_set *ss, uint64_t index_mutated, uint64_t sparse_index_mutated, enum WHISKER_SPARSE_SET_MUTATION_TYPE mutation_type);
 
 void whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index);
 void whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index);

@@ -35,7 +35,7 @@ struct whisker_ecs_component_deferred_action
 typedef struct whisker_ecs_components
 {
 	whisker_arr_declare(whisker_sparse_set *, components);
-	whisker_sparse_set *changed_components;
+	whisker_arr_declare(whisker_ecs_entity_id, component_ids);
 	pthread_mutex_t grow_components_mutex;
 	whisker_arr_declare(struct whisker_ecs_component_deferred_action, deferred_actions);
 	whisker_arr_declare(void, deferred_actions_data);
@@ -56,7 +56,6 @@ void whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t c
 whisker_sparse_set *whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 void whisker_ecs_c_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-void whisker_ecs_c_set_component_array_changed(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 
 // component deferred actions functions
 void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, void *data, size_t data_size);
