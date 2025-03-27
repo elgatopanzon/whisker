@@ -214,6 +214,11 @@ void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ec
 
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
 {
+    if (whisker_ecs_e(entities, process_phase->id)->unmanaged)
+    {
+    	return;
+    }
+
     int update_count = system_update_advance_process_phase_time_step(process_phase);
 
     for (int ui = 0; ui < update_count; ++ui)
@@ -572,7 +577,7 @@ static void itor_set_master_components(whisker_ecs_system_iterator *itor) {
 		// skip entities marked as destroyed
 		// note: if an entity is marked destroyed but still has components, then it's
 		// an entity with destroyed state managed externally
-        if (whisker_ecs_e(itor->entities, itor->entity_id)->destroyed)
+        if (whisker_ecs_e(itor->entities, itor->entity_id)->unmanaged)
         {
         	itor_increment_cursor(itor);
         	continue;

@@ -53,6 +53,9 @@ whisker_ecs *whisker_ecs_create()
 
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_PHASE_FINAL_RATE);
 
+	// register built-in systems
+	whisker_ecs_register_system(new, whisker_ecs_system_deregister_startup_phase, "wecs_system_deregister_startup_phase", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
+
 	// create thread pool for general work tasks
 	new->general_thread_pool = whisker_tp_create_and_init(0, "ecs_general_tasks");
 	whisker_arr_init_t(new->component_sort_requests, 32);
@@ -272,14 +275,14 @@ void whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_enti
 void whisker_ecs_soft_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
     whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-    atomic_store(&e->destroyed, true);
+    atomic_store(&e->unmanaged, true);
 }
 
 // immediately soft-revive the given entity ID with an atomic operation
 void whisker_ecs_soft_revive_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
     whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-    atomic_store(&e->destroyed, false);
+    atomic_store(&e->unmanaged, false);
 }
 
 // check whether the given entity ID is still alive
@@ -454,4 +457,26 @@ bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_e
 void whisker_ecs_create_deferred_component_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action)
 {
 	whisker_ecs_c_create_deferred_action(components, component_id, entity_id, action, value, component_size);
+}
+
+/**********************
+*  built-in systems  *
+**********************/
+
+// this system ensures the process phase WHISKER_ECS_PROCESS_PHASE_ON_STARTUP
+// gets disabled after the first frame along with this system
+void whisker_ecs_system_deregister_startup_phase(whisker_ecs_system_context *context)
+{
+	// destroy the process phase entity, and destroy this system's entity
+	whisker_ecs_entity *e = whisker_ecs_e_named(context->entities, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP);
+
+	if (e)
+	{
+		debug_log(DEBUG, ecs:system_deregister_startup_phase, "de-registering startup phase entity %d", e->id.index);
+
+		whisker_ecs_soft_destroy_entity(context->entities, e->id);
+
+		// destroy system entity to prevent running it again
+		whisker_ecs_soft_destroy_entity(context->entities, context->system_entity_id);
+	}
 }

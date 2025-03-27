@@ -62,6 +62,9 @@ typedef struct whisker_ecs_entity
     // note: this is not used for alive checks
     _Atomic bool destroyed;
 
+    // an unmanaged entity is neither active nor destroyed
+    _Atomic bool unmanaged;
+
     // pointer to current name, if any
     char* name;
 } whisker_ecs_entity;
