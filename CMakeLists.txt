@@ -21,9 +21,9 @@ endif()
 project(whisker C)
 
 # set and force c standard
-set(C_STANDARD 99)
+set(C_STANDARD 11)
 set(C_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 
 # pass warning cli switches to compiler
 if(MSVC)

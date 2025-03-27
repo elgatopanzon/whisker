@@ -7,6 +7,8 @@
 #ifndef WHISKER_STD_H_
 #define WHISKER_STD_H_
 
+#define _POSIX_C_SOURCE 199309L
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
