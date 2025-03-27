@@ -60,7 +60,7 @@ typedef struct whisker_ecs_entity
 
     // set when this entity is currently destroyed
     // note: this is not used for alive checks
-    bool destroyed;
+    _Atomic bool destroyed;
 
     // pointer to current name, if any
     char* name;

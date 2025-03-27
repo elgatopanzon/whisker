@@ -36,6 +36,10 @@ typedef struct whisker_ecs_system_iterator
 	// component arrays, including read/write/optional
 	whisker_arr_declare(whisker_sparse_set *, component_arrays);
 	whisker_arr_declare(size_t, component_arrays_cursors);
+	//
+	// pointers to ECS entities and components
+	whisker_ecs_components *components;
+	whisker_ecs_entities *entities;
 } whisker_ecs_system_iterator;
 
 typedef struct whisker_ecs_system_context

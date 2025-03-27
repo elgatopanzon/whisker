@@ -268,6 +268,20 @@ void whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_enti
 	whisker_ecs_e_destroy(entities, entity_id);
 }
 
+// immediately soft-destroy the given entity ID with an atomic operation
+void whisker_ecs_soft_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+{
+    whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+    atomic_store(&e->destroyed, true);
+}
+
+// immediately soft-revive the given entity ID with an atomic operation
+void whisker_ecs_soft_revive_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+{
+    whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+    atomic_store(&e->destroyed, false);
+}
+
 // check whether the given entity ID is still alive
 // note: this performs a version check using the full entity 64 bit ID
 bool whisker_ecs_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)

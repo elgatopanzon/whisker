@@ -460,6 +460,9 @@ whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_conte
 // init the provided iterator and cache the given components
 void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
+	itor->components = context->components;
+	itor->entities = context->entities;
+
 	// convert read and write component names to component sparse sets
 	char *combined_components;
 	combined_components = whisker_mem_xmalloc(strlen(read_components) + strlen(write_components) + 2);
@@ -561,8 +564,23 @@ static void itor_increment_cursor(whisker_ecs_system_iterator *itor) {
 }
 
 static void itor_set_master_components(whisker_ecs_system_iterator *itor) {
-    whisker_sparse_set *master_set = itor->component_arrays[itor->master_index];
-    itor->entity_id.id = master_set->sparse_index[itor->cursor];
+	while (itor->cursor < itor->cursor_max) 
+	{
+    	whisker_sparse_set *master_set = itor->component_arrays[itor->master_index];
+    	itor->entity_id.id = master_set->sparse_index[itor->cursor];
+
+		// skip entities marked as destroyed
+		// note: if an entity is marked destroyed but still has components, then it's
+		// an entity with destroyed state managed externally
+        if (whisker_ecs_e(itor->entities, itor->entity_id)->destroyed)
+        {
+        	itor_increment_cursor(itor);
+        	continue;
+        }
+
+        break;
+	}
+
 }
 
 static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor) {
@@ -571,6 +589,7 @@ static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor
     for (int ci = 0; ci < rw_length; ++ci) {
         whisker_sparse_set *set = itor->component_arrays[ci];
         whisker_ecs_entity_id_raw cursor_entity = set->sparse_index[itor->cursor];
+
 
         if (cursor_entity == itor->entity_id.id) {
             itor->component_arrays_cursors[ci] = itor->cursor;

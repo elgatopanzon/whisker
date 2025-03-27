@@ -103,6 +103,8 @@ void whisker_ecs_sort_component_thread_func_all_(void *component_sort_request, w
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities);
 whisker_ecs_entity_id whisker_ecs_create_named_entity(whisker_ecs_entities *entities, char* name);
 void whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+void whisker_ecs_soft_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+void whisker_ecs_soft_revive_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *entities);
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entities *entities, char* name);
 void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
