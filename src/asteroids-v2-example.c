@@ -11,6 +11,7 @@
 #include "whisker.h"
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
+#include "whisker_ecs_pool.h"
 
 const int asteroids_screen_width = 800;
 const int asteroids_screen_height = 800;
@@ -21,6 +22,9 @@ const Vector2 asteroids_screen_center = {(float) asteroids_screen_width / 2, (fl
 #define DRAW_FRAMETIME_AVG_SAMPLES 300
 
 whisker_ecs *asteroids_ecs;
+whisker_ecs_pool *asteroids_asteroids_pool;
+whisker_ecs_pool *asteroids_collisions_pool;
+whisker_ecs_pool *asteroids_bullets_pool;
 
 typedef enum ASTEROIDS_GAME_STATE
 {
@@ -91,6 +95,10 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 void asteroids_add_projectile(Vector2 position, float rotation);
 void asteroids_create_player_entity();
 
+void asteroids_pool_init_asteroids();
+void asteroids_pool_init_collisions();
+void asteroids_pool_init_bullets();
+
 typedef struct asteroids_component_collision
 {
 	whisker_ecs_entity_id entity_a;
@@ -144,10 +152,19 @@ int main(int argc, char** argv)
 void asteroids_init_ecs()
 {
 	asteroids_ecs = whisker_ecs_create();
+
+	// create pool instances
+	asteroids_asteroids_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 32, 16);
+	asteroids_collisions_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 32, 16);
+	asteroids_bullets_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 8, 4);
 }
 void asteroids_deinit_ecs()
 {
 	whisker_ecs_free(asteroids_ecs);
+
+	whisker_ecs_p_free_all(asteroids_asteroids_pool);
+	whisker_ecs_p_free_all(asteroids_collisions_pool);
+	whisker_ecs_p_free_all(asteroids_bullets_pool);
 }
 
 
@@ -214,7 +231,7 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
 			ASTEROIDS_ASTEROID_SIZE size = asteroid_sizes[size_i];
 
 			// create an entity id
-			whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
+			whisker_ecs_entity_id e = whisker_ecs_p_request_entity(asteroids_asteroids_pool);
 
 			// set the entity component data
 			float rotation = (float)(rand() % 360);
@@ -229,7 +246,7 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
     		whisker_ecs_set_tag(context->components, itor->component_ids_opt[7], e);
     		whisker_ecs_set_tag(context->components, itor->component_ids_opt[8], e);
 
-			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f", e.index, size, position.x, position.y);
+			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f (pool size %zu)", e.index, size, position.x, position.y, asteroids_asteroids_pool->entity_pool_length);
 		}
 	}
 }
@@ -438,7 +455,8 @@ void asteroids_system_collision(whisker_ecs_system_context *context)
     			*pos_2d = Vector2Add(*pos_2d, correction);
     			*colliding_position = Vector2Subtract(*colliding_position, correction);
 
-    			whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(context->entities);
+    			/* whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(context->entities); */
+    			whisker_ecs_entity_id collision_e = whisker_ecs_p_request_entity(asteroids_collisions_pool);
 
     			asteroids_component_collision col = {};
     			col.entity_a = entities[i].id;
@@ -961,6 +979,7 @@ void asteroids_system_raylib_end_drawing(whisker_ecs_system_context *context)
 	EndDrawing();
 }
 
+
 void asteroids_game_init()
 {
 	asteroids_game_state = ASTEROIDS_GAME_STATE_PLAYING;
@@ -974,6 +993,11 @@ void asteroids_game_init()
 
 	// create player entity
 	asteroids_create_player_entity();
+
+	// init pool prototype entities
+	asteroids_pool_init_asteroids();
+	asteroids_pool_init_collisions();
+	asteroids_pool_init_bullets();
 
 	// spawn asteroids
 	for (int i = 0; i < ASTEROID_SPAWN_START; ++i)
@@ -1320,7 +1344,7 @@ void asteroids_spawn_asteroid()
 void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, float rotation_velocity, ASTEROIDS_ASTEROID_SIZE size)
 {
 	// create an entity id
-	whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
+	whisker_ecs_entity_id e = whisker_ecs_p_request_entity(asteroids_asteroids_pool);
 
 	// set the entity component data
 	whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, pos_2d, Vector2, e, &(position));
@@ -1339,7 +1363,7 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 void asteroids_add_projectile(Vector2 position, float rotation)
 {
 	// create an entity id
-	whisker_ecs_entity_id e = whisker_ecs_create_entity_deferred(asteroids_ecs->entities);
+	whisker_ecs_entity_id e = whisker_ecs_p_request_entity(asteroids_bullets_pool);
 
 	// set the entity component data
 	whisker_ecs_set_named(asteroids_ecs->entities, asteroids_ecs->components, pos_2d, Vector2, e, &(position));
@@ -1357,4 +1381,51 @@ void asteroids_add_projectile(Vector2 position, float rotation)
 	whisker_ecs_set_named_tag(asteroids_ecs->entities, asteroids_ecs->components, t_screen_cull, e);    
 
 	debug_log(DEBUG, add_projectile, "rot %f at %fx%f", rotation, position.x, position.y);
+}
+
+
+void asteroids_pool_init_asteroids()
+{
+	// create an entity id
+	Vector2 pos_2d = {0,0};
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, pos_2d, Vector2, &pos_2d);
+	Vector2 vel_2d = {0,0};
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, vel_2d, Vector2, &vel_2d);
+	ASTEROIDS_ASTEROID_SIZE ast_size = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, ast_size, ASTEROIDS_ASTEROID_SIZE, &ast_size);
+	float radius = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, radius, float, &radius);
+	float rot = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, rot, float, &rot);
+	float rot_v = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, rot_v, float, &rot_v);
+	double ctime = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_asteroids_pool, ctime, double, &ctime);
+
+	whisker_ecs_p_set_prototype_named_tag(asteroids_asteroids_pool, t_ast);
+	whisker_ecs_p_set_prototype_named_tag(asteroids_asteroids_pool, t_screen_cull);
+}
+
+void asteroids_pool_init_collisions()
+{
+	asteroids_component_collision collision = {0};
+	whisker_ecs_p_set_prototype_named_component(asteroids_collisions_pool, collision, asteroids_component_collision, &collision);
+}
+
+void asteroids_pool_init_bullets()
+{
+	Vector2 pos_2d = {0,0};
+	whisker_ecs_p_set_prototype_named_component(asteroids_bullets_pool, pos_2d, Vector2, &pos_2d);
+	float rot = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_bullets_pool, rot, float, &rot);
+	float radius = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_bullets_pool, radius, float, &radius);
+	Vector2 vel_2d = {0,0};
+	whisker_ecs_p_set_prototype_named_component(asteroids_bullets_pool, vel_2d, Vector2, &vel_2d);
+	double ctime = 0;
+	whisker_ecs_p_set_prototype_named_component(asteroids_bullets_pool, ctime, double, &ctime);
+
+	whisker_ecs_p_set_prototype_named_tag(asteroids_bullets_pool, t_bullet);
+	whisker_ecs_p_set_prototype_named_tag(asteroids_bullets_pool, t_move_dir);
+	whisker_ecs_p_set_prototype_named_tag(asteroids_bullets_pool, t_screen_cull);
 }

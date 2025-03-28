@@ -13,9 +13,9 @@
 #ifndef WHISKER_ECS_ENTITY_H
 #define WHISKER_ECS_ENTITY_H
 
-#define WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity))
-#define WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_index))
-#define WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE (8096 / sizeof(whisker_ecs_entity_deferred_action))
+#define WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE (16384 / sizeof(whisker_ecs_entity))
+#define WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE (16384 / sizeof(whisker_ecs_entity_index))
+#define WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE (16384 / sizeof(whisker_ecs_entity_deferred_action))
 
 // the main entity index is a uint32
 typedef uint32_t whisker_ecs_entity_index;
@@ -67,6 +67,9 @@ typedef struct whisker_ecs_entity
 
     // pointer to current name, if any
     char* name;
+
+	// generic pointer to an unspecified managed by object
+    void *managed_by;
 } whisker_ecs_entity;
 
 
@@ -127,6 +130,8 @@ void whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id
 void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action);
 void whisker_ecs_e_process_deferred(whisker_ecs_entities *entities);
+void whisker_ecs_e_make_unmanaged(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+void whisker_ecs_e_make_managed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
 
 // utility functions
 whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);

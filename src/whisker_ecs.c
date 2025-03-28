@@ -175,8 +175,37 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 
 		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
 		{
+			// HACK: get pool managing the entity and create a deferred removal
+			// request for any entity not contained within the pool's components
+			whisker_ecs_entity *e = whisker_ecs_e(ecs->entities, action->id);
+			if (e->managed_by != NULL)
+			{ 
+				whisker_ecs_pool *pool = e->managed_by;
+
+				for (int ci = 0; ci < ecs->components->component_ids_length; ++ci)
+				{
+					whisker_ecs_entity_id component_id = ecs->components->component_ids[ci];
+					if (!whisker_ecs_c_has_component(ecs->components, component_id, action->id)) { continue; }
+
+					// if the pool components set contains this component, skip
+					// destroying it
+					if (whisker_ss_contains(pool->component_ids_set, component_id.index))
+					{
+						/* printf("deferred component: skip destroying matching pool component %zu (%s) from entity %zu\n", component_id, whisker_ecs_e(ecs->entities, component_id)->name, action->id); */
+						continue;
+					}
+
+					/* printf("deferred component: destroying non-matching pool component %zu (%s) from entity %zu\n", component_id, whisker_ecs_e(ecs->entities, component_id)->name, action->id); */
+
+					whisker_ecs_create_deferred_component_action(ecs->components, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
+				}
+
+				continue;
+			}
+
 			/* whisker_ecs_c_remove_all_components(ecs->components, action->id); */
 			whisker_ecs_create_deferred_component_action(ecs->components, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL);
+
 		}
 	}
 
@@ -187,7 +216,40 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 	whisker_ecs_update_process_changed_components_(ecs);
 	
 	// process entity actions
-	whisker_ecs_e_process_deferred(ecs->entities);
+	whisker_ecs_update_process_deferred_entity_actions_(ecs);
+}
+
+void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
+{
+	while (ecs->entities->deferred_actions_length > 0) 
+	{
+		whisker_ecs_entity_deferred_action action = ecs->entities->deferred_actions[--ecs->entities->deferred_actions_length];
+
+		whisker_ecs_entity *e = whisker_ecs_e(ecs->entities, action.id);
+
+		switch (action.action) {
+			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
+				ecs->entities->entities[action.id.index].destroyed = false;		
+				break;
+
+			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
+				if (e->managed_by != NULL)
+				{
+					// HACK: for now we assume everything managed is managed by a pool
+					whisker_ecs_pool *pool = e->managed_by;
+
+					/* printf("entity deferred action: returning entity %zu to pool\n", action.id); */
+
+					// note: the deferred entity actions are not implemented in
+					// the pool, and it uses locks instead
+					whisker_ecs_p_return_entity(pool, action.id);
+				}
+				else
+				{
+					whisker_ecs_e_destroy(ecs->entities, action.id);
+				}
+		}
+	}
 }
 
 void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
@@ -268,21 +330,28 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity(whisker_ecs_entities *enti
 // immediately destroy the given entity ID
 void whisker_ecs_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
+	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+	if (e->managed_by != NULL)
+	{
+		// HACK: for now we assume everything managed is managed by a pool
+		whisker_ecs_pool *pool = e->managed_by;
+		whisker_ecs_p_return_entity(pool, entity_id);
+		return;
+	}
+
 	whisker_ecs_e_destroy(entities, entity_id);
 }
 
 // immediately soft-destroy the given entity ID with an atomic operation
 void whisker_ecs_soft_destroy_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-    whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-    atomic_store(&e->unmanaged, true);
+	whisker_ecs_e_make_unmanaged(entities, entity_id);
 }
 
 // immediately soft-revive the given entity ID with an atomic operation
 void whisker_ecs_soft_revive_entity(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-    whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-    atomic_store(&e->unmanaged, false);
+	whisker_ecs_e_make_managed(entities, entity_id);
 }
 
 // check whether the given entity ID is still alive
@@ -327,6 +396,17 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 // request to destroy the provided entity ID at the end of current frame
 void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
+	if (entities->entities[entity_id.index].managed_by != NULL)
+	{
+		_Atomic bool currently_unmanaged = atomic_load(&entities->entities[entity_id.index].unmanaged);
+		if (!currently_unmanaged)
+		{
+    		whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
+    		atomic_store(&entities->entities[entity_id.index].unmanaged, true);
+		}
+		return;
+	}
+
 	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
 }
 

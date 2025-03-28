@@ -8,6 +8,7 @@
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"
+#include "whisker_ecs_pool.h"
 #include "whisker_thread_pool.h"
 
 #ifndef WHISKER_ECS_H
@@ -98,6 +99,7 @@ void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs);
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs);
 void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisker_thread_pool_context *t);
 void whisker_ecs_sort_component_thread_func_all_(void *component_sort_request, whisker_thread_pool_context *t);
+void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs);
 
 // entity shortcut functions
 whisker_ecs_entity_id whisker_ecs_create_entity(whisker_ecs_entities *entities);

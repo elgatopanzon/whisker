@@ -225,6 +225,19 @@ void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id
 	}
 }
 
+// set an entity to unmanaged state, and no longer included in iterations or
+// recycled
+void whisker_ecs_e_make_unmanaged(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+{
+    atomic_store(&entities->entities[entity_id.index].unmanaged, true);
+}
+
+// set an entity to managed state
+void whisker_ecs_e_make_managed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+{
+    atomic_store(&entities->entities[entity_id.index].unmanaged, false);
+}
+
 // add a deferred entity action to be processed at a later time
 // note: typically it would be the end of an update
 void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
