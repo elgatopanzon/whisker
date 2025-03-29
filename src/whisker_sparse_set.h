@@ -37,7 +37,6 @@ typedef struct whisker_sparse_set
 {
 	whisker_arr_declare(uint64_t, sparse);
 	whisker_arr_declare(uint64_t, sparse_index);
-	whisker_trie *sparse_trie;
 	whisker_arr_declare(void, dense);
 	whisker_arr_declare(struct whisker_sparse_set_mutation, mutations);
 	void *swap_buffer;

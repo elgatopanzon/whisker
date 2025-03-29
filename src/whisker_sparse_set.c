@@ -37,9 +37,6 @@ void whisker_ss_init_f(whisker_sparse_set *ss, size_t element_size)
 	// allocate mutations array
 	whisker_arr_init_t(ss->mutations, WHISKER_SPARSE_SET_SPARSE_BLOCK_SIZE);
 
-	// allocate root trie node
-	ss->sparse_trie = whisker_mem_xcalloc_t(1, whisker_trie);
-
 	ss->element_size = element_size;
 	ss->swap_buffer = whisker_mem_xcalloc(1, element_size);
 
@@ -70,7 +67,6 @@ void whisker_ss_free(whisker_sparse_set *ss)
 	free(ss->sparse_index);
 	free(ss->dense);
 	free(ss->mutations);
-	whisker_trie_free_all(ss->sparse_trie);
 	free(ss->swap_buffer);
 }
 
@@ -167,11 +163,6 @@ void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
 // check if the sparse set contains the index
 bool whisker_ss_contains(whisker_sparse_set *ss, uint64_t index)
 {
-	if (index > UINT_MAX)
-	{
-		return whisker_ss_get_dense_index(ss, index) != UINT64_MAX;
-	}
-
     return ss->sparse_length >= index + 1 && ss->sparse[index] != UINT64_MAX && ss->sparse_index[ss->sparse[index]] == index;
 }
 
@@ -193,20 +184,8 @@ void whisker_ss_record_mutation(whisker_sparse_set *ss, uint64_t index_mutated, 
 // set the dense index for the given index
 void whisker_ss_set_dense_index(whisker_sparse_set *ss, uint64_t index, uint64_t dense_index)
 {
-    if (index > UINT_MAX) {
-        whisker_trie *node = whisker_trie_search_node_(ss->sparse_trie, &index, sizeof(index), 0, false);
-        if (node) {
-            free(node->value);
-        }
-        uint64_t *dense_index_value = whisker_mem_xmalloc_t(*dense_index_value);
-        if (dense_index_value) {
-            *dense_index_value = dense_index;
-            whisker_trie_set_value(ss->sparse_trie, &index, sizeof(index), dense_index_value);
-        }
-    } else {
-    	whisker_ss_init_dense_index(ss, index);
-    	ss->sparse[index] = dense_index;
-    }
+    whisker_ss_init_dense_index(ss, index);
+    ss->sparse[index] = dense_index;
     return;
 }
 
@@ -236,11 +215,6 @@ void whisker_ss_init_dense_index(whisker_sparse_set *ss, uint64_t index)
 // get the dense index for the given index
 uint64_t whisker_ss_get_dense_index(whisker_sparse_set *ss, uint64_t index)
 {
-    if (index > UINT_MAX) {
-        uint64_t *dense_index = whisker_trie_search_value_f(ss->sparse_trie, &index, sizeof(index));
-        return dense_index ? *dense_index : UINT64_MAX;
-    }
-
     whisker_ss_init_dense_index(ss, index);
     return ss->sparse[index];
 }
