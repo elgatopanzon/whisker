@@ -148,7 +148,7 @@ void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whis
 *  component deferred actions functions  *
 ******************************************/
 // add a deferred component action to the queue
-void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, void *data, size_t data_size)
+void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, void *data, size_t data_size, bool propagate)
 {
 	// increment and fetch a stable deferred action index
 	size_t deferred_action_idx = atomic_fetch_add(&components->deferred_actions_length, 1);
@@ -171,6 +171,7 @@ void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, wh
 	components->deferred_actions[deferred_action_idx].data_size = data_size;
 	components->deferred_actions[deferred_action_idx].data_offset = 0;
 	components->deferred_actions[deferred_action_idx].action = action;
+	components->deferred_actions[deferred_action_idx].propagate = propagate;
 
 	if (data_size > 0)
 	{

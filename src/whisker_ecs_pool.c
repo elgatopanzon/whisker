@@ -170,7 +170,7 @@ void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id ent
 	{
 		whisker_sparse_set *component_array = whisker_ecs_c_get_component_array(pool->components, pool->component_ids[i]);
 		/* whisker_ss_set(component_array, entity_id.index, whisker_ss_get(component_array, pool->prototype_entity_id.index)); */
-		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size);
+		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size, false);
 	}
 
 	// turn into managed entity

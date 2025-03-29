@@ -64,6 +64,12 @@ whisker_ecs *whisker_ecs_create()
 	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
 	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
 
+	// create event entity pool
+	new->events_entity_pool = whisker_ecs_p_create_and_init(new->components, new->entities, 128, 64);
+	whisker_ecs_p_set_prototype_named_tag(new->events_entity_pool, t_event);
+	struct whisker_ecs_event_cull_event_component cull = {};
+	whisker_ecs_p_set_prototype_named_component(new->events_entity_pool, t_event_cull_data, cull, &cull);
+
 	return new;
 }
 
@@ -80,6 +86,9 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	// free thread pool
 	whisker_tp_free_all(ecs->general_thread_pool);
 	free(ecs->component_sort_requests);
+
+	// free entity pool
+	whisker_ecs_p_free_all(ecs->events_entity_pool);
 
 	free(ecs);
 }
@@ -219,6 +228,9 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 		}
 	}
 
+	// generate events from deferred component actions
+	whisker_ecs_update_generate_component_events_(ecs);
+
 	// process deferred component actions
 	whisker_ecs_update_process_deferred_component_actions_(ecs);
 
@@ -262,8 +274,71 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 	}
 }
 
+void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
+{
+	// use deferred actions to create component events
+	if (ecs->components->deferred_actions_length > 0) 
+	{
+		for (int i = 0; i < ecs->components->deferred_actions_length; ++i)
+		{
+			struct whisker_ecs_component_deferred_action *action = &ecs->components->deferred_actions[i];
+
+			// holds the name of the event to create
+			char* event_name; 
+			char* component_name = whisker_ecs_e(ecs->entities, action->component_id)->name;
+			// skip actions with propagate disabled or any component containing
+			// the string "ev_" which is assumed to be an event
+			// HACK: not sure how else to do this
+			if (!action->propagate || (component_name != NULL && strstr(component_name, "ev_") != NULL))
+			{
+				continue;
+			}
+
+			switch (action->action) {
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
+					// determine if this is an add event or a changed event
+					if (!whisker_ecs_has_component(ecs->components, action->component_id, action->entity_id))
+					{
+						asprintf(&event_name, "%s_ev_added", component_name);
+					}
+					else
+					{
+						// compare the existing value to the new value, overwise
+						// skip this action
+						if (memcmp(ecs->components->deferred_actions_data + action->data_offset, whisker_ss_get(ecs->components->components[action->component_id.index], action->entity_id.index), action->data_size) == 0)
+						{
+							continue;
+						}
+
+						// if the memory is different consider it changed
+						asprintf(&event_name, "%s_ev_changed", component_name);
+					}
+					break;
+
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
+					asprintf(&event_name, "%s_ev_removed", component_name);
+					break;
+				default:
+					continue;
+					break;
+			}
+
+			// create and fire event on the entity
+			whisker_ecs_entity_id event_entity = whisker_ecs_e_create_named(ecs->entities, event_name);
+
+			/* printf("deferred component events: creating %s (%zu) event on entity %zu\n", event_name, event_entity, action->entity_id); */
+
+			// fire off a non-deferred event
+			whisker_ecs_ev_fire_on_f(ecs->events_entity_pool, event_entity, action->entity_id);
+
+			free(event_name);
+		}
+	}
+}
+
 void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
 {
+	// process the deferred actions into real component actions
 	if (ecs->components->deferred_actions_length > 0) 
 	{
 		for (int i = 0; i < ecs->components->deferred_actions_length; ++i)
@@ -534,7 +609,7 @@ bool whisker_ecs_has_component(whisker_ecs_components *components, whisker_ecs_e
 // create a deferred component action to be processed later
 void whisker_ecs_create_deferred_component_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action)
 {
-	whisker_ecs_c_create_deferred_action(components, component_id, entity_id, action, value, component_size);
+	whisker_ecs_c_create_deferred_action(components, component_id, entity_id, action, value, component_size, true);
 }
 
 /**********************

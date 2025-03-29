@@ -83,6 +83,7 @@ typedef struct whisker_ecs
 	whisker_ecs_system_context system_update_context;
 	whisker_thread_pool *general_thread_pool;
 	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
+	whisker_ecs_pool *events_entity_pool;
 } whisker_ecs;
 
 
@@ -96,6 +97,7 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 // system update functions
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs);
+void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs);
 void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs);
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs);
 void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisker_thread_pool_context *t);
