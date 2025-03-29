@@ -60,6 +60,10 @@ whisker_ecs *whisker_ecs_create()
 	new->general_thread_pool = whisker_tp_create_and_init(0, "ecs_general_tasks");
 	whisker_arr_init_t(new->component_sort_requests, 32);
 
+	// register the event system's systems
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
+
 	return new;
 }
 

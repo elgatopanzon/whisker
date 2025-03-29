@@ -10,6 +10,7 @@
 #include "whisker_ecs_system.h"
 #include "whisker_ecs_pool.h"
 #include "whisker_thread_pool.h"
+#include "whisker_ecs_event.h"
 
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
