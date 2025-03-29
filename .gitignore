@@ -69,5 +69,8 @@ build.em
 callgrind*
 vgcore*
 
+# perf reports
+perf*
+
 #ignore vim sessions
 *.vim
