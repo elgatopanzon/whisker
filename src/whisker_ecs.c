@@ -164,9 +164,15 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
     for (int i = 0; i < ecs->systems->process_phases_length; ++i)
     {
         whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[i], update_context);
-
-		whisker_ecs_update_process_deferred_actions(ecs);
     }
+
+	// for consistency it's best to process deferred actions at the end of the
+	// frame.
+	// this ensures that events can survive for an entire frame despite being
+	// created at any point during the current/previous frame.
+	// the overall "reactivity" is less, however it forces less of an implicit
+	// ordering of systems which depend on frame actions from a previous phase.
+	whisker_ecs_update_process_deferred_actions(ecs);
 }
 
 // process any deferred actions queued since the previous update
