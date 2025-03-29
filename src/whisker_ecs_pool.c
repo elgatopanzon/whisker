@@ -42,9 +42,6 @@ void whisker_ecs_p_init(whisker_ecs_pool *pool, whisker_ecs_components *componen
 
 	pool->components = components;
 	pool->entities = entities;
-
-	// init initial entities
-	whisker_ecs_p_create_and_return(pool, count);
 }
 
 // deallocate an entity pool's allocations
@@ -112,6 +109,12 @@ void whisker_ecs_p_set_prototype_entity(whisker_ecs_pool *pool, whisker_ecs_enti
 // request an entity from the pool
 whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 {
+	// if the length is 0 and the cache misses are 0, then fill the pool 
+	// using the initial count value
+	if (pool->entity_pool_length == 0 && pool->cache_misses == 0)
+	{
+		whisker_ecs_p_create_and_return(pool, pool->inital_size);
+	}
 	/* printf("pool %p entities in pool: ", pool); */
 	/* for (int i = 0; i < pool->entity_pool_length; ++i) */
 	/* { */
