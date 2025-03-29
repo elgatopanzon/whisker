@@ -102,11 +102,11 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->entities, system_name);
 
 	// add process phase component to system
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0}, true);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// set component of its type on itself
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0}, true);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// register the system with the system scheduler
@@ -120,7 +120,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	});
 
 	// add the system index component to the system entity
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1}, true);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	/* // HACK: do a single execution of the system to initialise the iterator */
@@ -445,7 +445,7 @@ void *whisker_ecs_get_named_component(whisker_ecs_entities *entities, whisker_ec
 
 // set a named component on an entity
 // note: this will handle the creation of the underlying component array
-void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred)
+void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(entities, component_name);;
 	if (component_id.id == 0)
@@ -454,11 +454,11 @@ void *whisker_ecs_set_named_component(whisker_ecs_entities *entities, whisker_ec
 		// for now just return a NULL
 		return NULL;
 	}
-	return whisker_ecs_set_component(components, component_id, component_size, entity_id, value, deferred);
+	return whisker_ecs_set_component(components, component_id, component_size, entity_id, value);
 }
 
 // remove a named component from an entity
-void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id, bool deferred)
+void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_ecs_components *components, char *component_name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_component_id(entities, component_name);
 	if (component_id.id == 0)
@@ -467,7 +467,7 @@ void whisker_ecs_remove_named_component(whisker_ecs_entities *entities, whisker_
 		return;
 	}
 
-	whisker_ecs_remove_component(components, component_id, entity_id, deferred);
+	whisker_ecs_remove_component(components, component_id, entity_id);
 }
 
 // check whether an entity has a named component attached
@@ -492,45 +492,31 @@ void *whisker_ecs_get_component(whisker_ecs_components *components, whisker_ecs_
 
 // set the component by ID on the given entity
 // note: this will handle the creation of the underlying component array
-void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, bool deferred)
+void *whisker_ecs_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	if (deferred)
-	{
-		whisker_ecs_create_deferred_component_action(
-			components,
-			component_id,
-			component_size,
-			entity_id,
-			value,
-			WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET
-		);
-	}
-	else
-	{
-		whisker_ecs_c_set_component(components, component_id, component_size, entity_id, value);
-	}
+	whisker_ecs_create_deferred_component_action(
+		components,
+		component_id,
+		component_size,
+		entity_id,
+		value,
+		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET
+	);
 
 	return value;
 }
 
 // remove the component by ID from the given entity
-void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, bool deferred)
+void whisker_ecs_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
-	if (deferred)
-	{
-		whisker_ecs_create_deferred_component_action(
-			components,
-			component_id,
-			0,
-			entity_id,
-			NULL,
-			WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE
-		);
-	}
-	else
-	{
-		whisker_ecs_c_remove_component(components, component_id, entity_id);
-	}
+	whisker_ecs_create_deferred_component_action(
+		components,
+		component_id,
+		0,
+		entity_id,
+		NULL,
+		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE
+	);
 }
 
 // check if an entity has the given component by ID
