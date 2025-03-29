@@ -102,11 +102,11 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->entities, system_name);
 
 	// add process phase component to system
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0}, false);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0}, true);
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// set component of its type on itself
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0}, false);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0}, true);
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// register the system with the system scheduler
@@ -120,7 +120,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	});
 
 	// add the system index component to the system entity
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1}, false);
+	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1}, true);
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	/* // HACK: do a single execution of the system to initialise the iterator */
