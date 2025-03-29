@@ -137,7 +137,7 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 		whisker_ecs_p_realloc_entities(pool);
 	}
 
-	whisker_ecs_p_init_entity(pool, e);
+	whisker_ecs_p_init_entity(pool, e, false);
 
 	return e;
 }
@@ -157,14 +157,14 @@ whisker_ecs_entity_id whisker_ecs_p_create_entity_deferred(whisker_ecs_pool *poo
 }
 
 // initialise the entities components using the pool's prototype entity
-void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
+void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
 {
 	// copy component data from prototype entity
 	for (size_t i = 0; i < pool->component_ids_length; ++i)
 	{
 		whisker_sparse_set *component_array = whisker_ecs_c_get_component_array(pool->components, pool->component_ids[i]);
 		/* whisker_ss_set(component_array, entity_id.index, whisker_ss_get(component_array, pool->prototype_entity_id.index)); */
-		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size, false);
+		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size, propagate_component_changes);
 	}
 
 	// turn into managed entity
@@ -214,7 +214,7 @@ void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count)
 	for (int i = 0; i < count; ++i)
 	{
 		whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
-		whisker_ecs_p_init_entity(pool, e);
+		whisker_ecs_p_init_entity(pool, e, false);
 		whisker_ecs_p_return_entity(pool, e);
 	}
 }
