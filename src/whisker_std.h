@@ -8,6 +8,7 @@
 #define WHISKER_STD_H_
 
 #define _POSIX_C_SOURCE 199309L
+#define _GNU_SOURCE
 
 #include <assert.h>
 #include <ctype.h>
