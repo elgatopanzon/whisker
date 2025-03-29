@@ -312,6 +312,8 @@ void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisk
 {
 	struct whisker_ecs_component_sort_request *sort_request = component_sort_request;
 	whisker_ecs_c_sort_component_array(sort_request->components, sort_request->component_id);
+
+	sort_request->components->components[sort_request->component_id.index]->mutations_length = 0;
 }
 
 

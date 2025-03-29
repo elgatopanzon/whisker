@@ -156,7 +156,7 @@ void whisker_ss_remove(whisker_sparse_set *ss, uint64_t index) {
 
 	// create mutation
 	whisker_ss_record_mutation(ss, sparse_index_last, dense_index, WHISKER_SPARSE_SET_MUTATION_TYPE_ADD);
-	whisker_ss_record_mutation(ss, index, dense_index, WHISKER_SPARSE_SET_MUTATION_TYPE_SWAP);
+	whisker_ss_record_mutation(ss, index, dense_index, WHISKER_SPARSE_SET_MUTATION_TYPE_REMOVE);
 
 	if (WHISKER_SPARSE_SET_AUTOSORT)
 	{
@@ -259,7 +259,6 @@ void whisker_ss_sort(whisker_sparse_set *ss)
 
     if (n == 0)
     {
-    	ss->mutations_length = 0;
         return;
     }
 
