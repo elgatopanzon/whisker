@@ -62,8 +62,8 @@ whisker_ecs *whisker_ecs_create()
 	whisker_arr_init_t(new->component_sort_requests, 32);
 
 	// register the event system's systems
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
 
 	// create event entity pool
 	new->events_entity_pool = whisker_ecs_p_create_and_init(new->components, new->entities, 128, 64);
@@ -391,12 +391,13 @@ void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
 			whisker_ecs_entity_id event_entity = whisker_ecs_e_create_named(ecs->entities, event_name);
 			whisker_ecs_entity_id event_entity_target = whisker_ecs_e_create_named(ecs->entities, event_name_target);
 
-			/* printf("deferred component events: creating %s (%zu) event on entity %zu\n", event_name, event_entity, action->entity_id); */
 
 			// first fire the targetted event as a new event
 			whisker_ecs_entity_id event_target_entity = action->entity_id;
 			whisker_ecs_entity_id ev = whisker_ecs_ev_create_with_data(ecs->events_entity_pool, event_entity_target, whisker_ecs_entity_id, &event_target_entity);
 			whisker_ecs_ev_fire(ecs->events_entity_pool, ev);
+
+			/* printf("deferred component events: creating %s (%zu as %zu) event on entity %zu\n", event_name, event_entity, ev, action->entity_id); */
 
 			// fire the normal event directly on the entity itself
 			// note: events fired on the entity don't survive the entities
