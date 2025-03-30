@@ -150,7 +150,6 @@ int main(int argc, char** argv)
 }
 
 #define ASTEROIDS_PROCESS_PHASE_INPUT "asteroids_phase_input"
-#define ASTEROIDS_PROCESS_PHASE_COLLISION "asteroids_phase_collision"
 #define ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER "asteroids_phase_collision_handler"
 void asteroids_init_ecs()
 {
@@ -167,14 +166,13 @@ void asteroids_init_ecs()
 	process_phases_length = 0;
 
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_INPUT, 0);
-	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION, 0);
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER, 0);
 
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_STARTUP;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_PRE_LOAD;
 	process_phases[process_phases_length++] = ASTEROIDS_PROCESS_PHASE_INPUT;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE;
-	process_phases[process_phases_length++] = ASTEROIDS_PROCESS_PHASE_COLLISION;
+	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE;
 	process_phases[process_phases_length++] = ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_UPDATE;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_POST_UPDATE;
@@ -1104,41 +1102,35 @@ void asteroids_game_init()
     		asteroids_ecs,
     		asteroids_system_velocity_2d,
     		"system_velocity_2d",
-    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_AUTO
 		);
 		whisker_ecs_register_system(
     		asteroids_ecs,
     		asteroids_system_rotation_velocity,
     		"system_rotation_velocity",
-    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_AUTO
 		);
 		whisker_ecs_register_system(
     		asteroids_ecs,
     		asteroids_system_movement_direction,
     		"system_movement_direction",
-    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
 		);
 		whisker_ecs_register_system(
     		asteroids_ecs,
     		asteroids_system_screen_wrap,
     		"system_screen_wrap",
-    		WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE,
+    		WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
 		);
-	}
-
-	/***********************
-	*  phases: collision  *
-	***********************/
-	{
 		whisker_ecs_register_system(
     		asteroids_ecs,
     		asteroids_system_collision,
     		"system_collision",
-    		ASTEROIDS_PROCESS_PHASE_COLLISION,
+    		WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
 		);
 	}

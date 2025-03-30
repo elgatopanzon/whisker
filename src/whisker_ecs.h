@@ -16,34 +16,53 @@
 #define WHISKER_ECS_H
 
 // default process phase groups and their suggested update rates
+// the default for all is 0 (variable update rate)
 #ifndef WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE
 #define WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE 0
 #endif
 
+// the on_startup phase will run once at startup only
 #define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP "w_phase_on_startup"
 #ifndef WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE
 #define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE 0
 #endif
 
+// pre_load is the first phase of every update loop
 #define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD "w_phase_pre_load"
 #ifndef WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE
 #define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE 0
 #endif
 
+// the second phase is pre_update
 #define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE "w_phase_pre_update"
 #ifndef WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE
 #define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE 0
 #endif
 
+// fixed_update is a special phase running at the target update rate
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE "w_phase_fixed_update"
+#ifndef WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_RATE
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_RATE 60
+#endif
+
+// after fixed_update, the main on_update phase is run
 #define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE "w_phase_on_update"
 #ifndef WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE
 #define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE 0
 #endif
 
+// after on_update, post_update is run
 #define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE "w_phase_post_update"
 #ifndef WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE
 #define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE 0
 #endif
+
+// the last phase before the rendering phases is final
+#define WHISKER_ECS_PROCESS_PHASE_FINAL "w_phase_final"
+#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RATE
+#define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
+#endif
+
 
 #define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER "w_phase_pre_render"
 #ifndef WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE
@@ -63,11 +82,6 @@
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER "w_phase_final_render"
 #ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE 0
-#endif
-
-#define WHISKER_ECS_PROCESS_PHASE_FINAL "w_phase_final"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RATE
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
 #endif
 
 #define WHISKER_ECS_PROCESS_THREADED_AUTO -1
