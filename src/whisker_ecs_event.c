@@ -105,7 +105,7 @@ void whisker_ecs_ev_system_cull_events(whisker_ecs_system_context *context)
 	{
 		whisker_ecs_c_create_deferred_action(context->components, itor->component_ids_rw[0], itor->entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, NULL, 0, false);
 
-		whisker_ecs_e_add_deffered_action(context->entities, (whisker_ecs_entity_deferred_action){.id = itor->entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
+		whisker_ecs_e_destroy_deferred(context->entities, itor->entity_id);
 	}
 }
 

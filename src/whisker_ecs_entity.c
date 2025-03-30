@@ -103,6 +103,22 @@ whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
 	return e;
 }
 
+// create a new entity as a deferred action
+whisker_ecs_entity_id whisker_ecs_e_create_deferred(whisker_ecs_entities *entities)
+{
+	whisker_ecs_entity_id e = whisker_ecs_e_create(entities);
+	if (e.id == 0)
+	{
+		return e;
+	}
+
+	// set the entity to dead and add it to the deferred entities
+	entities->entities[e.index].destroyed = true;
+	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
+
+	return e;
+}
+
 // creates and sets an entity, either new or recycled
 whisker_ecs_entity_id whisker_ecs_e_create_(whisker_ecs_entities *entities)
 {
@@ -170,6 +186,26 @@ whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities,
 	return e;
 }
 
+// create a new named entity as a deferred action
+whisker_ecs_entity_id whisker_ecs_e_create_named_deferred(whisker_ecs_entities *entities, char *name)
+{
+	pthread_mutex_lock(&entities->create_entity_mutex);
+
+	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, name);
+
+	pthread_mutex_unlock(&entities->create_entity_mutex);
+	if (e.id == 0)
+	{
+		return e;
+	}
+
+	// set the entity to dead and add it to the deferred entities
+	entities->entities[e.index].destroyed = true;
+	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
+
+	return e;
+}
+
 // create a new entity with the given name
 whisker_ecs_entity_id whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char* name)
 {
@@ -217,12 +253,25 @@ void whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id
 void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
 	// mark entity as destroyed
-	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
-	if (!e->destroyed)
+	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
+	if (!currently_destroyed)
 	{
-		e->destroyed = true;
 		whisker_ecs_e_recycle(entities, entity_id);
+    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
 	}
+	return;
+}
+
+// destroy an entity as a deferred action
+void whisker_ecs_e_destroy_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+{
+	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
+	if (!currently_destroyed)
+	{
+    	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
+    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
+	}
+	return;
 }
 
 // set an entity to unmanaged state, and no longer included in iterations or

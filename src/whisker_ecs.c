@@ -312,6 +312,7 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 				break;
 
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
+				// exclude managed entities from being directly destroyed
 				if (e->managed_by != NULL)
 				{
 					continue;
@@ -527,44 +528,19 @@ bool whisker_ecs_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id 
 // request to create an entity, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_entity_deferred(whisker_ecs_entities *entities)
 {
-	whisker_ecs_entity_id e = whisker_ecs_e_create(entities);
-	if (e.id == 0)
-	{
-		return e;
-	}
-
-	// set the entity to dead and add it to the deferred entities
-	entities->entities[e.index].destroyed = true;
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
-
-	return e;
+	return whisker_ecs_e_create_deferred(entities);
 }
 
 // request to create an entity with a name, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entities *entities, char* name)
 {
-	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(entities, name);
-	if (e.id == 0)
-	{
-		return e;
-	}
-
-	// set the entity to dead and add it to the deferred entities
-	entities->entities[e.index].destroyed = true;
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
-
-	return e;
+	return whisker_ecs_e_create_named_deferred(entities, name);
 }
 
 // request to destroy the provided entity ID at the end of current frame
 void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
-	if (!currently_destroyed)
-	{
-    	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
-    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
-	}
+	whisker_ecs_e_destroy_deferred(entities, entity_id);
 	return;
 }
 
