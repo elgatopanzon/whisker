@@ -40,6 +40,9 @@ void whisker_ecs_p_init(whisker_ecs_pool *pool, whisker_ecs_components *componen
 
 	pthread_mutex_init(&pool->entity_pool_mutex, NULL);
 
+	// force enable propagate changes
+	pool->propagate_component_changes = true;
+
 	pool->components = components;
 	pool->entities = entities;
 }
@@ -137,7 +140,7 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 		whisker_ecs_p_realloc_entities(pool);
 	}
 
-	whisker_ecs_p_init_entity(pool, e, false);
+	whisker_ecs_p_init_entity(pool, e, pool->propagate_component_changes);
 
 	return e;
 }
@@ -164,11 +167,28 @@ void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id ent
 	{
 		whisker_sparse_set *component_array = whisker_ecs_c_get_component_array(pool->components, pool->component_ids[i]);
 		/* whisker_ss_set(component_array, entity_id.index, whisker_ss_get(component_array, pool->prototype_entity_id.index)); */
-		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size, propagate_component_changes);
+		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, whisker_ss_get(component_array, pool->prototype_entity_id.index), component_array->element_size, false);
+
+		// trigger a DUMMY_ADD on this entity
+		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DUMMY_ADD, NULL, 0, propagate_component_changes);
 	}
 
 	// turn into managed entity
 	whisker_ecs_e_make_managed(pool->entities, entity_id);
+}
+
+// de-initialise the entity and handle component actions
+void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
+{
+	// trigger DUMMY_REMOVE actions for each component
+	for (size_t i = 0; i < pool->component_ids_length; ++i)
+	{
+		// trigger a DUMMY_REMOVE on this entity
+		whisker_ecs_c_create_deferred_action(pool->components, pool->component_ids[i], entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DUMMY_REMOVE, NULL, 0, propagate_component_changes);
+	}
+
+	// turn into unmanaged entity
+	whisker_ecs_e_make_unmanaged(pool->entities, entity_id);
 }
 
 // return an entity to the pool
@@ -196,8 +216,7 @@ void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id e
 	pool->entity_pool[entity_idx] = entity_id;
 	pool->entities->entities[entity_id.index].id.version++;
 
-	// turn into unmanaged entity
-	whisker_ecs_e_make_unmanaged(pool->entities, entity_id);
+	whisker_ecs_p_deinit_entity(pool, entity_id, pool->propagate_component_changes);
 }
 
 // create new entities topping up the pool
@@ -210,11 +229,15 @@ void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool)
 // create and add entity to the pool
 void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count)
 {
-	/* printf("pool %p creating and adding %zu entities\n", pool, count); */
+	atomic_bool backup_propagate_changes = atomic_load(&pool->propagate_component_changes);
+	atomic_store(&pool->propagate_component_changes, false);
+
 	for (int i = 0; i < count; ++i)
 	{
-		whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
-		whisker_ecs_p_init_entity(pool, e, false);
-		whisker_ecs_p_return_entity(pool, e);
+    	whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
+    	whisker_ecs_p_init_entity(pool, e, false);
+    	whisker_ecs_p_return_entity(pool, e);
 	}
+
+	atomic_store(&pool->propagate_component_changes, backup_propagate_changes);
 }

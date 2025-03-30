@@ -103,7 +103,6 @@ void whisker_ecs_ev_system_cull_events(whisker_ecs_system_context *context)
 	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, "t_event", "", "");
 	while (whisker_ecs_s_iterate(itor)) 
 	{
-		/* debug_log(DEBUG, ecs:system_cull_events, "event: culling event entity %zu", itor->entity_id.id); */
 		whisker_ecs_c_create_deferred_action(context->components, itor->component_ids_rw[0], itor->entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, NULL, 0, false);
 
 		whisker_ecs_e_add_deffered_action(context->entities, (whisker_ecs_entity_deferred_action){.id = itor->entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
@@ -123,10 +122,10 @@ void whisker_ecs_ev_system_cull_event_components(whisker_ecs_system_context *con
 		// issue the deferred component removal request
 		struct whisker_ecs_event_cull_event_component *cull = whisker_ecs_itor_get(itor, 0);
 
-		/* debug_log(DEBUG, ecs:system_cull_events, "event: culling fire_on component %zu from entity %zu", cull->component_id.id, cull->entity_id.id); */
-
 		if (cull->component_id.id > 0 && cull->entity_id.id > 0)
 		{
+			/* debug_log(DEBUG, ecs:system_cull_events, "event: culling fire_on component %s (%zu) from entity %zu", whisker_ecs_e(context->entities, cull->component_id)->name, cull->component_id.id, cull->entity_id.id); */
+
 			whisker_ecs_c_create_deferred_action(context->components, cull->component_id, cull->entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, NULL, 0, false);
 		}
 		whisker_ecs_c_create_deferred_action(context->components, itor->component_ids_rw[0], itor->entity_id, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, NULL, 0, false);

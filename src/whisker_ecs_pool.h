@@ -26,6 +26,7 @@ typedef struct whisker_ecs_pool
 	size_t inital_size;
 	size_t realloc_block_size;
 	_Atomic size_t cache_misses;
+	_Atomic bool propagate_component_changes;
 
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
@@ -52,6 +53,7 @@ void whisker_ecs_p_set_prototype_entity(whisker_ecs_pool *pool, whisker_ecs_enti
 whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool);
 whisker_ecs_entity_id whisker_ecs_p_create_entity_deferred(whisker_ecs_pool *pool);
 void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes);
+void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes);
 void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id);
 void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool);
 void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count);

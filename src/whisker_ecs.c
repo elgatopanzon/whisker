@@ -66,6 +66,12 @@ whisker_ecs *whisker_ecs_create()
 
 	// create event entity pool
 	new->events_entity_pool = whisker_ecs_p_create_and_init(new->components, new->entities, 128, 64);
+
+	// disable propagation of changes to ensure that events don't trigger new
+	// events
+	new->events_entity_pool->propagate_component_changes = false;
+
+	// set the event components for the prototype entity
 	whisker_ecs_p_set_prototype_named_tag(new->events_entity_pool, t_event);
 	struct whisker_ecs_event_cull_event_component cull = {};
 	whisker_ecs_p_set_prototype_named_component(new->events_entity_pool, t_event_cull_data, cull, &cull);
@@ -219,6 +225,7 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 					whisker_ecs_create_deferred_component_action(ecs->components, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
 				}
 
+				whisker_ecs_p_return_entity(pool, action->id);
 				continue;
 			}
 
@@ -257,14 +264,7 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
 				if (e->managed_by != NULL)
 				{
-					// HACK: for now we assume everything managed is managed by a pool
-					whisker_ecs_pool *pool = e->managed_by;
-
-					/* printf("entity deferred action: returning entity %zu to pool\n", action.id); */
-
-					// note: the deferred entity actions are not implemented in
-					// the pool, and it uses locks instead
-					whisker_ecs_p_return_entity(pool, action.id);
+					continue;
 				}
 				else
 				{
@@ -285,21 +285,24 @@ void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
 
 			// holds the name of the event to create
 			char* event_name; 
+			char* event_name_target; 
 			char* component_name = whisker_ecs_e(ecs->entities, action->component_id)->name;
+
 			// skip actions with propagate disabled or any component containing
-			// the string "ev_" which is assumed to be an event
-			// HACK: not sure how else to do this
 			if (!action->propagate || (component_name != NULL && strstr(component_name, "ev_") != NULL))
 			{
 				continue;
 			}
 
+			// the string "ev_" which is assumed to be an event
+			// HACK: not sure how else to do this
 			switch (action->action) {
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
 					// determine if this is an add event or a changed event
 					if (!whisker_ecs_has_component(ecs->components, action->component_id, action->entity_id))
 					{
 						asprintf(&event_name, "%s_ev_added", component_name);
+						asprintf(&event_name_target, "%s_ev_added_to", component_name);
 					}
 					else
 					{
@@ -312,11 +315,22 @@ void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
 
 						// if the memory is different consider it changed
 						asprintf(&event_name, "%s_ev_changed", component_name);
+						asprintf(&event_name_target, "%s_ev_changed_on", component_name);
 					}
 					break;
 
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
 					asprintf(&event_name, "%s_ev_removed", component_name);
+					asprintf(&event_name_target, "%s_ev_removed_from", component_name);
+					break;
+
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DUMMY_ADD:
+					asprintf(&event_name, "%s_ev_added", component_name);
+					asprintf(&event_name_target, "%s_ev_added_to", component_name);
+					break;
+				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_DUMMY_REMOVE:
+					asprintf(&event_name, "%s_ev_removed", component_name);
+					asprintf(&event_name_target, "%s_ev_removed_from", component_name);
 					break;
 				default:
 					continue;
@@ -325,13 +339,22 @@ void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
 
 			// create and fire event on the entity
 			whisker_ecs_entity_id event_entity = whisker_ecs_e_create_named(ecs->entities, event_name);
+			whisker_ecs_entity_id event_entity_target = whisker_ecs_e_create_named(ecs->entities, event_name_target);
 
 			/* printf("deferred component events: creating %s (%zu) event on entity %zu\n", event_name, event_entity, action->entity_id); */
 
-			// fire off a non-deferred event
-			whisker_ecs_ev_fire_on_f(ecs->events_entity_pool, event_entity, action->entity_id);
+			// first fire the targetted event as a new event
+			whisker_ecs_entity_id event_target_entity = action->entity_id;
+			whisker_ecs_entity_id ev = whisker_ecs_ev_create_with_data(ecs->events_entity_pool, event_entity_target, whisker_ecs_entity_id, &event_target_entity);
+			whisker_ecs_ev_fire(ecs->events_entity_pool, ev);
+
+			// fire the normal event directly on the entity itself
+			// note: events fired on the entity don't survive the entities
+			// destruction
+			whisker_ecs_ev_fire_on_f(ecs->events_entity_pool, event_entity, event_target_entity);
 
 			free(event_name);
+			free(event_name_target);
 		}
 	}
 }
@@ -354,6 +377,8 @@ void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL:
 					whisker_ecs_c_remove_all_components(ecs->components, action.entity_id);
+					break;
+				default:
 					break;
 			}
 		}

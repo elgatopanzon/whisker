@@ -14,59 +14,59 @@
 #define WHISKER_ECS_EVENT_H
 
 // macros accepting named components
-#define whisker_ecs_ev_create(p, id) \
-	whisker_ecs_ev_create_f(p, id);\
-	debug_log(DEBUG, ecs:event_create, "creating event %zu", id.id);
+#define whisker_ecs_ev_create(p, i) \
+	whisker_ecs_ev_create_f(p, i);\
+	debug_log(DEBUG, ecs:event_create, "creating event %zu", i.id);
 
 #define whisker_ecs_ev_create_named(p, n) \
 	whisker_ecs_ev_create_f(p, whisker_ecs_e_create_named(e, #n)); \
 	debug_log(DEBUG, ecs:event_create, "creating event %s", #n);
 
-#define whisker_ecs_ev_create_with_data(p, id, t, v) \
-	whisker_ecs_ev_create_with_data_f(p, id, sizeof(t), v); \
-	debug_log(DEBUG, ecs:event_create, "creating event %zu with data type %s", id.id, #t);
+#define whisker_ecs_ev_create_with_data(p, i, t, v) \
+	whisker_ecs_ev_create_with_data_f(p, i, sizeof(t), v); \
+	debug_log(DEBUG, ecs:event_create, "creating event %zu with data type %s", i.id, #t);
 
 #define whisker_ecs_ev_create_with_data_named(p, n, t, v) \
 	whisker_ecs_ev_create_with_data_f(p, whisker_ecs_e_create_named(e, #n), sizeof(t), v); \
 	debug_log(DEBUG, ecs:event_create, "creating event %s with data type %s", #n, #t);
 
-#define whisker_ecs_ev_create_and_fire(p, id) \
-	whisker_ecs_ev_create_and_fire_f(p, id); \
-	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing", id.id);
+#define whisker_ecs_ev_create_and_fire(p, i) \
+	whisker_ecs_ev_create_and_fire_f(p, i); \
+	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing", i.id);
 
 #define whisker_ecs_ev_create_and_fire_named(p, n) \
 	whisker_ecs_ev_create_and_fire_f(p, whisker_ecs_e_create_named(e, #n)); \
 	debug_log(DEBUG, ecs:event_create, "creating event %s and firing", #n);
 
 
-#define whisker_ecs_ev_set_data(p, ev, id, t, v) \
-	whisker_ecs_ev_set_data_f(p, ev, id, sizeof(t), v); \
-	debug_log(DEBUG, ecs:event_create, "setting event %zu data with data type %zu", id.id, #t);
+#define whisker_ecs_ev_set_data(p, ev, i, t, v) \
+	whisker_ecs_ev_set_data_f(p, ev, i, sizeof(t), v); \
+	debug_log(DEBUG, ecs:event_create, "setting event %zu data with data type %zu", i.id, #t);
 
 #define whisker_ecs_ev_set_data_named(p, ev, n, t, v) \
 	whisker_ecs_ev_set_data_f(p, ev, whisker_ecs_e_create_named(e, #n), sizeof(t), v); \
 	debug_log(DEBUG, ecs:event_create, "setting event %s data with data type %s", #n, #t);
 
 
-#define whisker_ecs_ev_fire_on(p, id, on) \
-	whisker_ecs_ev_fire_on_f(p, id, on); \
-	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing on %zu", id.id, on.id);
+#define whisker_ecs_ev_fire_on(p, i, on) \
+	whisker_ecs_ev_fire_on_f(p, i, on); \
+	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing on %zu", i.id, on.id);
 
 #define whisker_ecs_ev_fire_on_named(p, n, on) \
 	whisker_ecs_ev_fire_on_f(p, whisker_ecs_e_create_named(e, #n), on); \
 	debug_log(DEBUG, ecs:event_create, "creating event %s and firing on %zu", #n, on.id);
 
-#define whisker_ecs_ev_fire_on_with_data(p, id, t, v, on) \
-	whisker_ecs_ev_fire_on_with_data_f(p, id, sizeof(t), v, on); \
-	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing on %zu with data type %s", id.id, on.id, #t);
+#define whisker_ecs_ev_fire_on_with_data(p, i, t, v, on) \
+	whisker_ecs_ev_fire_on_with_data_f(p, i, sizeof(t), v, on); \
+	debug_log(DEBUG, ecs:event_create, "creating event %zu and firing on %zu with data type %s", i.id, on.id, #t);
 
 #define whisker_ecs_ev_fire_on_with_data_named(p, n, t, v, on) \
 	whisker_ecs_ev_fire_on_with_data_f(p, whisker_ecs_e_create_named(e, #n), sizeof(t), v, on); \
 	debug_log(DEBUG, ecs:event_create, "creating event %s and firing on %zu with data type %s", #n, on.id, #t);
 
-#define whisker_ecs_ev_set_fire_on_data(p, id, t, v, on) \
-	whisker_ecs_ev_set_fire_on_data_f(p, id, sizeof(t), v, on); \
-	debug_log(DEBUG, ecs:event_create, "setting fire on event %zu on %zu with data type %s", id.id, on.id, #t);
+#define whisker_ecs_ev_set_fire_on_data(p, i, t, v, on) \
+	whisker_ecs_ev_set_fire_on_data_f(p, i, sizeof(t), v, on); \
+	debug_log(DEBUG, ecs:event_create, "setting fire on event %zu on %zu with data type %s", i.id, on.id, #t);
 
 #define whisker_ecs_ev_set_fire_on_data_named(p, n, t, v, on) \
 	whisker_ecs_ev_set_fire_on_data_f(p, whisker_ecs_e_create_named(e, #n), sizeof(t), v, on); \
