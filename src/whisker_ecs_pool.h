@@ -25,11 +25,15 @@ typedef struct whisker_ecs_pool
 	pthread_mutex_t entity_pool_mutex;
 	size_t inital_size;
 	size_t realloc_block_size;
-	_Atomic size_t cache_misses;
 	_Atomic bool propagate_component_changes;
 
 	whisker_ecs_components *components;
 	whisker_ecs_entities *entities;
+
+	// stat counters
+	_Atomic size_t stat_cache_misses;
+	_Atomic size_t stat_total_requests;
+	_Atomic size_t stat_total_returns;
 } whisker_ecs_pool;
 
 #define whisker_ecs_p_set_prototype_component(p, c, s, v) \
@@ -57,6 +61,7 @@ void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id e
 void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id);
 void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool);
 void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count);
+void whisker_ecs_p_add_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id);
 
 #endif /* WHISKER_ECS_POOL_H */
 

@@ -32,7 +32,7 @@ void whisker_ecs_p_init(whisker_ecs_pool *pool, whisker_ecs_components *componen
 
 	pool->realloc_block_size = realloc_count;
 	pool->inital_size = count;
-	pool->cache_misses = 0;
+	pool->stat_cache_misses = 0;
 
 	// create prototype entity
 	pool->prototype_entity_id = whisker_ecs_e_create(entities);
@@ -126,21 +126,25 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 		size_t entity_idx = atomic_fetch_sub(&pool->entity_pool_length, 1) - 1;
 
 		e = pool->entity_pool[entity_idx];
-		/* printf("pool %p get from pool index %zu entity %zu\n", pool, entity_idx, e.id); */
+		/* debug_log(DEBUG, ecs:pool_request, "pool %p get from pool index %zu entity %zu\n", pool, entity_idx, e.id); */
 	}	
 	else
 	{
 		// create and init new entity
 		e = whisker_ecs_p_create_entity_deferred(pool);
-		/* printf("pool %p create new entity %zu\n", pool, e.id); */
 
-		atomic_fetch_add_explicit(&(pool->cache_misses), 1, memory_order_relaxed);
+		atomic_fetch_add_explicit(&(pool->stat_cache_misses), 1, memory_order_relaxed);
+
+		debug_log(DEBUG, ecs:pool_request, "pool %p create new entity %zu (requests %zu returns %zu misses %zu)", pool, e.id, pool->stat_total_requests, pool->stat_total_returns, pool->stat_cache_misses);
 
 		// refill the pool
 		whisker_ecs_p_realloc_entities(pool);
 	}
 
 	whisker_ecs_p_init_entity(pool, e, pool->propagate_component_changes);
+
+	// increase stats
+	atomic_fetch_add_explicit(&pool->stat_total_requests, 1, memory_order_relaxed);
 
 	return e;
 }
@@ -194,12 +198,42 @@ void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id e
 // return an entity to the pool
 void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
 {
-	// increment the pool length
+	// add the entity to the pool
+	whisker_ecs_p_add_entity(pool, entity_id);
+
+	/* debug_log(DEBUG, ecs:pool_return, "pool %p return entity %zu (requests %zu returns %zu misses %zu)", pool, entity_id, pool->stat_total_requests, pool->stat_total_returns, pool->stat_cache_misses); */
+
+	whisker_ecs_p_deinit_entity(pool, entity_id, pool->propagate_component_changes);
+	
+	// increase stats
+	atomic_fetch_add_explicit(&pool->stat_total_returns, 1, memory_order_relaxed);
+}
+
+// create new entities topping up the pool
+void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool)
+{
+	/* debug_log(DEBUG, ecs:pool_realloc, "pool %p realloc entities block size %zu cache misses %zu\n", pool, pool->realloc_block_size, pool->cache_misses); */
+	whisker_ecs_p_create_and_return(pool, (pool->stat_cache_misses <= 1) ? pool->inital_size : pool->realloc_block_size * pool->stat_cache_misses);
+}
+
+// create and add entity to the pool
+void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count)
+{
+	for (int i = 0; i < count; ++i)
+	{
+    	whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
+    	whisker_ecs_p_init_entity(pool, e, false);
+    	whisker_ecs_p_deinit_entity(pool, e, false);
+		whisker_ecs_p_add_entity(pool, e);
+	}
+}
+
+// add an entity to the pool (this is not the same as returning an entity)
+void whisker_ecs_p_add_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
+{
+	// grow array if required using lock
 	size_t entity_idx = atomic_fetch_add(&pool->entity_pool_length, 1);
 
-	/* printf("pool %p return entity %zu to index %zu\n", pool, entity_id, entity_idx); */
-
-	// grow array if required using lock
 	if((entity_idx + 1) * sizeof(*pool->entity_pool) > pool->entity_pool_size)
 	{
 		pthread_mutex_lock(&pool->entity_pool_mutex);
@@ -215,29 +249,4 @@ void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id e
 
 	pool->entity_pool[entity_idx] = entity_id;
 	pool->entities->entities[entity_id.index].id.version++;
-
-	whisker_ecs_p_deinit_entity(pool, entity_id, pool->propagate_component_changes);
-}
-
-// create new entities topping up the pool
-void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool)
-{
-	/* printf("pool %p realloc entities block size %zu cache misses %zu\n", pool, pool->realloc_block_size, pool->cache_misses); */
-	whisker_ecs_p_create_and_return(pool, (pool->cache_misses <= 1) ? pool->inital_size : pool->realloc_block_size * pool->cache_misses);
-}
-
-// create and add entity to the pool
-void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count)
-{
-	atomic_bool backup_propagate_changes = atomic_load(&pool->propagate_component_changes);
-	atomic_store(&pool->propagate_component_changes, false);
-
-	for (int i = 0; i < count; ++i)
-	{
-    	whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
-    	whisker_ecs_p_init_entity(pool, e, false);
-    	whisker_ecs_p_return_entity(pool, e);
-	}
-
-	atomic_store(&pool->propagate_component_changes, backup_propagate_changes);
 }
