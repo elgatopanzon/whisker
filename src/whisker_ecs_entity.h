@@ -121,6 +121,7 @@ void whisker_ecs_e_free_entities_all(whisker_ecs_entities *entities);
 // entity management functions
 whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities);
 whisker_ecs_entity_id whisker_ecs_e_create_deferred(whisker_ecs_entities *entities);
+whisker_ecs_entity_id whisker_ecs_e_create_new_deferred(whisker_ecs_entities *entities);
 whisker_ecs_entity_id whisker_ecs_e_create_(whisker_ecs_entities *entities);
 whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities);
 whisker_ecs_entity_id  whisker_ecs_e_create_new_(whisker_ecs_entities *entities);

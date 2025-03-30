@@ -152,7 +152,7 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 // issue a real create request for an entity this pool can use
 whisker_ecs_entity_id whisker_ecs_p_create_entity_deferred(whisker_ecs_pool *pool)
 {
-	whisker_ecs_entity_id e = whisker_ecs_e_create_deferred(pool->entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_new_deferred(pool->entities);
 
 	// make sure to perform the soft-recycle actions on the entity
 	pool->entities->entities[e.index].unmanaged = true;
