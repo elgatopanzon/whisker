@@ -16,6 +16,10 @@
 #define WHISKER_ECS_H
 
 // default process phase groups and their suggested update rates
+#ifndef WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE 60
+#endif
+
 #define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP "w_phase_on_startup"
 #ifndef WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE
 #define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE 60
@@ -93,6 +97,7 @@ void whisker_ecs_free(whisker_ecs *ecs);
 // system functions
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count);
 whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec);
+void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, size_t phase_count);
 
 // system update functions
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time);

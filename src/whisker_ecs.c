@@ -61,8 +61,8 @@ whisker_ecs *whisker_ecs_create()
 	whisker_arr_init_t(new->component_sort_requests, 32);
 
 	// register the event system's systems
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
+	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
 
 	// create event entity pool
 	new->events_entity_pool = whisker_ecs_p_create_and_init(new->components, new->entities, 128, 64);
@@ -166,6 +166,55 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 	return component_id;
 }
 
+// set the order of process phases in the form of a char ** array of names
+// note: if a phase is specified which has not been created it will use the
+// WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE for the update rate
+void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, size_t phase_count)
+{
+	// backup existing process phase array
+	whisker_arr_declare(whisker_ecs_system_process_phase, process_phases_backup);
+	process_phases_backup = ecs->systems->process_phases;
+	process_phases_backup_length = ecs->systems->process_phases_length;
+	process_phases_backup_size = ecs->systems->process_phases_size;
+
+	// reinit the process phases array
+	whisker_arr_init_t(ecs->systems->process_phases, phase_count);
+	ecs->systems->process_phases_length = 0;
+	
+	for (int i = 0; i < phase_count; ++i)
+	{
+		whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_names[i]);
+
+		bool exists = false;
+
+		// find existing phase in old list
+		for (int pi = 0; pi < process_phases_backup_length; ++pi)
+		{
+			if (process_phases_backup[pi].id.id == component_id.id)
+			{
+				// re-register the process phase
+				debug_log(DEBUG, ecs:set_process_phase_order, "re-registering phase %s", phase_names[i]);
+
+				size_t idx = ecs->systems->process_phases_length++;
+				ecs->systems->process_phases[idx].id = component_id;
+				ecs->systems->process_phases[idx].time_step = process_phases_backup[pi].time_step;
+
+				exists = true;
+				break;
+			}
+		}
+
+		// if it doesn't exist, create it using the defaults
+		if (!exists)
+		{
+			debug_log(DEBUG, ecs:set_process_phase_order, "registering new phase %s", phase_names[i]);
+			whisker_ecs_s_register_process_phase(ecs->systems, component_id, WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE);
+		}
+	}
+
+	// free old process phases list
+	free(process_phases_backup);
+}
 
 /*****************************
 *  system update functions  *
@@ -179,15 +228,10 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
     for (int i = 0; i < ecs->systems->process_phases_length; ++i)
     {
         whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[i], update_context);
+
+		whisker_ecs_update_process_deferred_actions(ecs);
     }
 
-	// for consistency it's best to process deferred actions at the end of the
-	// frame.
-	// this ensures that events can survive for an entire frame despite being
-	// created at any point during the current/previous frame.
-	// the overall "reactivity" is less, however it forces less of an implicit
-	// ordering of systems which depend on frame actions from a previous phase.
-	whisker_ecs_update_process_deferred_actions(ecs);
 }
 
 // process any deferred actions queued since the previous update
@@ -225,7 +269,13 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 					whisker_ecs_create_deferred_component_action(ecs->components, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
 				}
 
-				whisker_ecs_p_return_entity(pool, action->id);
+				if (ecs->entities->entities[action->id.index].destroyed)
+				{
+					ecs->entities->entities[action->id.index].destroyed = false;
+					printf("return to pool %p: entity %zu\n", pool, action->id);
+					whisker_ecs_p_return_entity(pool, action->id);
+				}
+
 				continue;
 			}
 
@@ -508,18 +558,13 @@ whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(whisker_ecs_entit
 // request to destroy the provided entity ID at the end of current frame
 void whisker_ecs_destroy_entity_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
 {
-	if (entities->entities[entity_id.index].managed_by != NULL)
+	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
+	if (!currently_destroyed)
 	{
-		_Atomic bool currently_unmanaged = atomic_load(&entities->entities[entity_id.index].unmanaged);
-		if (!currently_unmanaged)
-		{
-    		whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
-    		atomic_store(&entities->entities[entity_id.index].unmanaged, true);
-		}
-		return;
+    	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
+    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
 	}
-
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
+	return;
 }
 
 
