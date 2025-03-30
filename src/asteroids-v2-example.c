@@ -979,6 +979,31 @@ void asteroids_system_raylib_end_drawing(whisker_ecs_system_context *context)
 	EndDrawing();
 }
 
+void asteroids_system_test_pos_2d_events(whisker_ecs_system_context *context)
+{
+	whisker_ecs_system_iterator *added_itor = whisker_ecs_s_get_iterator(context, 0, "pos_2d_ev_added", "", "");
+
+	while (whisker_ecs_s_iterate(added_itor)) 
+	{
+		debug_log(DEBUG, pos_2d_added, "event entity %zu event target %zu", added_itor->entity_id, added_itor->entity_id);
+	}
+
+	whisker_ecs_system_iterator *changed_itor = whisker_ecs_s_get_iterator(context, 1, "pos_2d_ev_changed", "", "");
+
+	while (whisker_ecs_s_iterate(changed_itor)) 
+	{
+		debug_log(DEBUG, pos_2d_changed, "event entity %zu event target %zu", changed_itor->entity_id, changed_itor->entity_id);
+	}
+
+	whisker_ecs_system_iterator *removed_itor = whisker_ecs_s_get_iterator(context, 2, "pos_2d_ev_removed_from", "", "");
+
+	while (whisker_ecs_s_iterate(removed_itor)) 
+	{
+		whisker_ecs_entity_id *entity = whisker_ecs_itor_get(removed_itor, 0);
+		debug_log(DEBUG, pos_2d_removed_from, "event entity %zu event target %zu", removed_itor->entity_id, *entity);
+	}
+
+}
 
 void asteroids_game_init()
 {
@@ -1162,6 +1187,15 @@ void asteroids_game_init()
     		"system_collision_cull",
     		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE,
     		WHISKER_ECS_PROCESS_THREADED_AUTO
+		);
+
+		// test system: pos_2d events
+		whisker_ecs_register_system(
+    		asteroids_ecs,
+    		asteroids_system_test_pos_2d_events,
+    		"system_test_pos_2d_events",
+    		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE,
+    		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
 		);
 	}
 
