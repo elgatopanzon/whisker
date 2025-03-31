@@ -165,8 +165,8 @@ void asteroids_init_ecs()
 	whisker_arr_init_t(process_phases, 15);
 	process_phases_length = 0;
 
-	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_INPUT, 0);
-	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER, 0);
+	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_INPUT, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_DEFAULT);
+	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_FIXED);
 
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_STARTUP;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_PRE_LOAD;

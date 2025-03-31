@@ -28,6 +28,9 @@ void whisker_ecs_s_init_systems(whisker_ecs_systems *s)
 
 	// create array for process phase list
 	whisker_arr_init_t(s->process_phases, 1);
+
+	// create array for process phase time steps
+	whisker_arr_init_t(s->process_phase_time_steps, 1);
 }
 
 // deallocate an instance of systems container and system data
@@ -47,6 +50,7 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 
 	free(systems->systems);
 	free(systems->process_phases);
+	free(systems->process_phase_time_steps);
 }
 
 
@@ -166,7 +170,7 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system)
 *  system update functions  *
 *****************************/
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
-static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase *process_phase);
+static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase_time_step *time_step_container);
 static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities);
 static void system_update_queue_system_work(whisker_ecs_system *system);
 static void system_update_execute_system(whisker_ecs_system *system);
@@ -189,9 +193,15 @@ void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_enti
     }
 }
 
-static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase *process_phase)
+static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase_time_step *time_step_container)
 {
-    return whisker_time_step_step_get_update_count(&process_phase->time_step);
+	if (!time_step_container->updated)
+	{
+		time_step_container->update_count = whisker_time_step_step_get_update_count(&time_step_container->time_step);
+		time_step_container->updated = true;
+	}
+
+	return time_step_container->update_count;
 }
 
 static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities)
@@ -204,6 +214,16 @@ static void system_update_set_context_values(whisker_ecs_system_context *context
     context->process_phase_time_step = system->process_phase_time_step;
     context->delta_time = system->delta_time;
     context->system_ptr = system->system_ptr;
+}
+
+// reset updated state on all time steps
+// this should be done at the end of the frame to allow triggering an advance
+void whisker_ecs_s_reset_process_phase_time_steps(whisker_ecs_systems *systems)
+{
+	for (int i = 0; i < systems->process_phase_time_steps_length; ++i)
+	{
+		systems->process_phase_time_steps[i].updated = false;
+	}
 }
 
 // update all systems in the given process phase
@@ -219,7 +239,9 @@ static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ec
     	return;
     }
 
-    int update_count = system_update_advance_process_phase_time_step(process_phase);
+    whisker_ecs_system_process_phase_time_step *time_step_container = &systems->process_phase_time_steps[process_phase->time_step_id];
+
+    int update_count = system_update_advance_process_phase_time_step(time_step_container);
 
     for (int ui = 0; ui < update_count; ++ui)
     {
@@ -230,8 +252,10 @@ static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ec
             int *system_idx = whisker_ecs_itor_get(system_itor, 0);
             whisker_ecs_system *system = &systems->systems[*system_idx];
 
-            system->delta_time = process_phase->time_step.delta_time_fixed;
-            system->process_phase_time_step = &process_phase->time_step;
+            system->delta_time = time_step_container->time_step.delta_time_fixed;
+            system->process_phase_time_step = &time_step_container->time_step;
+
+            /* printf("executing system %s frame count %zu\n", whisker_ecs_e(default_context->entities, system->entity_id)->name, system->process_phase_time_step->update_count); */
 
             if (system->thread_count > 0)
             {
@@ -277,12 +301,29 @@ void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_
 	system->system_ptr(context);
 }
 
+// register a process phase time step
+size_t whisker_ecs_s_register_process_phase_time_step(whisker_ecs_systems *systems, whisker_time_step time_step)
+{
+	whisker_ecs_system_process_phase_time_step time_step_container = {
+		.time_step = time_step,
+		.update_count = 0,
+		.updated = false,
+	};
+
+	size_t idx = systems->process_phase_time_steps_length++;
+	whisker_arr_ensure_alloc(systems->process_phase_time_steps, (idx + 1));
+
+	systems->process_phase_time_steps[idx] = time_step_container;
+
+	return idx;
+}
+
 // register a system process phase for the system scheduler
-void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec)
+void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, size_t time_step_id)
 {
 	whisker_ecs_system_process_phase process_phase = {
 		.id = component_id,
-		.time_step = whisker_time_step_create((update_rate_sec > 0) ? update_rate_sec : 60, (update_rate_sec > 0) ? false : true),
+		.time_step_id = time_step_id,
 	};
 
 	whisker_arr_ensure_alloc(systems->process_phases, (systems->process_phases_length + 1));

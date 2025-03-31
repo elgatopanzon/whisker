@@ -39,20 +39,53 @@ whisker_ecs *whisker_ecs_create()
 
 	// register default system process phases to allow bundled systems and
 	// modules and a standard default processing phase group set
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE);
+	whisker_time_step default_time_step = whisker_time_step_create(
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE,
+			1,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_UNCAPPED,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_CLAMP,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_SNAP,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_AVERAGE,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION_CLAMP
+		);
+	whisker_time_step fixed_update_time_step = whisker_time_step_create(
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_RATE,
+			0,
+			false,
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_CLAMP,
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_SNAP,
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_AVERAGE,
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_ACCUMULATION,
+			WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_ACCUMULATION_CLAMP
+		);
+	whisker_time_step rendering_phase_time_step = whisker_time_step_create(
+			0,
+			0,
+			WHISKER_ECS_PROCESS_PHASE_ON_RENDER_UNCAPPED,
+			false,
+			false,
+			false,
+			false,
+			false
+		);
+	size_t default_time_step_id = whisker_ecs_register_process_phase_time_step(new, default_time_step);
+	size_t fixed_update_time_step_id = whisker_ecs_register_process_phase_time_step(new, fixed_update_time_step);
+	size_t rendering_phase_time_step_id = whisker_ecs_register_process_phase_time_step(new, rendering_phase_time_step);
 
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE, WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE, fixed_update_time_step_id);
 
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_PHASE_FINAL_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_UPDATE, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_UPDATE, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL, default_time_step_id);
 
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_RENDER, WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_RENDER, WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_RENDER, WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE);
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_RENDER, rendering_phase_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_RENDER, rendering_phase_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_RENDER, rendering_phase_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER, rendering_phase_time_step_id);
 
 	// register built-in systems
 	whisker_ecs_register_system(new, whisker_ecs_system_deregister_startup_phase, "wecs_system_deregister_startup_phase", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
@@ -155,14 +188,20 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	return system;
 }
 
+// register a process phase time step to use when registering a process phase
+size_t whisker_ecs_register_process_phase_time_step(whisker_ecs *ecs, whisker_time_step time_step)
+{
+	return whisker_ecs_s_register_process_phase_time_step(ecs->systems, time_step);
+}
+
 // register a process phase for use by the system scheduler
 // note: update_rate_sec set to 0 = uncapped processing with variable delta time
-whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec)
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, size_t time_step_id)
 {
 	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
 
 	// add component ID to system's process phase list
-	whisker_ecs_s_register_process_phase(ecs->systems, component_id, update_rate_sec);
+	whisker_ecs_s_register_process_phase(ecs->systems, component_id, time_step_id);
 
 	return component_id;
 }
@@ -198,7 +237,7 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 
 				size_t idx = ecs->systems->process_phases_length++;
 				ecs->systems->process_phases[idx].id = component_id;
-				ecs->systems->process_phases[idx].time_step = process_phases_backup[pi].time_step;
+				ecs->systems->process_phases[idx].time_step_id = process_phases_backup[pi].time_step_id;
 
 				exists = true;
 				break;
@@ -209,7 +248,7 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 		if (!exists)
 		{
 			debug_log(DEBUG, ecs:set_process_phase_order, "registering new phase %s", phase_names[i]);
-			whisker_ecs_s_register_process_phase(ecs->systems, component_id, WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE);
+			whisker_ecs_s_register_process_phase(ecs->systems, component_id, 0);
 		}
 	}
 
@@ -233,6 +272,8 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 		whisker_ecs_update_process_deferred_actions(ecs);
     }
 
+	// reset process phase time steps to allow next frame to advance
+	whisker_ecs_s_reset_process_phase_time_steps(ecs->systems);
 }
 
 // process any deferred actions queued since the previous update

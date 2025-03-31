@@ -63,21 +63,27 @@ void whisker_debug_print_time_step(whisker_time_step *time_step)
 
 // create and init a whisker_time_step struct to be used with the time step
 // should update function
-whisker_time_step whisker_time_step_create(double update_rate_sec, bool uncapped)
+whisker_time_step whisker_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled)
 {
 	whisker_time_step time_step = {
+		.delta_clamp_enabled = delta_clamp_enabled,
+		.delta_snap_enabled = delta_snap_enabled,
+		.delta_average_enabled = delta_average_enabled,
+		.delta_accumulation_enabled = delta_accumulation_enabled,
+		.delta_accumulation_clamp_enabled = delta_accumulation_clamp_enabled,
+		.update_count_max = update_count_max,
+		.time_resolution = WHISKER_TIME_RESOLUTION,
+
+		// this is technically the display refresh rate, but it acts as a snap base
+		// value as well
+		.delta_snap_base = 60,
+		.uncapped = uncapped,
+		.update_multiplier = 1,
 	};
 
-	time_step.time_resolution = WHISKER_TIME_RESOLUTION;
 	time_step.delta_snap_max_error = time_step.time_resolution * WHISKER_TIME_STEP_SNAP_ERROR_MULTIPLIER;
 
-	// this is technically the display refresh rate, but it acts as a snap base
-	// value as well
-	time_step.delta_snap_base = 60;
-	time_step.uncapped = uncapped;
-
 	whisker_time_step_set_update_rate(&time_step, update_rate_sec);
-	time_step.update_multiplier = 1;
 
 	time_step.update_time_current = 0;
 	time_step.delta_accumulation = 0;
@@ -107,6 +113,11 @@ int whisker_time_step_step_get_update_count(whisker_time_step *time_step)
 		update_count++;
 	}
 
+	// if update count max is > 0, clamp update count to max
+	update_count = (time_step->update_count_max > 0 && update_count > time_step->update_count_max) ? time_step->update_count_max : update_count;
+
+	time_step->update_tick_count += update_count;
+
 	return update_count;
 }
 
@@ -121,7 +132,7 @@ void whisker_time_step_do_step(whisker_time_step *time_step)
 	// update tick count
 	time_step->tick_count += time_step->delta_time_real;
 
-	if (!time_step->uncapped)
+	if (time_step->delta_clamp_enabled && !time_step->uncapped)
 	{
 		// clamp values in odd circumstances
 		if (time_step->delta_time_real > time_step->update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT)
@@ -132,7 +143,9 @@ void whisker_time_step_do_step(whisker_time_step *time_step)
 		{
 			time_step->delta_time_real = 0;
 		}
-
+	}
+	if (time_step->delta_snap_enabled && !time_step->uncapped)
+	{
 		// snap delta time to nearest frequency
 		for (int i = 0; i < WHISKER_TIME_DELTA_SNAP_FREQ_COUNT; ++i)
 		{
@@ -142,6 +155,9 @@ void whisker_time_step_do_step(whisker_time_step *time_step)
 				break;
 			}
 		}
+	}
+	if (time_step->delta_average_enabled && !time_step->uncapped)
+	{
 
 		// update the delta time averages and set delta time
 		for (int i = 0; i < WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT - 1; ++i)
@@ -162,12 +178,14 @@ void whisker_time_step_do_step(whisker_time_step *time_step)
 		time_step->delta_average_residual += delta_average_sum % WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
 		time_step->delta_time_real += time_step->delta_average_residual / WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
 		time_step->delta_average_residual %= WHISKER_TIME_DELTA_AVG_SAMPLE_COUNT;
-
+	}
+	if (time_step->delta_accumulation_enabled && !time_step->uncapped)
+	{
 		// add the delta time to the delta accumulation
 		time_step->delta_accumulation += time_step->delta_time_real;
 
 		// prevent update accumulation spiral of death
-		if (time_step->delta_accumulation > time_step->update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT)
+		if (time_step->delta_accumulation_clamp_enabled && time_step->delta_accumulation > time_step->update_time_target * WHISKER_TIME_DELTA_SNAP_FREQ_COUNT)
 		{
 			time_step->delta_accumulation = 0;
 			time_step->delta_time_real = time_step->update_time_target;

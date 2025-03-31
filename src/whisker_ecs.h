@@ -15,74 +15,60 @@
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
 
-// default process phase groups and their suggested update rates
+#define WHISKER_ECS_PROCESS_PHASE_TIME_STEP_DEFAULT 0
+#define WHISKER_ECS_PROCESS_PHASE_TIME_STEP_FIXED 1
+#define WHISKER_ECS_PROCESS_PHASE_TIME_STEP_RENDERING 2
+
+// default process phase groups and their time step configs
 // the default for all is 0 (variable update rate)
-#ifndef WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE
-#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE 0
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_RATE 60
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_UNCAPPED false
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_CLAMP true
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_SNAP true
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_AVERAGE true
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION true
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION_CLAMP true
+#define WHISKER_ECS_PROCESS_PHASE_DEFAULT_UPDATE_COUNT_MAX 1
 
 // the on_startup phase will run once at startup only
 #define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP "w_phase_on_startup"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_STARTUP_RATE 0
-#endif
 
 // pre_load is the first phase of every update loop
 #define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD "w_phase_pre_load"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_LOAD_RATE 0
-#endif
 
 // the second phase is pre_update
 #define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE "w_phase_pre_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_UPDATE_RATE 0
-#endif
 
 // fixed_update is a special phase running at the target update rate
 #define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE "w_phase_fixed_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_RATE
 #define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_RATE 60
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_CLAMP true
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_SNAP true
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_AVERAGE true
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_ACCUMULATION true
+#define WHISKER_ECS_PROCESS_PHASE_FIXED_UPDATE_DELTA_ACCUMULATION_CLAMP true
 
 // after fixed_update, the main on_update phase is run
 #define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE "w_phase_on_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_UPDATE_RATE 0
-#endif
 
 // after on_update, post_update is run
 #define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE "w_phase_post_update"
-#ifndef WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE
-#define WHISKER_ECS_PROCESS_PHASE_POST_UPDATE_RATE 0
-#endif
 
 // the last phase before the rendering phases is final
 #define WHISKER_ECS_PROCESS_PHASE_FINAL "w_phase_final"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RATE
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RATE 0
-#endif
 
 
 #define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER "w_phase_pre_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_RATE 0
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_PRE_RENDER_UNCAPPED true
 
 #define WHISKER_ECS_PROCESS_PHASE_ON_RENDER "w_phase_on_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER_RATE 0
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_ON_RENDER_UNCAPPED true
 
 #define WHISKER_ECS_PROCESS_PHASE_POST_RENDER "w_phase_post_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER_RATE 0
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_POST_RENDER_UNCAPPED true
 
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER "w_phase_final_render"
-#ifndef WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE
-#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_RATE 0
-#endif
+#define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_UNCAPPED true
 
 #define WHISKER_ECS_PROCESS_THREADED_AUTO -1
 #define WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD 0
@@ -110,7 +96,8 @@ void whisker_ecs_free(whisker_ecs *ecs);
 
 // system functions
 whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_ptr)(struct whisker_ecs_system_context*), char *system_name, char *process_phase_name, size_t thread_count);
-whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, double update_rate_sec);
+size_t whisker_ecs_register_process_phase_time_step(whisker_ecs *ecs, whisker_time_step time_step);
+whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, size_t time_step_id);
 void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, size_t phase_count);
 
 // system update functions

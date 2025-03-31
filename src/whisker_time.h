@@ -35,6 +35,14 @@ typedef struct whisker_time_step
 	double update_rate_sec;
 	bool uncapped;
 
+	// bools to enable/disable functionality
+	bool delta_clamp_enabled;
+	bool delta_snap_enabled;
+	bool delta_average_enabled;
+	bool delta_accumulation_enabled;
+	bool delta_accumulation_clamp_enabled;
+	int update_count_max;
+
 	// used to enable multiplicity
 	int update_multiplier;
 
@@ -67,13 +75,14 @@ typedef struct whisker_time_step
 
 	// running stats
 	uint64_t tick_count;
+	uint64_t update_tick_count;
 } whisker_time_step;
 
 // time functions
 uint64_t whisker_time_get_precise_time();
 
 // time step functions
-whisker_time_step whisker_time_step_create(double update_rate_sec, bool uncapped);
+whisker_time_step whisker_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled);
 int whisker_time_step_step_get_update_count(whisker_time_step *time_step);
 void whisker_time_step_do_step(whisker_time_step *time_step);
 void whisker_time_step_set_update_rate(whisker_time_step *time_step, double update_rate_sec);

@@ -88,16 +88,24 @@ typedef struct whisker_ecs_system
 	whisker_thread_pool *thread_pool;
 } whisker_ecs_system;
 
+typedef struct whisker_ecs_system_process_phase_time_step
+{
+	whisker_time_step time_step;
+	size_t update_count;
+	bool updated;
+} whisker_ecs_system_process_phase_time_step;
+
 typedef struct whisker_ecs_system_process_phase
 {
 	whisker_ecs_entity_id id;
-	whisker_time_step time_step;
+	size_t time_step_id;
 } whisker_ecs_system_process_phase;
 
 typedef struct whisker_ecs_systems
 {
 	whisker_arr_declare(whisker_ecs_system, systems);
 	whisker_arr_declare(whisker_ecs_system_process_phase, process_phases);
+	whisker_arr_declare(whisker_ecs_system_process_phase_time_step, process_phase_time_steps);
 	size_t system_id;
 } whisker_ecs_systems;
 
@@ -121,10 +129,12 @@ void whisker_ecs_s_free_system(whisker_ecs_system *system);
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
 void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);
 void whisker_ecs_s_update_system_thread_(void *context, whisker_thread_pool_context *t);
+void whisker_ecs_s_reset_process_phase_time_steps(whisker_ecs_systems *systems);
 void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
 // system process phases functions
-void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, double update_rate_sec);
+size_t whisker_ecs_s_register_process_phase_time_step(whisker_ecs_systems *systems, whisker_time_step time_step);
+void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, size_t time_step_id);
 void whisker_ecs_s_deregister_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id);
 void whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems);
 
