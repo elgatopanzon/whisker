@@ -151,6 +151,7 @@ int main(int argc, char** argv)
 
 #define ASTEROIDS_PROCESS_PHASE_INPUT "asteroids_phase_input"
 #define ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER "asteroids_phase_collision_handler"
+#define ASTEROIDS_PROCESS_PHASE_RELAXED "asteroids_phase_input"
 void asteroids_init_ecs()
 {
 	asteroids_ecs = whisker_ecs_create();
@@ -168,6 +169,19 @@ void asteroids_init_ecs()
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_INPUT, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_DEFAULT);
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_FIXED);
 
+	whisker_time_step relaxed_time_step = whisker_time_step_create(
+			1,
+			1,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_UNCAPPED,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_CLAMP,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_SNAP,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_AVERAGE,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION,
+			WHISKER_ECS_PROCESS_PHASE_DEFAULT_DELTA_ACCUMULATION_CLAMP
+		);
+	size_t relaxed_time_step_id = whisker_ecs_register_process_phase_time_step(asteroids_ecs, relaxed_time_step);
+	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_RELAXED, relaxed_time_step_id);
+
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_STARTUP;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_PRE_LOAD;
 	process_phases[process_phases_length++] = ASTEROIDS_PROCESS_PHASE_INPUT;
@@ -177,6 +191,7 @@ void asteroids_init_ecs()
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_UPDATE;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_POST_UPDATE;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_FINAL;
+	process_phases[process_phases_length++] = ASTEROIDS_PROCESS_PHASE_RELAXED;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_PRE_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_POST_RENDER;
@@ -1068,7 +1083,7 @@ void asteroids_game_init()
         		asteroids_ecs, 
         		asteroids_system_asteroid_spawn, 
         		"system_asteroid_spawn", 
-        		WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, 
+        		ASTEROIDS_PROCESS_PHASE_RELAXED, 
         		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
     		);
 			whisker_ecs_set_named(
@@ -1217,7 +1232,7 @@ void asteroids_game_init()
     		asteroids_ecs,
     		asteroids_system_destroy_offscreen,
     		"system_destroy_offscreen",
-    		WHISKER_ECS_PROCESS_PHASE_POST_UPDATE,
+    		ASTEROIDS_PROCESS_PHASE_RELAXED,
     		WHISKER_ECS_PROCESS_THREADED_AUTO
 		);
 
