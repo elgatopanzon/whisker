@@ -109,7 +109,6 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 // system update functions
 void whisker_ecs_update(whisker_ecs *ecs, double delta_time);
 void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs);
-void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs);
 void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs);
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs);
 void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisker_thread_pool_context *t);

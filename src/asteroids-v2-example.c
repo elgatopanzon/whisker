@@ -13,6 +13,7 @@
 #include "whisker_ecs.h"
 #include "whisker_ecs_pool.h"
 #include "whisker_ecs_module_event.h"
+#include "whisker_ecs_module_component_change_events.h"
 
 const int asteroids_screen_width = 800;
 const int asteroids_screen_height = 800;
@@ -200,13 +201,13 @@ void asteroids_init_ecs()
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_POST_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER;
-	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_RESERVED;
 
 	whisker_ecs_set_process_phase_order(asteroids_ecs, process_phases, process_phases_length);
 	free(process_phases);
 
-	// init events module
+	// init events modules
 	whisker_ecs_module_event_init(asteroids_ecs, asteroids_event_pool);
+	whisker_ecs_module_component_change_events_init(asteroids_ecs);
 }
 void asteroids_deinit_ecs()
 {
