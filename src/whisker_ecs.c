@@ -69,9 +69,20 @@ whisker_ecs *whisker_ecs_create()
 			false,
 			false
 		);
+	whisker_time_step reserved_time_step = whisker_time_step_create(
+			0,
+			0,
+			true,
+			false,
+			false,
+			false,
+			false,
+			false
+		);
 	size_t default_time_step_id = whisker_ecs_register_process_phase_time_step(new, default_time_step);
 	size_t fixed_update_time_step_id = whisker_ecs_register_process_phase_time_step(new, fixed_update_time_step);
 	size_t rendering_phase_time_step_id = whisker_ecs_register_process_phase_time_step(new, rendering_phase_time_step);
+	size_t reserved_time_step_id = whisker_ecs_register_process_phase_time_step(new, reserved_time_step);
 
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP, default_time_step_id);
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_LOAD, default_time_step_id);
@@ -87,7 +98,17 @@ whisker_ecs *whisker_ecs_create()
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_RENDER, rendering_phase_time_step_id);
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER, rendering_phase_time_step_id);
 
-	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_RESERVED, default_time_step_id);
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_RESERVED, reserved_time_step_id);
+
+	// register 2 special process phases PRE_PHASE and POST_PHASE
+	// then set them to externally managed so they don't get scheduled
+	// TODO: implement this into the register process phase functions
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_PHASE_, reserved_time_step_id);
+	new->process_phase_pre_idx = new->systems->process_phases_length - 1;
+	new->systems->process_phases[new->process_phase_pre_idx].manual_scheduling = true;
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_PHASE_, reserved_time_step_id);
+	new->process_phase_post_idx = new->systems->process_phases_length - 1;
+	new->systems->process_phases[new->process_phase_post_idx].manual_scheduling = true;
 
 	// register built-in systems
 	whisker_ecs_register_system(new, whisker_ecs_system_deregister_startup_phase, "wecs_system_deregister_startup_phase", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
@@ -235,6 +256,18 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 		}
 	}
 
+	// insert managed process phases
+	// note: this assumes that the pre/post phase timestep is the same as the
+	// reserved one
+	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_RESERVED, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
+
+	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_PRE_PHASE_, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
+	ecs->process_phase_pre_idx = ecs->systems->process_phases_length - 1;
+	ecs->systems->process_phases[ecs->process_phase_pre_idx].manual_scheduling = true;
+	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_POST_PHASE_, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
+	ecs->process_phase_post_idx = ecs->systems->process_phases_length - 1;
+	ecs->systems->process_phases[ecs->process_phase_post_idx].manual_scheduling = true;
+
 	// free old process phases list
 	free(process_phases_backup);
 }
@@ -250,7 +283,15 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 
     for (int i = 0; i < ecs->systems->process_phases_length; ++i)
     {
+    	if (ecs->systems->process_phases[i].manual_scheduling) { continue; }
+
+    	// run pre_phase process phase
+        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[ecs->process_phase_pre_idx], update_context);
+
         whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[i], update_context);
+
+    	// run post_phase process phase
+        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[ecs->process_phase_post_idx], update_context);
 
 		whisker_ecs_update_process_deferred_actions(ecs);
     }

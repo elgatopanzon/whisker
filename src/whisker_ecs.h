@@ -69,7 +69,10 @@
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER "w_phase_final_render"
 #define WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER_UNCAPPED true
 
+// phases reserved for system use
 #define WHISKER_ECS_PROCESS_PHASE_RESERVED "w_phase_reserved"
+#define WHISKER_ECS_PROCESS_PHASE_PRE_PHASE_ "w_phase_pre_phase_"
+#define WHISKER_ECS_PROCESS_PHASE_POST_PHASE_ "w_phase_post_phase_"
 
 #define WHISKER_ECS_PROCESS_THREADED_AUTO -1
 #define WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD 0
@@ -88,6 +91,9 @@ typedef struct whisker_ecs
 	whisker_ecs_system_context system_update_context;
 	whisker_thread_pool *general_thread_pool;
 	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
+
+	size_t process_phase_pre_idx;
+	size_t process_phase_post_idx;
 } whisker_ecs;
 
 

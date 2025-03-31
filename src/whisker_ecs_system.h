@@ -99,6 +99,7 @@ typedef struct whisker_ecs_system_process_phase
 {
 	whisker_ecs_entity_id id;
 	size_t time_step_id;
+	bool manual_scheduling;
 } whisker_ecs_system_process_phase;
 
 typedef struct whisker_ecs_systems
