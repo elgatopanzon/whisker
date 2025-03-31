@@ -36,7 +36,7 @@ static void whisker_ecs_module_event_set_pool(whisker_ecs *ecs, whisker_ecs_pool
 	struct whisker_ecs_module_event_pool_component pool_component = {
 		.pool = entity_pool,
 	};
-	whisker_ecs_set_component(ecs->components, whisker_ecs_module_event_get_pool_entity(ecs->entities), sizeof(pool_component), whisker_ecs_module_event_get_module_entity(ecs->entities), &pool_component);
+	whisker_ecs_set_component(ecs->world->components, whisker_ecs_module_event_get_pool_entity(ecs->world->entities), sizeof(pool_component), whisker_ecs_module_event_get_module_entity(ecs->world->entities), &pool_component);
 }
 
 static whisker_ecs_pool *whisker_ecs_module_event_get_pool(whisker_ecs_entities *entities, whisker_ecs_components *components)

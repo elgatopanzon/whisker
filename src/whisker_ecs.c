@@ -15,13 +15,17 @@
 whisker_ecs *whisker_ecs_create()
 {
 	whisker_ecs *new = whisker_mem_xcalloc(1, sizeof(*new));
+	//
+	// create world object
+	new->world = whisker_ecs_world_create(new);
 
-	new->entities = whisker_ecs_e_create_and_init_entities();
-	new->components = whisker_ecs_c_create_and_init_components();
-	new->systems = whisker_ecs_s_create_and_init_systems();
+	new->world->entities = whisker_ecs_e_create_and_init_entities();
+	new->world->components = whisker_ecs_c_create_and_init_components();
+	new->world->systems = whisker_ecs_s_create_and_init_systems();
+
 
 	// reserve 1 entity for system use
-	whisker_ecs_e_create(new->entities);
+	whisker_ecs_e_create(new->world->entities);
 
 	// create a dummy system to use by the system context
 	whisker_ecs_system system = {
@@ -31,8 +35,8 @@ whisker_ecs *whisker_ecs_create()
 		.thread_id = 0,
 		.last_update = 0,
 		.delta_time = 0,
-		.entities = new->entities,
-		.components = new->components,
+		.entities = new->world->entities,
+		.components = new->world->components,
 	};
 	// init the system update context
 	whisker_ecs_s_init_system_context(&new->system_update_context, &system);
@@ -104,11 +108,11 @@ whisker_ecs *whisker_ecs_create()
 	// then set them to externally managed so they don't get scheduled
 	// TODO: implement this into the register process phase functions
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_PRE_PHASE_, reserved_time_step_id);
-	new->process_phase_pre_idx = new->systems->process_phases_length - 1;
-	new->systems->process_phases[new->process_phase_pre_idx].manual_scheduling = true;
+	new->process_phase_pre_idx = new->world->systems->process_phases_length - 1;
+	new->world->systems->process_phases[new->process_phase_pre_idx].manual_scheduling = true;
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_PHASE_, reserved_time_step_id);
-	new->process_phase_post_idx = new->systems->process_phases_length - 1;
-	new->systems->process_phases[new->process_phase_post_idx].manual_scheduling = true;
+	new->process_phase_post_idx = new->world->systems->process_phases_length - 1;
+	new->world->systems->process_phases[new->process_phase_post_idx].manual_scheduling = true;
 
 	// register built-in systems
 	whisker_ecs_register_system(new, whisker_ecs_system_deregister_startup_phase, "wecs_system_deregister_startup_phase", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
@@ -124,9 +128,9 @@ whisker_ecs *whisker_ecs_create()
 void whisker_ecs_free(whisker_ecs *ecs)
 {
 	// free ecs state
-	whisker_ecs_e_free_entities_all(ecs->entities);
-	whisker_ecs_c_free_components_all(ecs->components);
-	whisker_ecs_s_free_systems_all(ecs->systems);
+	whisker_ecs_e_free_entities_all(ecs->world->entities);
+	whisker_ecs_c_free_components_all(ecs->world->components);
+	whisker_ecs_s_free_systems_all(ecs->world->systems);
 
 	whisker_ecs_s_free_system_context(&ecs->system_update_context);
 
@@ -134,9 +138,9 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	whisker_tp_free_all(ecs->general_thread_pool);
 	free(ecs->component_sort_requests);
 
+	free(ecs->world);
 	free(ecs);
 }
-
 
 /**********************
 *  system functions  *
@@ -148,32 +152,32 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	debug_log(DEBUG, ecs:register_system, "registering system %s process phase %s", system_name, process_phase_name);
 
 	// get the entity for the process phase
-	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->entities, process_phase_name);
+	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->world->entities, process_phase_name);
 	// set the component on the system
 
 	// create an entity for this system with it's name
-	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->entities, system_name);
+	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->world->entities, system_name);
 
 	// add process phase component to system
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, process_phase_name, sizeof(bool), e, &(bool){0});
+	whisker_ecs_set_named_component(ecs->world->entities, ecs->world->components, process_phase_name, sizeof(bool), e, &(bool){0});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// set component of its type on itself
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, system_name, sizeof(bool), e, &(bool){0});
+	whisker_ecs_set_named_component(ecs->world->entities, ecs->world->components, system_name, sizeof(bool), e, &(bool){0});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// register the system with the system scheduler
-	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->systems, ecs->components, (whisker_ecs_system) {
+	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->world->systems, ecs->world->components, (whisker_ecs_system) {
 		.entity_id = e,
 		.process_phase_id = phase_e,
 		.system_ptr = system_ptr,
 		.thread_count = thread_count,
-		.components = ecs->components,
-		.entities = ecs->entities,
+		.components = ecs->world->components,
+		.entities = ecs->world->entities,
 	});
 
 	// add the system index component to the system entity
-	whisker_ecs_set_named_component(ecs->entities, ecs->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->systems->systems_length - 1});
+	whisker_ecs_set_named_component(ecs->world->entities, ecs->world->components, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->world->systems->systems_length - 1});
 	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	/* // HACK: do a single execution of the system to initialise the iterator */
@@ -195,17 +199,17 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 // register a process phase time step to use when registering a process phase
 size_t whisker_ecs_register_process_phase_time_step(whisker_ecs *ecs, whisker_time_step time_step)
 {
-	return whisker_ecs_s_register_process_phase_time_step(ecs->systems, time_step);
+	return whisker_ecs_s_register_process_phase_time_step(ecs->world->systems, time_step);
 }
 
 // register a process phase for use by the system scheduler
 // note: update_rate_sec set to 0 = uncapped processing with variable delta time
 whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char *phase_name, size_t time_step_id)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_name);
+	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->world->entities, phase_name);
 
 	// add component ID to system's process phase list
-	whisker_ecs_s_register_process_phase(ecs->systems, component_id, time_step_id);
+	whisker_ecs_s_register_process_phase(ecs->world->systems, component_id, time_step_id);
 
 	return component_id;
 }
@@ -217,17 +221,17 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 {
 	// backup existing process phase array
 	whisker_arr_declare(whisker_ecs_system_process_phase, process_phases_backup);
-	process_phases_backup = ecs->systems->process_phases;
-	process_phases_backup_length = ecs->systems->process_phases_length;
-	process_phases_backup_size = ecs->systems->process_phases_size;
+	process_phases_backup = ecs->world->systems->process_phases;
+	process_phases_backup_length = ecs->world->systems->process_phases_length;
+	process_phases_backup_size = ecs->world->systems->process_phases_size;
 
 	// reinit the process phases array
-	whisker_arr_init_t(ecs->systems->process_phases, phase_count);
-	ecs->systems->process_phases_length = 0;
+	whisker_arr_init_t(ecs->world->systems->process_phases, phase_count);
+	ecs->world->systems->process_phases_length = 0;
 	
 	for (int i = 0; i < phase_count; ++i)
 	{
-		whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->entities, phase_names[i]);
+		whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->world->entities, phase_names[i]);
 
 		bool exists = false;
 
@@ -239,9 +243,9 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 				// re-register the process phase
 				debug_log(DEBUG, ecs:set_process_phase_order, "re-registering phase %s", phase_names[i]);
 
-				size_t idx = ecs->systems->process_phases_length++;
-				ecs->systems->process_phases[idx].id = component_id;
-				ecs->systems->process_phases[idx].time_step_id = process_phases_backup[pi].time_step_id;
+				size_t idx = ecs->world->systems->process_phases_length++;
+				ecs->world->systems->process_phases[idx].id = component_id;
+				ecs->world->systems->process_phases[idx].time_step_id = process_phases_backup[pi].time_step_id;
 
 				exists = true;
 				break;
@@ -252,7 +256,7 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 		if (!exists)
 		{
 			debug_log(DEBUG, ecs:set_process_phase_order, "registering new phase %s", phase_names[i]);
-			whisker_ecs_s_register_process_phase(ecs->systems, component_id, 0);
+			whisker_ecs_s_register_process_phase(ecs->world->systems, component_id, 0);
 		}
 	}
 
@@ -262,11 +266,11 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_RESERVED, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
 
 	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_PRE_PHASE_, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
-	ecs->process_phase_pre_idx = ecs->systems->process_phases_length - 1;
-	ecs->systems->process_phases[ecs->process_phase_pre_idx].manual_scheduling = true;
+	ecs->process_phase_pre_idx = ecs->world->systems->process_phases_length - 1;
+	ecs->world->systems->process_phases[ecs->process_phase_pre_idx].manual_scheduling = true;
 	whisker_ecs_register_process_phase(ecs, WHISKER_ECS_PROCESS_PHASE_POST_PHASE_, process_phases_backup[ecs->process_phase_pre_idx].time_step_id);
-	ecs->process_phase_post_idx = ecs->systems->process_phases_length - 1;
-	ecs->systems->process_phases[ecs->process_phase_post_idx].manual_scheduling = true;
+	ecs->process_phase_post_idx = ecs->world->systems->process_phases_length - 1;
+	ecs->world->systems->process_phases[ecs->process_phase_post_idx].manual_scheduling = true;
 
 	// free old process phases list
 	free(process_phases_backup);
@@ -281,23 +285,23 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 	// update each system phase then run deferred actions
     whisker_ecs_system_context *update_context = &ecs->system_update_context;
 
-    for (int i = 0; i < ecs->systems->process_phases_length; ++i)
+    for (int i = 0; i < ecs->world->systems->process_phases_length; ++i)
     {
-    	if (ecs->systems->process_phases[i].manual_scheduling) { continue; }
+    	if (ecs->world->systems->process_phases[i].manual_scheduling) { continue; }
 
     	// run pre_phase process phase
-        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[ecs->process_phase_pre_idx], update_context);
+        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[ecs->process_phase_pre_idx], update_context);
 
-        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[i], update_context);
+        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[i], update_context);
 
     	// run post_phase process phase
-        whisker_ecs_s_update_process_phase(ecs->systems, ecs->entities, &ecs->systems->process_phases[ecs->process_phase_post_idx], update_context);
+        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[ecs->process_phase_post_idx], update_context);
 
 		whisker_ecs_update_process_deferred_actions(ecs);
     }
 
 	// reset process phase time steps to allow next frame to advance
-	whisker_ecs_s_reset_process_phase_time_steps(ecs->systems);
+	whisker_ecs_s_reset_process_phase_time_steps(ecs->world->systems);
 }
 
 // process any deferred actions queued since the previous update
@@ -319,23 +323,23 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 {
 	// for each deferred deleted entity remove all its components
-	for (size_t i = 0; i < ecs->entities->deferred_actions_length; ++i)
+	for (size_t i = 0; i < ecs->world->entities->deferred_actions_length; ++i)
 	{
-		whisker_ecs_entity_deferred_action *action = &ecs->entities->deferred_actions[i];
+		whisker_ecs_entity_deferred_action *action = &ecs->world->entities->deferred_actions[i];
 
 		if (action->action == WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY)
 		{
 			// HACK: get pool managing the entity and create a deferred removal
 			// request for any entity not contained within the pool's components
-			whisker_ecs_entity *e = whisker_ecs_e(ecs->entities, action->id);
+			whisker_ecs_entity *e = whisker_ecs_e(ecs->world->entities, action->id);
 			if (e->managed_by != NULL)
 			{ 
 				whisker_ecs_pool *pool = e->managed_by;
 
-				for (int ci = 0; ci < ecs->components->component_ids_length; ++ci)
+				for (int ci = 0; ci < ecs->world->components->component_ids_length; ++ci)
 				{
-					whisker_ecs_entity_id component_id = ecs->components->component_ids[ci];
-					if (!whisker_ecs_c_has_component(ecs->components, component_id, action->id)) { continue; }
+					whisker_ecs_entity_id component_id = ecs->world->components->component_ids[ci];
+					if (!whisker_ecs_c_has_component(ecs->world->components, component_id, action->id)) { continue; }
 
 					// if the pool components set contains this component, skip
 					// destroying it
@@ -347,12 +351,12 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 
 					/* printf("deferred component: destroying non-matching pool component %zu (%s) from entity %zu\n", component_id, whisker_ecs_e(ecs->entities, component_id)->name, action->id); */
 
-					whisker_ecs_create_deferred_component_action(ecs->components, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
+					whisker_ecs_create_deferred_component_action(ecs->world->components, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
 				}
 
-				if (ecs->entities->entities[action->id.index].destroyed)
+				if (ecs->world->entities->entities[action->id.index].destroyed)
 				{
-					ecs->entities->entities[action->id.index].destroyed = false;
+					ecs->world->entities->entities[action->id.index].destroyed = false;
 					whisker_ecs_p_return_entity(pool, action->id);
 				}
 
@@ -360,7 +364,7 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 			}
 
 			/* whisker_ecs_c_remove_all_components(ecs->components, action->id); */
-			whisker_ecs_create_deferred_component_action(ecs->components, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL);
+			whisker_ecs_create_deferred_component_action(ecs->world->components, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL);
 
 		}
 	}
@@ -368,15 +372,15 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 
 void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 {
-	while (ecs->entities->deferred_actions_length > 0) 
+	while (ecs->world->entities->deferred_actions_length > 0) 
 	{
-		whisker_ecs_entity_deferred_action action = ecs->entities->deferred_actions[--ecs->entities->deferred_actions_length];
+		whisker_ecs_entity_deferred_action action = ecs->world->entities->deferred_actions[--ecs->world->entities->deferred_actions_length];
 
-		whisker_ecs_entity *e = whisker_ecs_e(ecs->entities, action.id);
+		whisker_ecs_entity *e = whisker_ecs_e(ecs->world->entities, action.id);
 
 		switch (action.action) {
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
-				ecs->entities->entities[action.id.index].destroyed = false;		
+				ecs->world->entities->entities[action.id.index].destroyed = false;		
 				break;
 
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
@@ -387,7 +391,7 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 				}
 				else
 				{
-					whisker_ecs_e_destroy(ecs->entities, action.id);
+					whisker_ecs_e_destroy(ecs->world->entities, action.id);
 				}
 		}
 	}
@@ -396,46 +400,46 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
 {
 	// process the deferred actions into real component actions
-	if (ecs->components->deferred_actions_length > 0) 
+	if (ecs->world->components->deferred_actions_length > 0) 
 	{
-		for (int i = 0; i < ecs->components->deferred_actions_length; ++i)
+		for (int i = 0; i < ecs->world->components->deferred_actions_length; ++i)
 		{
-			struct whisker_ecs_component_deferred_action action = ecs->components->deferred_actions[i];
+			struct whisker_ecs_component_deferred_action action = ecs->world->components->deferred_actions[i];
 
 			switch (action.action) {
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
-					whisker_ecs_c_set_component(ecs->components, action.component_id, action.data_size, action.entity_id, ecs->components->deferred_actions_data + action.data_offset);
+					whisker_ecs_c_set_component(ecs->world->components, action.component_id, action.data_size, action.entity_id, ecs->world->components->deferred_actions_data + action.data_offset);
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
-					whisker_ecs_c_remove_component(ecs->components, action.component_id, action.entity_id);
+					whisker_ecs_c_remove_component(ecs->world->components, action.component_id, action.entity_id);
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL:
-					whisker_ecs_c_remove_all_components(ecs->components, action.entity_id);
+					whisker_ecs_c_remove_all_components(ecs->world->components, action.entity_id);
 					break;
 				default:
 					break;
 			}
 		}
 
-		ecs->components->deferred_actions_length = 0;
-		ecs->components->deferred_actions_data_length = 0;
+		ecs->world->components->deferred_actions_length = 0;
+		ecs->world->components->deferred_actions_data_length = 0;
 	}
 }
 
 void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 {
-	whisker_arr_ensure_alloc(ecs->component_sort_requests, ecs->components->component_ids_length);
+	whisker_arr_ensure_alloc(ecs->component_sort_requests, ecs->world->components->component_ids_length);
 
-	for (int i = 0; i < ecs->components->component_ids_length; ++i)
+	for (int i = 0; i < ecs->world->components->component_ids_length; ++i)
 	{
-		whisker_ecs_entity_id component_id = ecs->components->component_ids[i];
-		if (!ecs->components->components[component_id.index]->mutations_length)
+		whisker_ecs_entity_id component_id = ecs->world->components->component_ids[i];
+		if (!ecs->world->components->components[component_id.index]->mutations_length)
 		{
 			continue;
 		}
 
 		size_t sort_request_idx = ecs->component_sort_requests_length++;
-		ecs->component_sort_requests[sort_request_idx].components = ecs->components;
+		ecs->component_sort_requests[sort_request_idx].components = ecs->world->components;
 		ecs->component_sort_requests[sort_request_idx].component_id = component_id;
 
 		whisker_tp_queue_work(ecs->general_thread_pool, whisker_ecs_sort_component_thread_func_, &ecs->component_sort_requests[sort_request_idx]);

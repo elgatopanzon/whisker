@@ -5,6 +5,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_ecs_world.h"
 #include "whisker_ecs_entity.h"
 #include "whisker_ecs_component.h"
 #include "whisker_ecs_system.h"
@@ -85,9 +86,7 @@ struct whisker_ecs_component_sort_request
 
 typedef struct whisker_ecs
 {
-	whisker_ecs_entities *entities;
-	whisker_ecs_components *components;
-	whisker_ecs_systems *systems;
+	struct whisker_ecs_world *world;
 	whisker_ecs_system_context system_update_context;
 	whisker_thread_pool *general_thread_pool;
 	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
