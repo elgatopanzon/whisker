@@ -154,22 +154,5 @@ void whisker_ecs_system_deregister_startup_phase(whisker_ecs_system_context *con
 #define whisker_ecs_remove_tag(cm, n, e) whisker_ecs_remove_component(cm, n, e)
 #define whisker_ecs_has(cm, n, e) whisker_ecs_has_component(cm, n, e)
 
-// short macros: general component
-#define wecs_set_n whisker_ecs_set_named
-#define wecs_get_n whisker_ecs_get_named
-#define wecs_remove_n whisker_ecs_remove_named
-#define wecs_has_n whisker_ecs_has_named
-
-#define wecs_set_nt whisker_ecs_set_named_tag
-#define wecs_remove_nt whisker_ecs_remove_named_tag
-
-#define wecs_set whisker_ecs_set
-#define wecs_get whisker_ecs_get
-#define wecs_remove whisker_ecs_remove
-
-#define wecs_set_t whisker_ecs_set_tag
-#define wecs_remove_t whisker_ecs_remove_tag
-#define wecs_has whisker_ecs_has
-
 #endif /* WHISKER_ECS_H */
 
