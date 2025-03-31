@@ -303,6 +303,21 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
 // process any deferred actions queued since the previous update
 void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 {
+	// pre-process destroyed entities
+	whisker_ecs_update_pre_process_destroyed_entities_(ecs);
+
+	// process deferred component actions
+	whisker_ecs_update_process_deferred_component_actions_(ecs);
+
+	// process and sort changed components
+	whisker_ecs_update_process_changed_components_(ecs);
+	
+	// process entity actions
+	whisker_ecs_update_process_deferred_entity_actions_(ecs);
+}
+
+void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
+{
 	// for each deferred deleted entity remove all its components
 	for (size_t i = 0; i < ecs->entities->deferred_actions_length; ++i)
 	{
@@ -349,15 +364,6 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 
 		}
 	}
-
-	// process deferred component actions
-	whisker_ecs_update_process_deferred_component_actions_(ecs);
-
-	// process and sort changed components
-	whisker_ecs_update_process_changed_components_(ecs);
-	
-	// process entity actions
-	whisker_ecs_update_process_deferred_entity_actions_(ecs);
 }
 
 void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
