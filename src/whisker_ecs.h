@@ -10,7 +10,6 @@
 #include "whisker_ecs_system.h"
 #include "whisker_ecs_pool.h"
 #include "whisker_thread_pool.h"
-#include "whisker_ecs_event.h"
 
 #ifndef WHISKER_ECS_H
 #define WHISKER_ECS_H
@@ -89,7 +88,6 @@ typedef struct whisker_ecs
 	whisker_ecs_system_context system_update_context;
 	whisker_thread_pool *general_thread_pool;
 	whisker_arr_declare(struct whisker_ecs_component_sort_request, component_sort_requests);
-	whisker_ecs_pool *events_entity_pool;
 } whisker_ecs;
 
 

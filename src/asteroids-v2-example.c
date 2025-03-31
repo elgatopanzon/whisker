@@ -12,6 +12,7 @@
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
 #include "whisker_ecs_pool.h"
+#include "whisker_ecs_module_event.h"
 
 const int asteroids_screen_width = 800;
 const int asteroids_screen_height = 800;
@@ -25,6 +26,7 @@ whisker_ecs *asteroids_ecs;
 whisker_ecs_pool *asteroids_asteroids_pool;
 whisker_ecs_pool *asteroids_collisions_pool;
 whisker_ecs_pool *asteroids_bullets_pool;
+whisker_ecs_pool *asteroids_event_pool;
 
 typedef enum ASTEROIDS_GAME_STATE
 {
@@ -160,6 +162,7 @@ void asteroids_init_ecs()
 	asteroids_asteroids_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 32, 16);
 	asteroids_collisions_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 32, 16);
 	asteroids_bullets_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 8, 4);
+	asteroids_event_pool = whisker_ecs_p_create_and_init(asteroids_ecs->components, asteroids_ecs->entities, 128, 64);
 
 	// custom process phase list
 	whisker_arr_declare(char *, process_phases);
@@ -200,6 +203,9 @@ void asteroids_init_ecs()
 
 	whisker_ecs_set_process_phase_order(asteroids_ecs, process_phases, process_phases_length);
 	free(process_phases);
+
+	// init events module
+	whisker_ecs_module_event_init(asteroids_ecs, asteroids_event_pool);
 }
 void asteroids_deinit_ecs()
 {
@@ -208,6 +214,7 @@ void asteroids_deinit_ecs()
 	whisker_ecs_p_free_all(asteroids_asteroids_pool);
 	whisker_ecs_p_free_all(asteroids_collisions_pool);
 	whisker_ecs_p_free_all(asteroids_bullets_pool);
+	whisker_ecs_p_free_all(asteroids_event_pool);
 }
 
 
@@ -766,6 +773,7 @@ void asteroids_system_entity_deferred_destroy(whisker_ecs_system_context *contex
 		/* debug_printf("destroying entity %zu %d\n", itor->entity_id); */
 
 		whisker_ecs_destroy_entity_deferred(asteroids_ecs->entities, itor->entity_id);
+		whisker_ecs_module_event_create_and_fire_named(context->entities, context->components, test_event);
 	}
 }
 

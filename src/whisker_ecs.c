@@ -96,22 +96,6 @@ whisker_ecs *whisker_ecs_create()
 	new->general_thread_pool = whisker_tp_create_and_init(0, "ecs_general_tasks");
 	whisker_arr_init_t(new->component_sort_requests, 32);
 
-	// register the event system's systems
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_event_components, "wecs_system_cull_event_components", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
-	whisker_ecs_register_system(new, whisker_ecs_ev_system_cull_events, "wecs_system_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
-
-	// create event entity pool
-	new->events_entity_pool = whisker_ecs_p_create_and_init(new->components, new->entities, 128, 64);
-
-	// disable propagation of changes to ensure that events don't trigger new
-	// events
-	new->events_entity_pool->propagate_component_changes = false;
-
-	// set the event components for the prototype entity
-	whisker_ecs_p_set_prototype_named_tag(new->events_entity_pool, t_event);
-	struct whisker_ecs_event_cull_event_component cull = {};
-	whisker_ecs_p_set_prototype_named_component(new->events_entity_pool, t_event_cull_data, cull, &cull);
-
 	return new;
 }
 
@@ -128,9 +112,6 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	// free thread pool
 	whisker_tp_free_all(ecs->general_thread_pool);
 	free(ecs->component_sort_requests);
-
-	// free entity pool
-	whisker_ecs_p_free_all(ecs->events_entity_pool);
 
 	free(ecs);
 }
@@ -329,7 +310,7 @@ void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
 	}
 
 	// generate events from deferred component actions
-	whisker_ecs_update_generate_component_events_(ecs);
+	/* whisker_ecs_update_generate_component_events_(ecs); */
 
 	// process deferred component actions
 	whisker_ecs_update_process_deferred_component_actions_(ecs);
@@ -438,15 +419,15 @@ void whisker_ecs_update_generate_component_events_(whisker_ecs *ecs)
 
 			// first fire the targetted event as a new event
 			whisker_ecs_entity_id event_target_entity = action->entity_id;
-			whisker_ecs_entity_id ev = whisker_ecs_ev_create_with_data(ecs->events_entity_pool, event_entity_target, whisker_ecs_entity_id, &event_target_entity);
-			whisker_ecs_ev_fire(ecs->events_entity_pool, ev);
+			/* whisker_ecs_entity_id ev = whisker_ecs_ev_create_with_data(ecs->events_entity_pool, event_entity_target, whisker_ecs_entity_id, &event_target_entity); */
+			/* whisker_ecs_ev_fire(ecs->events_entity_pool, ev); */
 
 			/* printf("deferred component events: creating %s (%zu as %zu) event on entity %zu\n", event_name, event_entity, ev, action->entity_id); */
 
 			// fire the normal event directly on the entity itself
 			// note: events fired on the entity don't survive the entities
 			// destruction
-			whisker_ecs_ev_fire_on_f(ecs->events_entity_pool, event_entity, event_target_entity);
+			/* whisker_ecs_ev_fire_on_f(ecs->events_entity_pool, event_entity, event_target_entity); */
 
 			free(event_name);
 			free(event_name_target);
