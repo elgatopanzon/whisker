@@ -153,7 +153,7 @@ int main(int argc, char** argv)
 
 #define ASTEROIDS_PROCESS_PHASE_INPUT "asteroids_phase_input"
 #define ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER "asteroids_phase_collision_handler"
-#define ASTEROIDS_PROCESS_PHASE_RELAXED "asteroids_phase_input"
+#define ASTEROIDS_PROCESS_PHASE_RELAXED "asteroids_phase_relaxed"
 void asteroids_init_ecs()
 {
 	asteroids_ecs = whisker_ecs_create();
@@ -171,6 +171,7 @@ void asteroids_init_ecs()
 
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_INPUT, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_DEFAULT);
 	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_COLLISION_HANDLER, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_FIXED);
+	whisker_ecs_register_process_phase(asteroids_ecs, ASTEROIDS_PROCESS_PHASE_RELAXED, WHISKER_ECS_PROCESS_PHASE_TIME_STEP_DEFAULT);
 
 	whisker_time_step relaxed_time_step = whisker_time_step_create(
 			1,
