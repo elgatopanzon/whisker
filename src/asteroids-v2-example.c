@@ -181,6 +181,7 @@ void asteroids_init_ecs()
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_ON_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_POST_RENDER;
 	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER;
+	process_phases[process_phases_length++] = WHISKER_ECS_PROCESS_PHASE_RESERVED;
 
 	whisker_ecs_set_process_phase_order(asteroids_ecs, process_phases, process_phases_length);
 	free(process_phases);

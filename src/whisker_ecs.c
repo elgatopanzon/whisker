@@ -87,6 +87,8 @@ whisker_ecs *whisker_ecs_create()
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_POST_RENDER, rendering_phase_time_step_id);
 	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_FINAL_RENDER, rendering_phase_time_step_id);
 
+	whisker_ecs_register_process_phase(new, WHISKER_ECS_PROCESS_PHASE_RESERVED, default_time_step_id);
+
 	// register built-in systems
 	whisker_ecs_register_system(new, whisker_ecs_system_deregister_startup_phase, "wecs_system_deregister_startup_phase", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD);
 
