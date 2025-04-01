@@ -11,7 +11,6 @@
 #include "whisker.h"
 #include "whisker_debug.h"
 #include "whisker_ecs.h"
-#include "whisker_ecs_pool.h"
 #include "whisker_ecs_module_event.h"
 #include "whisker_ecs_module_component_change_events.h"
 
@@ -160,10 +159,10 @@ void asteroids_init_ecs()
 	asteroids_ecs = whisker_ecs_create();
 
 	// create pool instances
-	asteroids_asteroids_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world->components, asteroids_ecs->world->entities, 32, 16);
-	asteroids_collisions_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world->components, asteroids_ecs->world->entities, 32, 16);
-	asteroids_bullets_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world->components, asteroids_ecs->world->entities, 8, 4);
-	asteroids_event_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world->components, asteroids_ecs->world->entities, 128, 64);
+	asteroids_asteroids_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world, 32, 16);
+	asteroids_collisions_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world, 32, 16);
+	asteroids_bullets_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world, 8, 4);
+	asteroids_event_pool = whisker_ecs_p_create_and_init(asteroids_ecs->world, 128, 64);
 
 	// custom process phase list
 	whisker_arr_declare(char *, process_phases);
@@ -288,15 +287,15 @@ void asteroids_system_asteroid_spawn(whisker_ecs_system_context *context)
 			// set the entity component data
 			float rotation = (float)(rand() % 360);
 			float rotation_velocity = GetRandomValue(ASTEROID_ROTATION_VELOCITY_MIN, ASTEROID_ROTATION_VELOCITY_MAX);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[0], Vector2, e, &position);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[1], Vector2, e, &velocity);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[2], ASTEROIDS_ASTEROID_SIZE, e, (void*)&size);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[3], float, e, (void*)&((float){(ASTEROID_RADIUS * 0.6f) * size}));
-    		whisker_ecs_set(context->components, itor->component_ids_opt[4], float, e, (void*)&rotation);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[5], float, e, (void*)&rotation_velocity);
-    		whisker_ecs_set(context->components, itor->component_ids_opt[6], double, e, (void*)&(double){GetTime()});
-    		whisker_ecs_set_tag(context->components, itor->component_ids_opt[7], e);
-    		whisker_ecs_set_tag(context->components, itor->component_ids_opt[8], e);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[0], Vector2, e, &position);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[1], Vector2, e, &velocity);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[2], ASTEROIDS_ASTEROID_SIZE, e, (void*)&size);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[3], float, e, (void*)&((float){(ASTEROID_RADIUS * 0.6f) * size}));
+    		whisker_ecs_set(context->world, itor->component_ids_opt[4], float, e, (void*)&rotation);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[5], float, e, (void*)&rotation_velocity);
+    		whisker_ecs_set(context->world, itor->component_ids_opt[6], double, e, (void*)&(double){GetTime()});
+    		whisker_ecs_set_tag(context->world, itor->component_ids_opt[7], e);
+    		whisker_ecs_set_tag(context->world, itor->component_ids_opt[8], e);
 
 			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f (pool size %zu)", e.index, size, position.x, position.y, asteroids_asteroids_pool->entity_pool_length);
 		}
@@ -507,13 +506,13 @@ void asteroids_system_collision(whisker_ecs_system_context *context)
     			*pos_2d = Vector2Add(*pos_2d, correction);
     			*colliding_position = Vector2Subtract(*colliding_position, correction);
 
-    			/* whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(context->entities); */
+    			/* whisker_ecs_entity_id collision_e = whisker_ecs_create_entity_deferred(context->world->entities); */
     			whisker_ecs_entity_id collision_e = whisker_ecs_p_request_entity(asteroids_collisions_pool);
 
     			asteroids_component_collision col = {};
     			col.entity_a = entities[i].id;
     			col.entity_b = entities[j].id;
-    			whisker_ecs_set(context->components, itor_outer->component_ids_opt[0], asteroids_component_collision, collision_e, &col);
+    			whisker_ecs_set(context->world, itor_outer->component_ids_opt[0], asteroids_component_collision, collision_e, &col);
 			}
 		}
 	}
@@ -525,7 +524,7 @@ void asteroids_system_collision_cull(whisker_ecs_system_context *context)
 
 	while (whisker_ecs_s_iterate(itor)) 
 	{
-		whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], itor->entity_id);
+		whisker_ecs_set_tag(context->world, itor->component_ids_opt[0], itor->entity_id);
 	}
 }
 
@@ -545,7 +544,7 @@ void asteroids_system_destroy_offscreen(whisker_ecs_system_context *context)
 		{
 			debug_log(DEBUG, system:destroy_offscreen, "e = %zu %fx%f", itor->entity_id.id, pos_2d->x, pos_2d->y);
 			/* whisker_ecs_c_set_component(system->components, itor->component_ids_opt[0], sizeof(bool), itor->entity_id, &(bool){false}); */
-			whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], itor->entity_id);
+			whisker_ecs_set_tag(context->world, itor->component_ids_opt[0], itor->entity_id);
 		}
 	}
 }
@@ -558,7 +557,7 @@ void asteroids_system_projectile_collide_destroy(whisker_ecs_system_context *con
 	{
 		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
-		if (!whisker_ecs_has(context->components, itor->component_ids_opt[2], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[3], collision->entity_b))
+		if (!whisker_ecs_has(context->world, itor->component_ids_opt[2], collision->entity_a) || !whisker_ecs_has(context->world, itor->component_ids_opt[3], collision->entity_b))
 		{
 			continue;
 		}
@@ -566,9 +565,9 @@ void asteroids_system_projectile_collide_destroy(whisker_ecs_system_context *con
 		debug_log(DEBUG, system:projectile_collide_destroy, "%zu hit asteroid %zu", collision->entity_a, collision->entity_b);
 
 		// destroy existing asteroid and projectile
-		whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], collision->entity_a);    
-		whisker_ecs_set_tag(context->components, itor->component_ids_opt[0], collision->entity_b);    
-		whisker_ecs_set_tag(context->components, itor->component_ids_opt[1], collision->entity_b);    
+		whisker_ecs_set_tag(context->world, itor->component_ids_opt[0], collision->entity_a);    
+		whisker_ecs_set_tag(context->world, itor->component_ids_opt[0], collision->entity_b);    
+		whisker_ecs_set_tag(context->world, itor->component_ids_opt[1], collision->entity_b);    
 	}
 }
 
@@ -619,7 +618,7 @@ void asteroids_system_asteroid_hit_asteroid(whisker_ecs_system_context *context)
 	{
 		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
-		if (!whisker_ecs_has(context->components, itor->component_ids_opt[0], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[0], collision->entity_b))
+		if (!whisker_ecs_has(context->world, itor->component_ids_opt[0], collision->entity_a) || !whisker_ecs_has(context->world, itor->component_ids_opt[0], collision->entity_b))
 		{
 			continue;
 		}
@@ -627,19 +626,19 @@ void asteroids_system_asteroid_hit_asteroid(whisker_ecs_system_context *context)
 		/* debug_printf("collision %d: %d hit asteroid %d\n", system.entity->id.index, collision->entity_a.index, collision->entity_b.index); */
 
 		// asteroid a
-		Vector2 *asteroida_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[1], collision->entity_a);
-		float *asteroida_rotation_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[2], collision->entity_a);		
+		Vector2 *asteroida_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[1], collision->entity_a);
+		float *asteroida_rotation_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[2], collision->entity_a);		
 
 
-		Vector2 *asteroida_position = whisker_ecs_get(context->components, itor->component_ids_opt[3], collision->entity_a);		
-		Vector2 *asteroida_hit_by_position = whisker_ecs_get(context->components, itor->component_ids_opt[3], collision->entity_b);		
+		Vector2 *asteroida_position = whisker_ecs_get(context->world, itor->component_ids_opt[3], collision->entity_a);		
+		Vector2 *asteroida_hit_by_position = whisker_ecs_get(context->world, itor->component_ids_opt[3], collision->entity_b);		
 
 		Vector2 asteroida_nudge_direction = Vector2Normalize(Vector2Subtract(*asteroida_position, *asteroida_hit_by_position));
 
 
 		// asteroid b
-		Vector2 *asteroidb_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[1], collision->entity_b);
-		float *asteroidb_rotation_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[2], collision->entity_b);		
+		Vector2 *asteroidb_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[1], collision->entity_b);
+		float *asteroidb_rotation_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[2], collision->entity_b);		
 
 		/* debug_printf("system:asteroid_hit_asteroid 1:%d (%f) hit asteroid %d (%f)\n", collision->entity_a.index, *asteroida_rotation_velocity, collision->entity_b.index, *asteroidb_rotation_velocity); */
 
@@ -680,12 +679,12 @@ void asteroids_system_player_hit_asteroid(whisker_ecs_system_context *context)
 	{
 		asteroids_component_collision *collision = whisker_ecs_itor_get(itor, 0);
 
-		if (!whisker_ecs_has(context->components, itor->component_ids_opt[7], collision->entity_a) || !whisker_ecs_has(context->components, itor->component_ids_opt[8], collision->entity_b))
+		if (!whisker_ecs_has(context->world, itor->component_ids_opt[7], collision->entity_a) || !whisker_ecs_has(context->world, itor->component_ids_opt[8], collision->entity_b))
 		{
 			continue;
 		}
 
-		ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_get(context->components, itor->component_ids_opt[0], collision->entity_b);
+		ASTEROIDS_PLAYER_STATE *player_state = whisker_ecs_get(context->world, itor->component_ids_opt[0], collision->entity_b);
 
 		// deal damage to the player, only in the default state
 		// TODO: maybe figure out a better way to handle this state
@@ -695,22 +694,22 @@ void asteroids_system_player_hit_asteroid(whisker_ecs_system_context *context)
 
 		*player_state = ASTEROIDS_PLAYER_STATE_HIT;
 
-		double *hit_time = whisker_ecs_get(context->components, itor->component_ids_opt[1], collision->entity_b);
+		double *hit_time = whisker_ecs_get(context->world, itor->component_ids_opt[1], collision->entity_b);
 		*hit_time = GetTime();
 
-		asteroids_component_collision *col = whisker_ecs_get(context->components, itor->component_ids_opt[2], collision->entity_b);
+		asteroids_component_collision *col = whisker_ecs_get(context->world, itor->component_ids_opt[2], collision->entity_b);
 		col->entity_a = collision->entity_a;
 		col->entity_b = collision->entity_b;
 
 		// TODO: refactor this to use system access macros
-		int* player_life = whisker_ecs_get(context->components, itor->component_ids_opt[3], collision->entity_b);
-		ASTEROIDS_ASTEROID_SIZE* asteroid_size = whisker_ecs_get(context->components, itor->component_ids_opt[4], collision->entity_a);
+		int* player_life = whisker_ecs_get(context->world, itor->component_ids_opt[3], collision->entity_b);
+		ASTEROIDS_ASTEROID_SIZE* asteroid_size = whisker_ecs_get(context->world, itor->component_ids_opt[4], collision->entity_a);
 
 		int damage = *asteroid_size * ASTEROID_DAMAGE;
 
-		Vector2* asteroid_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[5], collision->entity_a);
+		Vector2* asteroid_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[5], collision->entity_a);
 		*asteroid_velocity = Vector2Scale(*asteroid_velocity, ASTEROID_HIT_VELOCITY_REDUCTION);
-		float* rotation_velocity = whisker_ecs_get(context->components, itor->component_ids_opt[6], collision->entity_a);		
+		float* rotation_velocity = whisker_ecs_get(context->world, itor->component_ids_opt[6], collision->entity_a);		
 		*rotation_velocity += (GetRandomValue(-270, 270));
 
 		debug_log(DEBUG, system:player_damage, "%zu hit player %zu (%d damage)", collision->entity_a, collision->entity_b, damage);
@@ -737,7 +736,7 @@ void asteroids_system_player_hit_nudge(whisker_ecs_system_context *context)
 		if (*p_state == ASTEROIDS_PLAYER_STATE_HIT) {
 			debug_log(DEBUG, system:player_hit_nudge, "nudging player from the hit");
 
-			Vector2 *hit_by_position = whisker_ecs_get(context->components, itor->component_ids_rw[3], hit_collision->entity_a);		
+			Vector2 *hit_by_position = whisker_ecs_get(context->world, itor->component_ids_rw[3], hit_collision->entity_a);		
 
 			Vector2 nudge_direction = Vector2Normalize(Vector2Subtract(*pos_2d, *hit_by_position));
 
@@ -774,8 +773,8 @@ void asteroids_system_entity_deferred_destroy(whisker_ecs_system_context *contex
 	{
 		/* debug_printf("destroying entity %zu %d\n", itor->entity_id); */
 
-		whisker_ecs_destroy_entity_deferred(context->entities, itor->entity_id);
-		whisker_ecs_module_event_create_and_fire_named(context->entities, context->components, test_event);
+		whisker_ecs_destroy_entity_deferred(context->world, itor->entity_id);
+		whisker_ecs_module_event_create_and_fire_named(context->world, test_event);
 	}
 }
 
@@ -1004,8 +1003,8 @@ void asteroids_system_draw_frame_time(whisker_ecs_system_context *context)
 		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
 		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8), font_size, RED);
 
-		size_t entity_count = whisker_ecs_e_count(context->entities);
-		size_t entity_count_alive = whisker_ecs_e_alive_count(context->entities);
+		size_t entity_count = whisker_ecs_e_count(context->world->entities);
+		size_t entity_count_alive = whisker_ecs_e_alive_count(context->world->entities);
 
 		const char* s1 = TextFormat("AC %d", asteroid_count);
 		const char* s2 = TextFormat("EA %d", entity_count_alive);
@@ -1097,8 +1096,7 @@ void asteroids_game_init()
         		WHISKER_ECS_PROCESS_THREADED_MAIN_THREAD
     		);
 			whisker_ecs_set_named(
-    			asteroids_ecs->world->entities,
-    			asteroids_ecs->world->components,
+    			asteroids_ecs->world,
     			system_asteroid_spawn_time,
     			double,
     			spawn_sys->entity_id,
@@ -1327,8 +1325,7 @@ void asteroids_game_init()
 		);
 
 		whisker_ecs_set_named(
-    		asteroids_ecs->world->entities, 
-    		asteroids_ecs->world->components, 
+    		asteroids_ecs->world, 
     		frametime, 
     		asteroids_component_frametime, 
     		frametime_sys->entity_id, 
@@ -1387,27 +1384,27 @@ void asteroids_game_draw_frame()
 
 void asteroids_create_player_entity()
 {
-	whisker_ecs_entity_id e = whisker_ecs_create_named_entity_deferred(asteroids_ecs->world->entities, "player");
+	whisker_ecs_entity_id e = whisker_ecs_create_named_entity_deferred(asteroids_ecs->world, "player");
 
 	Vector2 position = asteroids_screen_center;
 
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, pos_2d, Vector2, e, &(position));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, vel_2d, Vector2, e, &((Vector2) { }));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, radius, float, e, (void*)&((float){PLAYER_RADIUS * 0.66f}));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, rot, float, e, (void*)&(float){180});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, rot_v, float, e, (void*)&(float){0});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, ctime, double, e, (void*)&(double){GetTime()});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, score, int, e, (void*)&(int){0});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, life, int, e, (void*)&(int){PLAYER_START_LIFE});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, p_state, ASTEROIDS_PLAYER_STATE, e, (void*)&(ASTEROIDS_PLAYER_STATE){ASTEROIDS_PLAYER_STATE_DEFAULT});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, fire_time, double, e, (void*)&(double){0});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, hit_time, double, e, (void*)&(double){0});
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, hit_collision, asteroids_component_collision, e, (void*)&(asteroids_component_collision){});
+	whisker_ecs_set_named(asteroids_ecs->world, pos_2d, Vector2, e, &(position));
+	whisker_ecs_set_named(asteroids_ecs->world, vel_2d, Vector2, e, &((Vector2) { }));
+	whisker_ecs_set_named(asteroids_ecs->world, radius, float, e, (void*)&((float){PLAYER_RADIUS * 0.66f}));
+	whisker_ecs_set_named(asteroids_ecs->world, rot, float, e, (void*)&(float){180});
+	whisker_ecs_set_named(asteroids_ecs->world, rot_v, float, e, (void*)&(float){0});
+	whisker_ecs_set_named(asteroids_ecs->world, ctime, double, e, (void*)&(double){GetTime()});
+	whisker_ecs_set_named(asteroids_ecs->world, score, int, e, (void*)&(int){0});
+	whisker_ecs_set_named(asteroids_ecs->world, life, int, e, (void*)&(int){PLAYER_START_LIFE});
+	whisker_ecs_set_named(asteroids_ecs->world, p_state, ASTEROIDS_PLAYER_STATE, e, (void*)&(ASTEROIDS_PLAYER_STATE){ASTEROIDS_PLAYER_STATE_DEFAULT});
+	whisker_ecs_set_named(asteroids_ecs->world, fire_time, double, e, (void*)&(double){0});
+	whisker_ecs_set_named(asteroids_ecs->world, hit_time, double, e, (void*)&(double){0});
+	whisker_ecs_set_named(asteroids_ecs->world, hit_collision, asteroids_component_collision, e, (void*)&(asteroids_component_collision){});
 
 	/* whisker_ecs_set(asteroids_ecs, fps, asteroids_component_fps, e, (void*)&(asteroids_component_fps){0}); */
 	/* whisker_ecs_set(asteroids_ecs, frametime, asteroids_component_frametime, e, (void*)&(asteroids_component_frametime){0}); */
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_player, e);    
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_screen_wrap, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_player, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_screen_wrap, e);    
 }
 
 void asteroids_spawn_asteroid()
@@ -1446,15 +1443,15 @@ void asteroids_add_asteroid(Vector2 position, Vector2 velocity, float rotation, 
 	whisker_ecs_entity_id e = whisker_ecs_p_request_entity(asteroids_asteroids_pool);
 
 	// set the entity component data
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, pos_2d, Vector2, e, &(position));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, vel_2d, Vector2, e, &(velocity));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, ast_size, ASTEROIDS_ASTEROID_SIZE, e, (void*)&size);
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, radius, float, e, (void*)&((float){(ASTEROID_RADIUS * 0.6f) * size}));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, rot, float, e, (void*)&rotation);
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, rot_v, float, e, (void*)&(rotation_velocity));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, ctime, double, e, (void*)&(double){GetTime()});
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_ast, e);    
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_screen_cull, e);    
+	whisker_ecs_set_named(asteroids_ecs->world, pos_2d, Vector2, e, &(position));
+	whisker_ecs_set_named(asteroids_ecs->world, vel_2d, Vector2, e, &(velocity));
+	whisker_ecs_set_named(asteroids_ecs->world, ast_size, ASTEROIDS_ASTEROID_SIZE, e, (void*)&size);
+	whisker_ecs_set_named(asteroids_ecs->world, radius, float, e, (void*)&((float){(ASTEROID_RADIUS * 0.6f) * size}));
+	whisker_ecs_set_named(asteroids_ecs->world, rot, float, e, (void*)&rotation);
+	whisker_ecs_set_named(asteroids_ecs->world, rot_v, float, e, (void*)&(rotation_velocity));
+	whisker_ecs_set_named(asteroids_ecs->world, ctime, double, e, (void*)&(double){GetTime()});
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_ast, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_screen_cull, e);    
 
 	debug_log(DEBUG, add_asteroid, "entity %d size %d at %fx%f", e.index, size, position.x, position.y);
 }
@@ -1465,19 +1462,19 @@ void asteroids_add_projectile(Vector2 position, float rotation)
 	whisker_ecs_entity_id e = whisker_ecs_p_request_entity(asteroids_bullets_pool);
 
 	// set the entity component data
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, pos_2d, Vector2, e, &(position));
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, rot, float, e, (void*)&rotation);
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, radius, float, e, (void*)&((float){((PROJECTILE_WIDTH + PROJECTILE_LENGTH) * 2) / 4}));
+	whisker_ecs_set_named(asteroids_ecs->world, pos_2d, Vector2, e, &(position));
+	whisker_ecs_set_named(asteroids_ecs->world, rot, float, e, (void*)&rotation);
+	whisker_ecs_set_named(asteroids_ecs->world, radius, float, e, (void*)&((float){((PROJECTILE_WIDTH + PROJECTILE_LENGTH) * 2) / 4}));
 
 	// TODO: this is only because the recycled entity's data still exists and is
 	// updated by the movement system because it looks for a POSITION component
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, vel_2d, Vector2, e, &((Vector2){}));
+	whisker_ecs_set_named(asteroids_ecs->world, vel_2d, Vector2, e, &((Vector2){}));
 
-	whisker_ecs_set_named(asteroids_ecs->world->entities, asteroids_ecs->world->components, ctime, double, e, (void*)&(double){GetTime()});
+	whisker_ecs_set_named(asteroids_ecs->world, ctime, double, e, (void*)&(double){GetTime()});
 
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_bullet, e);    
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_move_dir, e);    
-	whisker_ecs_set_named_tag(asteroids_ecs->world->entities, asteroids_ecs->world->components, t_screen_cull, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_bullet, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_move_dir, e);    
+	whisker_ecs_set_named_tag(asteroids_ecs->world, t_screen_cull, e);    
 
 	debug_log(DEBUG, add_projectile, "rot %f at %fx%f", rotation, position.x, position.y);
 }
