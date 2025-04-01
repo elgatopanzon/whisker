@@ -61,7 +61,7 @@ static whisker_ecs_entity_id whisker_ecs_module_event_get_module_entity(struct w
 whisker_ecs_entity_id whisker_ecs_module_event_create_event(struct whisker_ecs_world *world)
 {
 	whisker_ecs_pool *pool = whisker_ecs_module_event_get_pool(world);
-	whisker_ecs_entity_id ev = whisker_ecs_p_request_entity(pool);
+	whisker_ecs_entity_id ev = whisker_ecs_request_pool_entity(pool);
 
 	pool->world->entities->entities[ev.index].destroyed = true;
 	whisker_ecs_create_deferred_entity_action(pool->world->entities, ev, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
@@ -150,8 +150,8 @@ void whisker_ecs_module_event_set_fire_on_data_f(struct whisker_ecs_world *world
 // event entities are destroyed and not picked up twice
 void whisker_ecs_module_event_system_cull_events(whisker_ecs_system_context *context)
 {
-	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, STR(w_module_event), "", "");
-	while (whisker_ecs_s_iterate(itor)) 
+	whisker_ecs_system_iterator *itor = whisker_ecs_query(context, 0, STR(w_module_event), "", "");
+	while (whisker_ecs_iterate(itor)) 
 	{
 		/* debug_log(DEBUG, ecs:system_cull_events, "culling event entity %zu", itor->entity_id.id); */
 
@@ -168,8 +168,8 @@ void whisker_ecs_module_event_system_cull_events(whisker_ecs_system_context *con
 // and we don't want to cull the actual entity.
 void whisker_ecs_module_event_system_cull_event_components(whisker_ecs_system_context *context)
 {
-	whisker_ecs_system_iterator *itor = whisker_ecs_s_get_iterator(context, 0, STR(w_module_event_cull_data), "", "");
-	while (whisker_ecs_s_iterate(itor)) 
+	whisker_ecs_system_iterator *itor = whisker_ecs_query(context, 0, STR(w_module_event_cull_data), "", "");
+	while (whisker_ecs_iterate(itor)) 
 	{
 		// issue the deferred component removal request
 		struct whisker_ecs_module_event_cull_event_component *cull = whisker_ecs_itor_get(itor, 0);

@@ -52,7 +52,7 @@ whisker_ecs *whisker_ecs_create()
 
 	new->world->entities = whisker_ecs_create_and_init_entities_container_();
 	new->world->components = whisker_ecs_c_create_and_init_components();
-	new->world->systems = whisker_ecs_s_create_and_init_systems();
+	new->world->systems = whisker_ecs_create_and_init_systems_container();
 
 
 	// reserve 1 entity for system use
@@ -69,7 +69,7 @@ whisker_ecs *whisker_ecs_create()
 		.world = new->world,
 	};
 	// init the system update context
-	whisker_ecs_s_init_system_context(&new->system_update_context, &system);
+	whisker_ecs_init_system_context(&new->system_update_context, &system);
 
 	// register default system process phases to allow bundled systems and
 	// modules and a standard default processing phase group set
@@ -160,9 +160,9 @@ void whisker_ecs_free(whisker_ecs *ecs)
 	// free ecs state
 	whisker_ecs_free_entities_all_(ecs->world->entities);
 	whisker_ecs_c_free_components_all(ecs->world->components);
-	whisker_ecs_s_free_systems_all(ecs->world->systems);
+	whisker_ecs_free_systems_container_all(ecs->world->systems);
 
-	whisker_ecs_s_free_system_context(&ecs->system_update_context);
+	whisker_ecs_free_system_context(&ecs->system_update_context);
 
 	// free thread pool
 	whisker_tp_free_all(ecs->general_thread_pool);
@@ -218,7 +218,7 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 	for (int i = 0; i < system.thread_count + 1; ++i)
 	{
 		size_t thread_context_idx = system.thread_contexts_length++;
-		whisker_ecs_s_init_system_context(&system.thread_contexts[thread_context_idx], &system);
+		whisker_ecs_init_system_context(&system.thread_contexts[thread_context_idx], &system);
 		system.thread_contexts[thread_context_idx].thread_id = i;
 		system.thread_contexts[thread_context_idx].thread_max = system.thread_count;
 	}
@@ -242,7 +242,17 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 // register a process phase time step to use when registering a process phase
 size_t whisker_ecs_register_process_phase_time_step(whisker_ecs *ecs, whisker_time_step time_step)
 {
-	return whisker_ecs_s_register_process_phase_time_step(ecs->world->systems, time_step);
+	whisker_ecs_system_process_phase_time_step time_step_container = {
+		.time_step = time_step,
+		.update_count = 0,
+		.updated = false,
+	};
+
+	size_t idx = ecs->world->systems->process_phase_time_steps_length++;
+	whisker_arr_ensure_alloc(ecs->world->systems->process_phase_time_steps, (idx + 1));
+
+	ecs->world->systems->process_phase_time_steps[idx] = time_step_container;
+	return idx;
 }
 
 // register a process phase for use by the system scheduler
@@ -252,7 +262,13 @@ whisker_ecs_entity_id whisker_ecs_register_process_phase(whisker_ecs *ecs, char 
 	whisker_ecs_entity_id component_id = whisker_ecs_create_named_entity(ecs->world, phase_name);
 
 	// add component ID to system's process phase list
-	whisker_ecs_s_register_process_phase(ecs->world->systems, component_id, time_step_id);
+	whisker_ecs_system_process_phase process_phase = {
+		.id = component_id,
+		.time_step_id = time_step_id,
+	};
+
+	whisker_arr_ensure_alloc(ecs->world->systems->process_phases, (ecs->world->systems->process_phases_length + 1));
+	ecs->world->systems->process_phases[ecs->world->systems->process_phases_length++] = process_phase;
 
 	return component_id;
 }
@@ -299,7 +315,7 @@ void whisker_ecs_set_process_phase_order(whisker_ecs *ecs, char **phase_names, s
 		if (!exists)
 		{
 			debug_log(DEBUG, ecs:set_process_phase_order, "registering new phase %s", phase_names[i]);
-			whisker_ecs_s_register_process_phase(ecs->world->systems, component_id, 0);
+			whisker_ecs_register_process_phase(ecs, phase_names[i], 0);
 		}
 	}
 
@@ -333,22 +349,22 @@ void whisker_ecs_update(whisker_ecs *ecs, double delta_time)
     	if (ecs->world->systems->process_phases[i].manual_scheduling) { continue; }
 
     	// run pre_phase process phase
-        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[ecs->process_phase_pre_idx], update_context);
+        whisker_ecs_update_process_phase(ecs->world, &ecs->world->systems->process_phases[ecs->process_phase_pre_idx], update_context);
 
-        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[i], update_context);
+        whisker_ecs_update_process_phase(ecs->world, &ecs->world->systems->process_phases[i], update_context);
 
     	// run post_phase process phase
-        whisker_ecs_s_update_process_phase(ecs->world->systems, ecs->world->entities, &ecs->world->systems->process_phases[ecs->process_phase_post_idx], update_context);
+        whisker_ecs_update_process_phase(ecs->world, &ecs->world->systems->process_phases[ecs->process_phase_post_idx], update_context);
 
-		whisker_ecs_update_process_deferred_actions(ecs);
+		whisker_ecs_update_process_deferred_actions_(ecs);
     }
 
 	// reset process phase time steps to allow next frame to advance
-	whisker_ecs_s_reset_process_phase_time_steps(ecs->world->systems);
+	whisker_ecs_reset_process_phase_time_steps_(ecs->world->systems);
 }
 
 // process any deferred actions queued since the previous update
-void whisker_ecs_update_process_deferred_actions(whisker_ecs *ecs)
+void whisker_ecs_update_process_deferred_actions_(whisker_ecs *ecs)
 {
 	// pre-process destroyed entities
 	whisker_ecs_update_pre_process_destroyed_entities_(ecs);
@@ -400,7 +416,7 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 				if (ecs->world->entities->entities[action->id.index].destroyed)
 				{
 					ecs->world->entities->entities[action->id.index].destroyed = false;
-					whisker_ecs_p_return_entity(pool, action->id);
+					whisker_ecs_return_pool_entity(pool, action->id);
 				}
 
 				continue;
@@ -528,7 +544,7 @@ void whisker_ecs_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_ent
 	{
 		// HACK: for now we assume everything managed is managed by a pool
 		whisker_ecs_pool *pool = e->managed_by;
-		whisker_ecs_p_return_entity(pool, entity_id);
+		whisker_ecs_return_pool_entity(pool, entity_id);
 		return;
 	}
 
@@ -1465,16 +1481,16 @@ void whisker_ecs_c_remove_all_components(whisker_ecs_components *components, whi
 ****************/
 
 // create and init an instance of systems container
-whisker_ecs_systems *whisker_ecs_s_create_and_init_systems()
+whisker_ecs_systems *whisker_ecs_create_and_init_systems_container()
 {
 	whisker_ecs_systems *s = whisker_mem_xcalloc(1, sizeof(*s));
-	whisker_ecs_s_init_systems(s);
+	whisker_ecs_init_systems_container(s);
 
 	return s;
 }
 
 // init an instance of systems container
-void whisker_ecs_s_init_systems(whisker_ecs_systems *s)
+void whisker_ecs_init_systems_container(whisker_ecs_systems *s)
 {
 	// create array for systems
 	whisker_arr_init_t(s->systems, 1);
@@ -1487,18 +1503,18 @@ void whisker_ecs_s_init_systems(whisker_ecs_systems *s)
 }
 
 // deallocate an instance of systems container and system data
-void whisker_ecs_s_free_systems_all(whisker_ecs_systems *systems)
+void whisker_ecs_free_systems_container_all(whisker_ecs_systems *systems)
 {
-	whisker_ecs_s_free_systems(systems);
+	whisker_ecs_free_systems_container(systems);
 	free(systems);
 }
 
 // deallocate system data in instance of systems container
-void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
+void whisker_ecs_free_systems_container(whisker_ecs_systems *systems)
 {
 	for (int i = 0; i < systems->systems_length; ++i)
 	{
-		whisker_ecs_s_free_system(&systems->systems[i]);
+		whisker_ecs_free_system(&systems->systems[i]);
 	}
 
 	free(systems->systems);
@@ -1511,16 +1527,16 @@ void whisker_ecs_s_free_systems(whisker_ecs_systems *systems)
 *  system context functions  *
 ******************************/
 // create and init an instance of a system context
-whisker_ecs_system_context *whisker_ecs_s_create_and_init_system_context(whisker_ecs_system *system)
+whisker_ecs_system_context *whisker_ecs_create_and_init_system_context(whisker_ecs_system *system)
 {
 	whisker_ecs_system_context *c = whisker_mem_xcalloc(1, sizeof(*c));
-	whisker_ecs_s_init_system_context(c, system);
+	whisker_ecs_init_system_context(c, system);
 
 	return c;
 }
 
 // init an instance of a system context
-void whisker_ecs_s_init_system_context(whisker_ecs_system_context *context, whisker_ecs_system *system)
+void whisker_ecs_init_system_context(whisker_ecs_system_context *context, whisker_ecs_system *system)
 {
 	// create iterators sparse set
 	context->iterators = whisker_ss_create_t(whisker_ecs_system_iterator);
@@ -1536,7 +1552,7 @@ void whisker_ecs_s_init_system_context(whisker_ecs_system_context *context, whis
 }
 
 // deallocate data for system context instance
-void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
+void whisker_ecs_free_system_context(whisker_ecs_system_context *context)
 {
 	if (context->iterators != NULL)
 	{
@@ -1544,7 +1560,7 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 		{
 			whisker_ecs_system_iterator itor = ((whisker_ecs_system_iterator*)context->iterators->dense)[i];
 
-			whisker_ecs_s_free_iterator(&itor);
+			whisker_ecs_free_iterator(&itor);
 		}
 
 		whisker_ss_free_all(context->iterators);
@@ -1552,9 +1568,9 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context)
 }
 
 // deallocate a system context instance
-void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context)
+void whisker_ecs_free_system_context_all(whisker_ecs_system_context *context)
 {
-	whisker_ecs_s_free_system_context(context);
+	whisker_ecs_free_system_context(context);
 	free(context);
 }
 
@@ -1564,11 +1580,11 @@ void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context)
 ********************************/
 
 // deallocate a system instance
-void whisker_ecs_s_free_system(whisker_ecs_system *system)
+void whisker_ecs_free_system(whisker_ecs_system *system)
 {
 	for (int i = 0; i < system->thread_contexts_length; ++i)
 	{
-		whisker_ecs_s_free_system_context(&system->thread_contexts[i]);
+		whisker_ecs_free_system_context(&system->thread_contexts[i]);
 	}
 
 	free(system->thread_contexts);
@@ -1593,20 +1609,6 @@ static void system_update_set_context_values(whisker_ecs_system_context *context
 static void system_update_execute_system(whisker_ecs_system *system);
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
-// run an update on the registered systems
-// note: processes all phases without deferred actions
-void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time)
-{
-    whisker_ecs_system *default_system = &systems->systems[systems->system_id];
-    whisker_ecs_system_context *default_context = &default_system->thread_contexts[0];
-
-    for (int i = 0; i < systems->process_phases_length; ++i)
-    {
-        whisker_ecs_system_process_phase *process_phase = &systems->process_phases[i];
-
-        system_update_process_phase(systems, entities, process_phase, default_context);
-    }
-}
 
 static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase_time_step *time_step_container)
 {
@@ -1621,7 +1623,7 @@ static int system_update_advance_process_phase_time_step(whisker_ecs_system_proc
 
 static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities)
 {
-    return whisker_ecs_s_get_iterator(default_context, index, "w_ecs_system_idx", entities->entities[index].name, "");
+    return whisker_ecs_query(default_context, index, "w_ecs_system_idx", entities->entities[index].name, "");
 }
 
 static void system_update_set_context_values(whisker_ecs_system_context *context, whisker_ecs_system *system)
@@ -1633,7 +1635,7 @@ static void system_update_set_context_values(whisker_ecs_system_context *context
 
 // reset updated state on all time steps
 // this should be done at the end of the frame to allow triggering an advance
-void whisker_ecs_s_reset_process_phase_time_steps(whisker_ecs_systems *systems)
+void whisker_ecs_reset_process_phase_time_steps_(whisker_ecs_systems *systems)
 {
 	for (int i = 0; i < systems->process_phase_time_steps_length; ++i)
 	{
@@ -1642,9 +1644,9 @@ void whisker_ecs_s_reset_process_phase_time_steps(whisker_ecs_systems *systems)
 }
 
 // update all systems in the given process phase
-void whisker_ecs_s_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
+void whisker_ecs_update_process_phase(struct whisker_ecs_world *world, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
 {
-	system_update_process_phase(systems, entities, process_phase, default_context);
+	system_update_process_phase(world->systems, world->entities, process_phase, default_context);
 }
 
 static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
@@ -1662,7 +1664,7 @@ static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ec
     {
         whisker_ecs_system_iterator *system_itor = system_update_get_system_iterator(default_context, process_phase->id.index, entities);
 
-        while (whisker_ecs_s_iterate(system_itor))
+        while (whisker_ecs_iterate(system_itor))
         {
             int *system_idx = whisker_ecs_itor_get(system_itor, 0);
             whisker_ecs_system *system = &systems->systems[*system_idx];
@@ -1698,82 +1700,22 @@ static void system_update_queue_system_work(whisker_ecs_system *system)
     {
         whisker_ecs_system_context *context = &system->thread_contexts[ti];
         system_update_set_context_values(context, system);
-        whisker_tp_queue_work(system->thread_pool, whisker_ecs_s_update_system_thread_, context);
+        whisker_tp_queue_work(system->thread_pool, whisker_ecs_update_system_thread_func_, context);
     }
     whisker_tp_wait_work(system->thread_pool);
 }
 
 
-void whisker_ecs_s_update_system_thread_(void *context, whisker_thread_pool_context *t)
+void whisker_ecs_update_system_thread_func_(void *context, whisker_thread_pool_context *t)
 {
 	whisker_ecs_system_context *system_context = context;
 	system_context->system_ptr(system_context);
 }
 
 // update the provided system
-void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context)
+void whisker_ecs_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context)
 {
 	system->system_ptr(context);
-}
-
-// register a process phase time step
-size_t whisker_ecs_s_register_process_phase_time_step(whisker_ecs_systems *systems, whisker_time_step time_step)
-{
-	whisker_ecs_system_process_phase_time_step time_step_container = {
-		.time_step = time_step,
-		.update_count = 0,
-		.updated = false,
-	};
-
-	size_t idx = systems->process_phase_time_steps_length++;
-	whisker_arr_ensure_alloc(systems->process_phase_time_steps, (idx + 1));
-
-	systems->process_phase_time_steps[idx] = time_step_container;
-
-	return idx;
-}
-
-// register a system process phase for the system scheduler
-void whisker_ecs_s_register_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id, size_t time_step_id)
-{
-	whisker_ecs_system_process_phase process_phase = {
-		.id = component_id,
-		.time_step_id = time_step_id,
-	};
-
-	whisker_arr_ensure_alloc(systems->process_phases, (systems->process_phases_length + 1));
-	systems->process_phases[systems->process_phases_length++] = process_phase;
-}
-
-// deregister the provided process phase by ID
-// note: this will shift all process phases to fill the gap and maintain order
-void whisker_ecs_s_deregister_process_phase(whisker_ecs_systems *systems, whisker_ecs_entity_id component_id)
-{
-	size_t index = -1;
-
-	for (int i = 0; i < systems->process_phases_length; ++i)
-	{
-		if (systems->process_phases[i].id.id == component_id.id)
-		{
-			index = i;
-		}
-	}
-	if (index > -1)
-	{
-    	for (int i = index; i < systems->process_phases_length - 1; i++)
-    	{
-        	systems->process_phases[i] = systems->process_phases[i + 1];
-    	}
-
-    	systems->process_phases_length--;
-	}
-}
-
-// clear the current process phase list
-// note: this does not remove the entities and components associated with the existing phases
-void whisker_ecs_s_reset_process_phases(whisker_ecs_systems *systems)
-{
-    systems->process_phases_length = 0;
 }
 
 
@@ -1787,7 +1729,7 @@ static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor
 static void itor_update_master_index(whisker_ecs_system_iterator *itor);
 
 // create and init an iterator instance
-whisker_ecs_system_iterator *whisker_ecs_s_create_iterator()
+whisker_ecs_system_iterator *whisker_ecs_create_iterator()
 {
 	whisker_ecs_system_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
 
@@ -1799,7 +1741,7 @@ whisker_ecs_system_iterator *whisker_ecs_s_create_iterator()
 }
 
 // free instance of iterator and all data
-void whisker_ecs_s_free_iterator(whisker_ecs_system_iterator *itor)
+void whisker_ecs_free_iterator(whisker_ecs_system_iterator *itor)
 {
 	free_null(itor->component_ids_rw);
 	free_null(itor->component_ids_w);
@@ -1810,19 +1752,19 @@ void whisker_ecs_s_free_iterator(whisker_ecs_system_iterator *itor)
 
 // get an iterator instance with the given itor_index
 // note: this will init the iterator if one does not exist at the index
-whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
+whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
 {
 	whisker_ecs_system_iterator *itor;
 
 	// check if iterator index is set
 	if (!whisker_ss_contains(context->iterators, itor_index))
 	{
-		itor = whisker_ecs_s_create_iterator();
+		itor = whisker_ecs_create_iterator();
 		whisker_ss_set(context->iterators, itor_index, itor);
 
 		free(itor);
 		itor = whisker_ss_get(context->iterators, itor_index);
-		whisker_ecs_s_init_iterator(context, itor, read_components, write_components, optional_components);
+		whisker_ecs_init_iterator(context, itor, read_components, write_components, optional_components);
 	}
 
 	itor = whisker_ss_get(context->iterators, itor_index);
@@ -1919,7 +1861,7 @@ whisker_ecs_system_iterator *whisker_ecs_s_get_iterator(whisker_ecs_system_conte
 }
 
 // init the provided iterator and cache the given components
-void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components)
+void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
 	itor->world = context->world;
 
@@ -2002,7 +1944,7 @@ void whisker_ecs_s_init_iterator(whisker_ecs_system_context *context, whisker_ec
 
 // step through an iterator incrementing the cursor
 // note: returns false to indicate the iteration has reached the end
-bool whisker_ecs_s_iterate(whisker_ecs_system_iterator *itor) 
+bool whisker_ecs_iterate(whisker_ecs_system_iterator *itor) 
 {
     if (!itor_is_iteration_active(itor)) { return false; }
 
@@ -2093,22 +2035,22 @@ static void itor_update_master_index(whisker_ecs_system_iterator *itor) {
 **************/
 
 // create an instance of an entity pool
-whisker_ecs_pool *whisker_ecs_p_create()
+whisker_ecs_pool *whisker_ecs_create_entity_pool()
 {
 	return whisker_mem_xcalloc_t(1, whisker_ecs_pool);
 }
 
 // create and init an instance of an entity pool
-whisker_ecs_pool *whisker_ecs_p_create_and_init(struct whisker_ecs_world *world, size_t count, size_t realloc_count)
+whisker_ecs_pool *whisker_ecs_create_and_init_entity_pool(struct whisker_ecs_world *world, size_t count, size_t realloc_count)
 {
-	whisker_ecs_pool *pool = whisker_ecs_p_create();
-	whisker_ecs_p_init(pool, world, count, realloc_count);
+	whisker_ecs_pool *pool = whisker_ecs_create_entity_pool();
+	whisker_ecs_init_entity_pool(pool, world, count, realloc_count);
 
 	return pool;
 }
 
 // init an instance of an entity pool
-void whisker_ecs_p_init(whisker_ecs_pool *pool, struct whisker_ecs_world *world, size_t count, size_t realloc_count)
+void whisker_ecs_init_entity_pool(whisker_ecs_pool *pool, struct whisker_ecs_world *world, size_t count, size_t realloc_count)
 {
 	whisker_arr_init_t(pool->component_ids, 1);
 	whisker_arr_init_t(pool->entity_pool, count);
@@ -2131,7 +2073,7 @@ void whisker_ecs_p_init(whisker_ecs_pool *pool, struct whisker_ecs_world *world,
 }
 
 // deallocate an entity pool's allocations
-void whisker_ecs_p_free(whisker_ecs_pool *pool)
+void whisker_ecs_free_entity_pool(whisker_ecs_pool *pool)
 {
 	free(pool->component_ids);
 	free(pool->entity_pool);
@@ -2140,14 +2082,14 @@ void whisker_ecs_p_free(whisker_ecs_pool *pool)
 }
 
 // deallocate and free an entity pool
-void whisker_ecs_p_free_all(whisker_ecs_pool *pool)
+void whisker_ecs_free_entity_pool_all(whisker_ecs_pool *pool)
 {
-	whisker_ecs_p_free(pool);
+	whisker_ecs_free_entity_pool(pool);
 	free(pool);
 }
 
 // set a component on the prototype entity for a pool
-void whisker_ecs_p_set_prototype_component_f(whisker_ecs_pool *pool, whisker_ecs_entity_id component_id, size_t component_size, void *prototype_value)
+void whisker_ecs_set_entity_pool_component_f(whisker_ecs_pool *pool, whisker_ecs_entity_id component_id, size_t component_size, void *prototype_value)
 {
 	if (!whisker_ss_contains(pool->component_ids_set, component_id.index))
 	{
@@ -2176,13 +2118,13 @@ void whisker_ecs_p_set_prototype_component_f(whisker_ecs_pool *pool, whisker_ecs
 }
 
 // set a named component on the prototype entity for a pool
-void whisker_ecs_p_set_prototype_named_component_f(whisker_ecs_pool *pool, char* component_name, size_t component_size, void *prototype_value)
+void whisker_ecs_set_entity_pool_named_component_f(whisker_ecs_pool *pool, char* component_name, size_t component_size, void *prototype_value)
 {
-	whisker_ecs_p_set_prototype_component_f(pool, whisker_ecs_e_create_named(pool->world->entities, component_name), component_size, prototype_value);
+	whisker_ecs_set_entity_pool_component_f(pool, whisker_ecs_e_create_named(pool->world->entities, component_name), component_size, prototype_value);
 }
 
 // set the prototype entity for this pool, clearing previously set component IDs
-void whisker_ecs_p_set_prototype_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id prototype_entity_id)
+void whisker_ecs_set_entity_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id prototype_entity_id)
 {
 	pool->component_ids_length = 0;
 	pool->prototype_entity_id = prototype_entity_id;
@@ -2193,7 +2135,7 @@ void whisker_ecs_p_set_prototype_entity(whisker_ecs_pool *pool, whisker_ecs_enti
 }
 
 // request an entity from the pool
-whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
+whisker_ecs_entity_id whisker_ecs_request_pool_entity(whisker_ecs_pool *pool)
 {
 	/* printf("pool %p entities in pool: ", pool); */
 	/* for (int i = 0; i < pool->entity_pool_length; ++i) */
@@ -2214,17 +2156,17 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 	else
 	{
 		// create and init new entity
-		e = whisker_ecs_p_create_entity_deferred(pool);
+		e = whisker_ecs_create_pool_entity_deferred(pool);
 
 		atomic_fetch_add_explicit(&(pool->stat_cache_misses), 1, memory_order_relaxed);
 
 		debug_log(DEBUG, ecs:pool_request, "pool %p create new entity %zu (requests %zu returns %zu misses %zu)", pool, e.id, pool->stat_total_requests, pool->stat_total_returns, pool->stat_cache_misses);
 
 		// refill the pool
-		whisker_ecs_p_realloc_entities(pool);
+		whisker_ecs_realloc_pool_entities(pool);
 	}
 
-	whisker_ecs_p_init_entity(pool, e, pool->propagate_component_changes);
+	whisker_ecs_init_pool_entity(pool, e, pool->propagate_component_changes);
 
 	// increase stats
 	atomic_fetch_add_explicit(&pool->stat_total_requests, 1, memory_order_relaxed);
@@ -2233,7 +2175,7 @@ whisker_ecs_entity_id whisker_ecs_p_request_entity(whisker_ecs_pool *pool)
 }
 
 // issue a real create request for an entity this pool can use
-whisker_ecs_entity_id whisker_ecs_p_create_entity_deferred(whisker_ecs_pool *pool)
+whisker_ecs_entity_id whisker_ecs_create_pool_entity_deferred(whisker_ecs_pool *pool)
 {
 	whisker_ecs_entity_id e = whisker_ecs_e_create_new_deferred(pool->world->entities);
 
@@ -2245,7 +2187,7 @@ whisker_ecs_entity_id whisker_ecs_p_create_entity_deferred(whisker_ecs_pool *poo
 }
 
 // initialise the entities components using the pool's prototype entity
-void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
+void whisker_ecs_init_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
 {
 	// copy component data from prototype entity
 	for (size_t i = 0; i < pool->component_ids_length; ++i)
@@ -2263,7 +2205,7 @@ void whisker_ecs_p_init_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id ent
 }
 
 // de-initialise the entity and handle component actions
-void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
+void whisker_ecs_deinit_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id, bool propagate_component_changes)
 {
 	// trigger DUMMY_REMOVE actions for each component
 	for (size_t i = 0; i < pool->component_ids_length; ++i)
@@ -2277,40 +2219,40 @@ void whisker_ecs_p_deinit_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id e
 }
 
 // return an entity to the pool
-void whisker_ecs_p_return_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
+void whisker_ecs_return_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
 {
 	// add the entity to the pool
-	whisker_ecs_p_add_entity(pool, entity_id);
+	whisker_ecs_add_pool_entity(pool, entity_id);
 
 	/* debug_log(DEBUG, ecs:pool_return, "pool %p return entity %zu (requests %zu returns %zu misses %zu)", pool, entity_id, pool->stat_total_requests, pool->stat_total_returns, pool->stat_cache_misses); */
 
-	whisker_ecs_p_deinit_entity(pool, entity_id, pool->propagate_component_changes);
+	whisker_ecs_deinit_pool_entity(pool, entity_id, pool->propagate_component_changes);
 	
 	// increase stats
 	atomic_fetch_add_explicit(&pool->stat_total_returns, 1, memory_order_relaxed);
 }
 
 // create new entities topping up the pool
-void whisker_ecs_p_realloc_entities(whisker_ecs_pool *pool)
+void whisker_ecs_realloc_pool_entities(whisker_ecs_pool *pool)
 {
 	/* debug_log(DEBUG, ecs:pool_realloc, "pool %p realloc entities block size %zu cache misses %zu\n", pool, pool->realloc_block_size, pool->cache_misses); */
-	whisker_ecs_p_create_and_return(pool, (pool->stat_cache_misses <= 1) ? pool->inital_size : pool->realloc_block_size * pool->stat_cache_misses);
+	whisker_ecs_create_and_return_pool_entity(pool, (pool->stat_cache_misses <= 1) ? pool->inital_size : pool->realloc_block_size * pool->stat_cache_misses);
 }
 
 // create and add entity to the pool
-void whisker_ecs_p_create_and_return(whisker_ecs_pool *pool, size_t count)
+void whisker_ecs_create_and_return_pool_entity(whisker_ecs_pool *pool, size_t count)
 {
 	for (int i = 0; i < count; ++i)
 	{
-    	whisker_ecs_entity_id e = whisker_ecs_p_create_entity_deferred(pool);
-    	whisker_ecs_p_init_entity(pool, e, false);
-    	whisker_ecs_p_deinit_entity(pool, e, false);
-		whisker_ecs_p_add_entity(pool, e);
+    	whisker_ecs_entity_id e = whisker_ecs_create_pool_entity_deferred(pool);
+    	whisker_ecs_init_pool_entity(pool, e, false);
+    	whisker_ecs_deinit_pool_entity(pool, e, false);
+		whisker_ecs_add_pool_entity(pool, e);
 	}
 }
 
 // add an entity to the pool (this is not the same as returning an entity)
-void whisker_ecs_p_add_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
+void whisker_ecs_add_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id entity_id)
 {
 	// grow array if required using lock
 	size_t entity_idx = atomic_fetch_add(&pool->entity_pool_length, 1);
