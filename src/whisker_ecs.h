@@ -797,7 +797,6 @@ void whisker_ecs_s_free_system_context(whisker_ecs_system_context *context);
 void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context);
 
 // system operation functions
-whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system);
 void whisker_ecs_s_free_system(whisker_ecs_system *system);
 void whisker_ecs_s_update_systems(whisker_ecs_systems *systems, whisker_ecs_entities *entities, double delta_time);
 void whisker_ecs_s_update_system(whisker_ecs_system *system, whisker_ecs_system_context *context);

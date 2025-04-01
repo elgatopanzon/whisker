@@ -183,46 +183,60 @@ whisker_ecs_system *whisker_ecs_register_system(whisker_ecs *ecs, void (*system_
 
 	// get the entity for the process phase
 	whisker_ecs_entity_id phase_e = whisker_ecs_create_named_entity(ecs->world, process_phase_name);
-	// set the component on the system
 
 	// create an entity for this system with it's name
 	whisker_ecs_entity_id e = whisker_ecs_create_named_entity(ecs->world, system_name);
 
 	// add process phase component to system
 	whisker_ecs_set_named_component(ecs->world, process_phase_name, sizeof(bool), e, &(bool){0});
-	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
 	// set component of its type on itself
 	whisker_ecs_set_named_component(ecs->world, system_name, sizeof(bool), e, &(bool){0});
-	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
-	// register the system with the system scheduler
-	whisker_ecs_system *system = whisker_ecs_s_register_system(ecs->world->systems, ecs->world->components, (whisker_ecs_system) {
+	// create system struct
+	whisker_ecs_system system = {
 		.entity_id = e,
 		.process_phase_id = phase_e,
 		.system_ptr = system_ptr,
 		.thread_count = thread_count,
 		.world = ecs->world,
-	});
+	};
+
+	// create contexts for the provided thread count
+	// set thread count to 1 when it's set to 0
+	if (system.thread_count == -1)
+	{
+		system.thread_count = whisker_tp_system_core_count();
+	}
+	debug_log(DEBUG, ecs:register_system, "sys e %zu creating %zu thread contexts", system.entity_id, system.thread_count);
+
+	// create system context array
+	whisker_arr_init_t(system.thread_contexts, (system.thread_count + 1));
+
+	// create 1 extra context, which acts as the default context or first
+	// thread's context
+	for (int i = 0; i < system.thread_count + 1; ++i)
+	{
+		size_t thread_context_idx = system.thread_contexts_length++;
+		whisker_ecs_s_init_system_context(&system.thread_contexts[thread_context_idx], &system);
+		system.thread_contexts[thread_context_idx].thread_id = i;
+		system.thread_contexts[thread_context_idx].thread_max = system.thread_count;
+	}
+
+	// create thread pool if we want threads for this system
+	if (system.thread_count > 0)
+	{
+		system.thread_pool = whisker_tp_create_and_init(system.thread_count, system.world->entities->entities[system.entity_id.index].name);
+	}
+	
+	// add system to main systems list
+	whisker_arr_ensure_alloc(ecs->world->systems->systems, (ecs->world->systems->systems_length + 1));
+	ecs->world->systems->systems[ecs->world->systems->systems_length++] = system;
 
 	// add the system index component to the system entity
 	whisker_ecs_set_named_component(ecs->world, "w_ecs_system_idx", sizeof(int), e, &(int){ecs->world->systems->systems_length - 1});
-	/* whisker_ecs_update_process_deferred_component_actions_(ecs); */
 
-	/* // HACK: do a single execution of the system to initialise the iterator */
-	/* // why: this ensures the system's iterators initialise their component */
-	/* // strings and underlying entities in a thread-safe way before */
-	/* // multi-threading the system execution */
-	/* whisker_ecs_system_context *exec_context = &system->thread_contexts[0]; */
-	/* exec_context->system_ptr = system->system_ptr; */
-	/* exec_context->entities = system->entities; */
-	/* exec_context->components = system->components; */
-	/* uint64_t thread_max_back = exec_context->thread_max; */
-	/* exec_context->thread_max = UINT64_MAX; */
-	/* whisker_ecs_s_update_system(system, exec_context); */
-	/* exec_context->thread_max = thread_max_back; */
-
-	return system;
+	return &ecs->world->systems->systems[ecs->world->systems->systems_length - 1];
 }
 
 // register a process phase time step to use when registering a process phase
@@ -1548,43 +1562,6 @@ void whisker_ecs_s_free_system_context_all(whisker_ecs_system_context *context)
 /********************************
 *  system operation functions  *
 ********************************/
-// regiser a system in the systems container
-whisker_ecs_system* whisker_ecs_s_register_system(whisker_ecs_systems *systems, whisker_ecs_components *components, whisker_ecs_system system)
-{
-
-	// create contexts for the provided thread count
-	// set thread count to 1 when it's set to 0
-	if (system.thread_count == -1)
-	{
-		system.thread_count = whisker_tp_system_core_count();
-	}
-	debug_log(DEBUG, ecs:register_system, "sys e %zu creating %zu thread contexts", system.entity_id, system.thread_count);
-
-	// create system context array
-	whisker_arr_init_t(system.thread_contexts, (system.thread_count + 1));
-
-	// create 1 extra context, which acts as the default context or first
-	// thread's context
-	for (int i = 0; i < system.thread_count + 1; ++i)
-	{
-		size_t thread_context_idx = system.thread_contexts_length++;
-		whisker_ecs_s_init_system_context(&system.thread_contexts[thread_context_idx], &system);
-		system.thread_contexts[thread_context_idx].thread_id = i;
-		system.thread_contexts[thread_context_idx].thread_max = system.thread_count;
-	}
-
-	// create thread pool if we want threads for this system
-	if (system.thread_count > 0)
-	{
-		system.thread_pool = whisker_tp_create_and_init(system.thread_count, system.world->entities->entities[system.entity_id.index].name);
-	}
-	
-	// add system to main systems list
-	whisker_arr_ensure_alloc(systems->systems, (systems->systems_length + 1));
-	systems->systems[systems->systems_length++] = system;
-
-	return &systems->systems[systems->systems_length - 1];
-}
 
 // deallocate a system instance
 void whisker_ecs_s_free_system(whisker_ecs_system *system)
