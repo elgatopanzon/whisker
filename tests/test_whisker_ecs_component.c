@@ -16,19 +16,19 @@
 
 START_TEST(test_whisker_ecs_component_create_components_struct)
 {
-	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
+	whisker_ecs_components *c = whisker_ecs_create_and_init_components_container();
 
 	// verify empty arrays
 	ck_assert_int_eq(0, c->components_length);
 
 	// free
-	whisker_ecs_c_free_components_all(c);
+	whisker_ecs_free_components_container_all(c);
 }
 END_TEST
 
 START_TEST(test_whisker_ecs_component_get_component_array)
 {
-	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
+	whisker_ecs_components *c = whisker_ecs_create_and_init_components_container();
 
 	// set a component and trigger creation of component sparse set
 	whisker_ecs_entity_id component_id = {.id = 123};
@@ -36,31 +36,31 @@ START_TEST(test_whisker_ecs_component_get_component_array)
 	uint64_t component = 5454;
 
 	// set the component
-	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), entity_id, &component);
-	whisker_ecs_c_sort_component_array(c, component_id);
+	whisker_ecs_set_component_(c, component_id, sizeof(uint64_t), entity_id, &component);
+	whisker_ecs_sort_component_array(c, component_id);
 
 	// get the component sparse set
-	whisker_sparse_set *component_array = whisker_ecs_c_get_component_array(c, component_id);
+	whisker_sparse_set *component_array = whisker_ecs_get_component_array(c, component_id);
 
 	// verify length
 	ck_assert_uint_eq(1, component_array->sparse_index_length);
 
 	// free
-	whisker_ecs_c_free_components_all(c);
+	whisker_ecs_free_components_container_all(c);
 }
 END_TEST
 
 START_TEST(test_whisker_ecs_component_get_and_set)
 {
 	// create components and component array
-	whisker_ecs_components *c = whisker_ecs_c_create_and_init_components();
+	whisker_ecs_components *c = whisker_ecs_create_and_init_components_container();
 	whisker_ecs_entity_id component_id = {.id = 3};
 
 	whisker_ecs_entity_id e1 = {.id = 0};
 
 	// set using component set
-	whisker_ecs_c_set_component(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10});
-	whisker_ecs_c_sort_component_array(c, component_id);
+	whisker_ecs_set_component_(c, component_id, sizeof(uint64_t), e1, &(uint64_t){10});
+	whisker_ecs_sort_component_array(c, component_id);
 
 	// check array
 	int64_t *uint_e1 = whisker_ecs_c_get_component(c, component_id, e1);
@@ -70,7 +70,7 @@ START_TEST(test_whisker_ecs_component_get_and_set)
 	ck_assert_uint_eq(10, *(uint64_t*)whisker_ecs_c_get_component(c, component_id, e1));
 
 	// free
-	whisker_ecs_c_free_components_all(c);
+	whisker_ecs_free_components_container_all(c);
 }
 END_TEST
 

@@ -754,11 +754,11 @@ void whisker_ecs_free_entities_all_(whisker_ecs_entities *entities);
 *
 *  the components container is the ECS's database
 */
-whisker_ecs_components * whisker_ecs_c_create_components();
-void whisker_ecs_c_init_components(whisker_ecs_components *components);
-whisker_ecs_components *whisker_ecs_c_create_and_init_components();
-void whisker_ecs_c_free_components(whisker_ecs_components *components);
-void whisker_ecs_c_free_components_all(whisker_ecs_components *components);
+whisker_ecs_components * whisker_ecs_create_components_container();
+void whisker_ecs_init_components_container(whisker_ecs_components *components);
+whisker_ecs_components *whisker_ecs_create_and_init_components_container();
+void whisker_ecs_free_components_container(whisker_ecs_components *components);
+void whisker_ecs_free_components_container_all(whisker_ecs_components *components);
 
 
 /* systems container
@@ -919,21 +919,16 @@ void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities, size_t len
 
 
 // component array management
-void whisker_ecs_c_create_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size);
-void whisker_ecs_c_grow_components_(whisker_ecs_components *components, size_t capacity);
-whisker_sparse_set *whisker_ecs_c_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-void whisker_ecs_c_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-void whisker_ecs_c_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-
-// component deferred actions functions
-void whisker_ecs_c_create_deferred_action(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, void *data, size_t data_size, bool propagate);
+void whisker_ecs_create_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size);
+void whisker_ecs_grow_components_container_(whisker_ecs_components *components, size_t capacity);
+whisker_sparse_set *whisker_ecs_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
+void whisker_ecs_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
+void whisker_ecs_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
 
 // component management
-void* whisker_ecs_c_get_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void whisker_ecs_c_set_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component);
-bool whisker_ecs_c_has_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void whisker_ecs_c_remove_component(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void whisker_ecs_c_remove_all_components(whisker_ecs_components *components, whisker_ecs_entity_id entity_id);
+void whisker_ecs_set_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component);
+void whisker_ecs_remove_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void whisker_ecs_remove_all_components_(whisker_ecs_components *components, whisker_ecs_entity_id entity_id);
 
 
 //////////////////
