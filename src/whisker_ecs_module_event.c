@@ -64,13 +64,13 @@ whisker_ecs_entity_id whisker_ecs_module_event_create_event(struct whisker_ecs_w
 	whisker_ecs_entity_id ev = whisker_ecs_request_pool_entity(pool);
 
 	pool->world->entities->entities[ev.index].destroyed = true;
-	whisker_ecs_create_deferred_entity_action(pool->world->entities, ev, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
+	whisker_ecs_create_deferred_entity_action(pool->world, ev, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
 
 	// set the t_event component on the entity
 	whisker_ecs_module_event_set_data_f(world, ev, whisker_ecs_create_named_entity(pool->world, "w_module_event"), sizeof(bool), &(bool){0});
 
 	// make the entity unmanaged
-	whisker_ecs_soft_destroy_entity(pool->world, ev);
+	whisker_ecs_set_entity_unmanaged(pool->world, ev);
 
 	return ev;
 }
@@ -109,7 +109,7 @@ void whisker_ecs_module_event_set_data_f(struct whisker_ecs_world *world, whiske
 void whisker_ecs_module_event_fire(struct whisker_ecs_world *world, whisker_ecs_entity_id event_entity_id)
 {
 	// firing an event is just making it managed again
-	whisker_ecs_soft_revive_entity(world, event_entity_id);
+	whisker_ecs_set_entity_managed(world, event_entity_id);
 }
 
 // fire an event, attaching it instead to the given entity ID

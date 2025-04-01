@@ -56,7 +56,7 @@ whisker_ecs *whisker_ecs_create()
 
 
 	// reserve 1 entity for system use
-	whisker_ecs_e_create(new->world->entities);
+	whisker_ecs_e_create(new->world);
 
 	// create a dummy system to use by the system context
 	whisker_ecs_system system = {
@@ -390,7 +390,7 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 		{
 			// HACK: get pool managing the entity and create a deferred removal
 			// request for any entity not contained within the pool's components
-			whisker_ecs_entity *e = whisker_ecs_e(ecs->world->entities, action->id);
+			whisker_ecs_entity *e = whisker_ecs_get_entity(ecs->world, action->id);
 			if (e->managed_by != NULL)
 			{ 
 				whisker_ecs_pool *pool = e->managed_by;
@@ -434,7 +434,7 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 	{
 		whisker_ecs_entity_deferred_action action = ecs->world->entities->deferred_actions[--ecs->world->entities->deferred_actions_length];
 
-		whisker_ecs_entity *e = whisker_ecs_e(ecs->world->entities, action.id);
+		whisker_ecs_entity *e = whisker_ecs_get_entity(ecs->world, action.id);
 
 		switch (action.action) {
 			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
@@ -449,7 +449,7 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs)
 				}
 				else
 				{
-					whisker_ecs_e_destroy(ecs->world->entities, action.id);
+					whisker_ecs_e_destroy(ecs->world, action.id);
 				}
 		}
 	}
@@ -466,13 +466,13 @@ void whisker_ecs_update_process_deferred_component_actions_(whisker_ecs *ecs)
 
 			switch (action.action) {
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET:
-					whisker_ecs_set_component_(ecs->world->components, action.component_id, action.data_size, action.entity_id, ecs->world->components->deferred_actions_data + action.data_offset);
+					whisker_ecs_set_component_(ecs->world, action.component_id, action.data_size, action.entity_id, ecs->world->components->deferred_actions_data + action.data_offset);
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE:
-					whisker_ecs_remove_component_(ecs->world->components, action.component_id, action.entity_id);
+					whisker_ecs_remove_component_(ecs->world, action.component_id, action.entity_id);
 					break;
 				case WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL:
-					whisker_ecs_remove_all_components_(ecs->world->components, action.entity_id);
+					whisker_ecs_remove_all_components_(ecs->world, action.entity_id);
 					break;
 				default:
 					break;
@@ -497,7 +497,7 @@ void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 		}
 
 		size_t sort_request_idx = ecs->component_sort_requests_length++;
-		ecs->component_sort_requests[sort_request_idx].components = ecs->world->components;
+		ecs->component_sort_requests[sort_request_idx].world = ecs->world;
 		ecs->component_sort_requests[sort_request_idx].component_id = component_id;
 
 		whisker_tp_queue_work(ecs->general_thread_pool, whisker_ecs_sort_component_thread_func_, &ecs->component_sort_requests[sort_request_idx]);
@@ -513,9 +513,9 @@ void whisker_ecs_update_process_changed_components_(whisker_ecs *ecs)
 void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisker_thread_pool_context *t)
 {
 	struct whisker_ecs_component_sort_request *sort_request = component_sort_request;
-	whisker_ecs_sort_component_array(sort_request->components, sort_request->component_id);
+	whisker_ecs_sort_component_array(sort_request->world, sort_request->component_id);
 
-	sort_request->components->components[sort_request->component_id.index]->mutations_length = 0;
+	sort_request->world->components->components[sort_request->component_id.index]->mutations_length = 0;
 }
 
 
@@ -525,20 +525,20 @@ void whisker_ecs_sort_component_thread_func_(void *component_sort_request, whisk
 // request an entity ID to be created or recycled
 whisker_ecs_entity_id whisker_ecs_create_entity(struct whisker_ecs_world *world)
 {
-	return whisker_ecs_e_create(world->entities);
+	return whisker_ecs_e_create(world);
 }
 
 // request an entity ID to be created or recycled, providing a name
 // note: names are unique, creating an entity with the same name returns the existing entity if it exists
 whisker_ecs_entity_id whisker_ecs_create_named_entity(struct whisker_ecs_world *world, char* name)
 {
-	return whisker_ecs_e_create_named(world->entities, name);
+	return whisker_ecs_e_create_named(world, name);
 }
 
 // immediately destroy the given entity ID
 void whisker_ecs_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_entity *e = whisker_ecs_e(world->entities, entity_id);
+	whisker_ecs_entity *e = whisker_ecs_get_entity(world, entity_id);
 	if (e->managed_by != NULL)
 	{
 		// HACK: for now we assume everything managed is managed by a pool
@@ -547,68 +547,61 @@ void whisker_ecs_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_ent
 		return;
 	}
 
-	whisker_ecs_e_destroy(world->entities, entity_id);
+	whisker_ecs_e_destroy(world, entity_id);
 }
 
 // immediately soft-destroy the given entity ID with an atomic operation
-void whisker_ecs_soft_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
+void whisker_ecs_set_entity_unmanaged(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_e_make_unmanaged(world->entities, entity_id);
+    atomic_store(&world->entities->entities[entity_id.index].unmanaged, true);
 }
 
 // immediately soft-revive the given entity ID with an atomic operation
-void whisker_ecs_soft_revive_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
+void whisker_ecs_set_entity_managed(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_e_make_managed(world->entities, entity_id);
-}
-
-// check whether the given entity ID is still alive
-// note: this performs a version check using the full entity 64 bit ID
-bool whisker_ecs_is_alive(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
-{
-	return whisker_ecs_e_is_alive(world->entities, entity_id);
+    atomic_store(&world->entities->entities[entity_id.index].unmanaged, false);
 }
 
 // request to create an entity, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_entity_deferred(struct whisker_ecs_world *world)
 {
-	return whisker_ecs_e_create_deferred(world->entities);
+	return whisker_ecs_e_create_deferred(world);
 }
 
 // request to create an entity with a name, deferring the creation until end of current frame
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(struct whisker_ecs_world *world, char* name)
 {
-	return whisker_ecs_e_create_named_deferred(world->entities, name);
+	return whisker_ecs_e_create_named_deferred(world, name);
 }
 
 // request to destroy the provided entity ID at the end of current frame
 void whisker_ecs_destroy_entity_deferred(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	whisker_ecs_e_destroy_deferred(world->entities, entity_id);
+	whisker_ecs_e_destroy_deferred(world, entity_id);
 	return;
 }
 
 // create a deferred entity action
-void whisker_ecs_create_deferred_entity_action(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action)
+void whisker_ecs_create_deferred_entity_action(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action)
 {
-	whisker_ecs_entity_deferred_action deferred_action = {.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE};
+	whisker_ecs_entity_deferred_action deferred_action = {.id = entity_id, .action = action};
 
-	size_t deferred_action_idx = atomic_fetch_add(&entities->deferred_actions_length, 1);
+	size_t deferred_action_idx = atomic_fetch_add(&world->entities->deferred_actions_length, 1);
 
-	if((deferred_action_idx + 1) * sizeof(*entities->deferred_actions) > entities->deferred_actions_size)
+	if((deferred_action_idx + 1) * sizeof(*world->entities->deferred_actions) > world->entities->deferred_actions_size)
 	{
-		pthread_mutex_lock(&entities->deferred_actions_mutex);
+		pthread_mutex_lock(&world->entities->deferred_actions_mutex);
 
 		whisker_arr_ensure_alloc_block_size(
-			entities->deferred_actions, 
+			world->entities->deferred_actions, 
 			(deferred_action_idx + 1),
 			WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
 		);
 
-		pthread_mutex_unlock(&entities->deferred_actions_mutex);
+		pthread_mutex_unlock(&world->entities->deferred_actions_mutex);
 	}
 	
-	entities->deferred_actions[deferred_action_idx] = deferred_action;
+	world->entities->deferred_actions[deferred_action_idx] = deferred_action;
 }
 
 
@@ -619,7 +612,7 @@ void whisker_ecs_create_deferred_entity_action(whisker_ecs_entities *entities, w
 // get the component entity ID for the given component name
 whisker_ecs_entity_id whisker_ecs_component_id(struct whisker_ecs_world *world, char* component_name)
 {
-	return whisker_ecs_e_named(world->entities, component_name)->id;
+	return whisker_ecs_e_named(world, component_name)->id;
 }
 
 // get a named component for an entity
@@ -641,7 +634,7 @@ void *whisker_ecs_get_named_component(struct whisker_ecs_world *world, char *com
 // note: this will handle the creation of the underlying component array
 void *whisker_ecs_set_named_component(struct whisker_ecs_world *world, char *component_name, size_t component_size, whisker_ecs_entity_id entity_id, void *value)
 {
-	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(world->entities, component_name);;
+	whisker_ecs_entity_id component_id = whisker_ecs_e_create_named(world, component_name);;
 	if (component_id.id == 0)
 	{
 		// TODO: panic here
@@ -683,7 +676,7 @@ void *whisker_ecs_get_component(struct whisker_ecs_world *world, whisker_ecs_ent
 {
 	// return component pointer
 	return whisker_ss_get(
-		whisker_ecs_get_component_array(world->components, component_id),
+		whisker_ecs_get_component_array(world, component_id),
 		entity_id.index
 	);
 }
@@ -723,7 +716,7 @@ void whisker_ecs_remove_component(struct whisker_ecs_world *world, whisker_ecs_e
 bool whisker_ecs_has_component(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	// get component array
-	whisker_sparse_set* component_array = whisker_ecs_get_component_array(world->components, component_id);
+	whisker_sparse_set* component_array = whisker_ecs_get_component_array(world, component_id);
 
 	// return component pointer
 	return component_array != NULL && whisker_ss_contains(component_array, entity_id.index);
@@ -793,16 +786,16 @@ void whisker_ecs_create_deferred_component_action(struct whisker_ecs_world *worl
 void whisker_ecs_system_deregister_startup_phase(whisker_ecs_system_context *context)
 {
 	// destroy the process phase entity, and destroy this system's entity
-	whisker_ecs_entity *e = whisker_ecs_e_named(context->world->entities, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP);
+	whisker_ecs_entity *e = whisker_ecs_e_named(context->world, WHISKER_ECS_PROCESS_PHASE_ON_STARTUP);
 
 	if (e)
 	{
 		debug_log(DEBUG, ecs:system_deregister_startup_phase, "de-registering startup phase entity %d", e->id.index);
 
-		whisker_ecs_soft_destroy_entity(context->world, e->id);
+		whisker_ecs_set_entity_unmanaged(context->world, e->id);
 
 		// destroy system entity to prevent running it again
-		whisker_ecs_soft_destroy_entity(context->world, context->system_entity_id);
+		whisker_ecs_set_entity_unmanaged(context->world, context->system_entity_id);
 	}
 }
 
@@ -888,256 +881,204 @@ void whisker_ecs_free_entities_all_(whisker_ecs_entities *entities)
 *  entity management  *
 ***********************/
 // request a new entity
-whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities)
+whisker_ecs_entity_id whisker_ecs_e_create(struct whisker_ecs_world *world)
 {
-	pthread_mutex_lock(&entities->create_entity_mutex);
+	pthread_mutex_lock(&world->entities->create_entity_mutex);
 
-	whisker_ecs_entity_id e = whisker_ecs_e_create_(entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_(world);
 
-	pthread_mutex_unlock(&entities->create_entity_mutex);
+	pthread_mutex_unlock(&world->entities->create_entity_mutex);
 
 	return e;
 }
 
 // create a new entity as a deferred action
-whisker_ecs_entity_id whisker_ecs_e_create_deferred(whisker_ecs_entities *entities)
+whisker_ecs_entity_id whisker_ecs_e_create_deferred(struct whisker_ecs_world *world)
 {
-	whisker_ecs_entity_id e = whisker_ecs_e_create(entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create(world);
 	if (e.id == 0)
 	{
 		return e;
 	}
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities[e.index].destroyed = true;
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
+	world->entities->entities[e.index].destroyed = true;
+	whisker_ecs_create_deferred_entity_action(world, e, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
 
 	return e;
 }
 
 // create a new entity as a deferred action without using previously recycled entities
-whisker_ecs_entity_id whisker_ecs_e_create_new_deferred(whisker_ecs_entities *entities)
+whisker_ecs_entity_id whisker_ecs_e_create_new_deferred(struct whisker_ecs_world *world)
 {
-	pthread_mutex_lock(&entities->create_entity_mutex);
+	pthread_mutex_lock(&world->entities->create_entity_mutex);
 
-	whisker_ecs_entity_id e = whisker_ecs_e_create_new_(entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_new_(world);
 
-	pthread_mutex_unlock(&entities->create_entity_mutex);
+	pthread_mutex_unlock(&world->entities->create_entity_mutex);
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities[e.index].destroyed = true;
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
+	world->entities->entities[e.index].destroyed = true;
+	whisker_ecs_create_deferred_entity_action(world, e, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
 
 	return e;
 }
 
 // creates and sets an entity, either new or recycled
-whisker_ecs_entity_id whisker_ecs_e_create_(whisker_ecs_entities *entities)
+whisker_ecs_entity_id whisker_ecs_e_create_(struct whisker_ecs_world *world)
 {
-	if (entities->destroyed_entities_length)
+	if (world->entities->destroyed_entities_length)
 	{
-		return entities->entities[whisker_ecs_e_pop_recycled_(entities)].id;
+		return world->entities->entities[whisker_ecs_e_pop_recycled_(world)].id;
 	}
-	return whisker_ecs_e_create_new_(entities);
+	return whisker_ecs_e_create_new_(world);
 }
 
 // pop a recycled entity from the destroyed_entities stack
-whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities)
+whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(struct whisker_ecs_world *world)
 {
-	if (entities->destroyed_entities_length > 0)
+	if (world->entities->destroyed_entities_length > 0)
 	{
-		whisker_ecs_entity_index recycled_index = --entities->destroyed_entities_length;
-		entities->entities[recycled_index].destroyed = false;
-		return entities->destroyed_entities[recycled_index];
+		whisker_ecs_entity_index recycled_index = --world->entities->destroyed_entities_length;
+		world->entities->entities[recycled_index].destroyed = false;
+		return world->entities->destroyed_entities[recycled_index];
 	}
 
 	return 0;
 }
 
 // create a new entity and add it to the entities list
-whisker_ecs_entity_id whisker_ecs_e_create_new_(whisker_ecs_entities *entities)
+whisker_ecs_entity_id whisker_ecs_e_create_new_(struct whisker_ecs_world *world)
 {
-	const size_t new_idx = entities->entities_length++;
+	const size_t new_idx = world->entities->entities_length++;
 
 	// reallocate the entity array if required
 	whisker_arr_ensure_alloc_block_size(
-		entities->entities, 
+		world->entities->entities, 
 		(new_idx + 1), 
 		WHISKER_ECS_ENTITY_REALLOC_BLOCK_SIZE
 	);
 
 	// init the newly created entity with valid index
-	entities->entities[new_idx] = (whisker_ecs_entity) {
+	world->entities->entities[new_idx] = (whisker_ecs_entity) {
 		.id.index = new_idx,
 	};
-	return entities->entities[new_idx].id;
+	return world->entities->entities[new_idx].id;
 }
 
 // set the name for an entity
-void whisker_ecs_e_set_name(whisker_ecs_entities *entities, char* name, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_set_name(struct whisker_ecs_world *world, char* name, whisker_ecs_entity_id entity_id)
 {
 	whisker_ecs_entity_index *trie_id = whisker_mem_xcalloc_t(1, *trie_id);
 	*trie_id = entity_id.index;
-	whisker_trie_set_value_str(entities->entity_names, name, trie_id);
+	whisker_trie_set_value_str(world->entities->entity_names, name, trie_id);
 
 	// copy the name into the entities name
-	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+	whisker_ecs_entity *e = whisker_ecs_get_entity(world, entity_id);
 	e->name = whisker_mem_xmalloc(strlen(name) + 1);
 	strncpy(e->name, name, strlen(name) + 1);
 }
 
 // create entity with a name, or return an existing entity with the same name
-whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities, char *name)
+whisker_ecs_entity_id whisker_ecs_e_create_named(struct whisker_ecs_world *world, char *name)
 {
-	pthread_mutex_lock(&entities->create_entity_mutex);
+	pthread_mutex_lock(&world->entities->create_entity_mutex);
 
-	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, name);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(world, name);
 
-	pthread_mutex_unlock(&entities->create_entity_mutex);
+	pthread_mutex_unlock(&world->entities->create_entity_mutex);
 
 	return e;
 }
 
 // create a new named entity as a deferred action
-whisker_ecs_entity_id whisker_ecs_e_create_named_deferred(whisker_ecs_entities *entities, char *name)
+whisker_ecs_entity_id whisker_ecs_e_create_named_deferred(struct whisker_ecs_world *world, char *name)
 {
-	pthread_mutex_lock(&entities->create_entity_mutex);
+	pthread_mutex_lock(&world->entities->create_entity_mutex);
 
-	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(entities, name);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_named_(world, name);
 
-	pthread_mutex_unlock(&entities->create_entity_mutex);
+	pthread_mutex_unlock(&world->entities->create_entity_mutex);
 	if (e.id == 0)
 	{
 		return e;
 	}
 
 	// set the entity to dead and add it to the deferred entities
-	entities->entities[e.index].destroyed = true;
-	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = e, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE});
+	world->entities->entities[e.index].destroyed = true;
+	whisker_ecs_create_deferred_entity_action(world, e, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
 
 	return e;
 }
 
 // create a new entity with the given name
-whisker_ecs_entity_id whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char* name)
+whisker_ecs_entity_id whisker_ecs_e_create_named_(struct whisker_ecs_world *world, char* name)
 {
-	whisker_ecs_entity *e = whisker_ecs_e_named(entities, name);
+	whisker_ecs_entity *e = whisker_ecs_e_named(world, name);
 	if (e)
 	{
 		return e->id;
 	}
 
 	// create new entity with name
-	whisker_ecs_entity_id e_id = whisker_ecs_e_create_(entities);
+	whisker_ecs_entity_id e_id = whisker_ecs_e_create_(world);
 
 	// set the name
-	whisker_ecs_e_set_name(entities, name, e_id);
+	whisker_ecs_e_set_name(world, name, e_id);
 
 	return e_id;
 }
 
 // recycle an entity into the destroyed entities stack
-void whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_recycle(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
 	// increment version
-	whisker_ecs_entity *e = whisker_ecs_e(entities, entity_id);
+	whisker_ecs_entity *e = whisker_ecs_get_entity(world, entity_id);
 	e->id.version++;
 
 	// clear name pointer
 	if (e->name != NULL)
 	{
-		whisker_trie_remove_value_str(entities->entity_names, e->name);
+		whisker_trie_remove_value_str(world->entities->entity_names, e->name);
 		free_null(e->name);
 		e->name = NULL;
 	}
 
 	// push to dead entities stack
 	whisker_arr_ensure_alloc_block_size(
-		entities->destroyed_entities, 
-		(entities->destroyed_entities_length + 1), 
+		world->entities->destroyed_entities, 
+		(world->entities->destroyed_entities_length + 1), 
 		WHISKER_ECS_ENTITY_DESTROYED_REALLOC_BLOCK_SIZE
 	);
-	entities->destroyed_entities[entities->destroyed_entities_length++] = e->id.index;
+	world->entities->destroyed_entities[world->entities->destroyed_entities_length++] = e->id.index;
 }
 
 // destroy an entity, incrementing it's version and adding it to the destroyed
 // entities stack
-void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_destroy(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
 	// mark entity as destroyed
-	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
+	_Atomic bool currently_destroyed = atomic_load(&world->entities->entities[entity_id.index].destroyed);
 	if (!currently_destroyed)
 	{
-		whisker_ecs_e_recycle(entities, entity_id);
-    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
+		whisker_ecs_e_recycle(world, entity_id);
+    	atomic_store(&world->entities->entities[entity_id.index].destroyed, true);
 	}
 	return;
 }
 
 // destroy an entity as a deferred action
-void whisker_ecs_e_destroy_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+void whisker_ecs_e_destroy_deferred(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	_Atomic bool currently_destroyed = atomic_load(&entities->entities[entity_id.index].destroyed);
+	_Atomic bool currently_destroyed = atomic_load(&world->entities->entities[entity_id.index].destroyed);
 	if (!currently_destroyed)
 	{
-    	whisker_ecs_e_add_deffered_action(entities, (whisker_ecs_entity_deferred_action){.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY});
-    	atomic_store(&entities->entities[entity_id.index].destroyed, true);
+    	whisker_ecs_create_deferred_entity_action(world, entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY);
+    	atomic_store(&world->entities->entities[entity_id.index].destroyed, true);
 	}
 	return;
 }
 
-// set an entity to unmanaged state, and no longer included in iterations or
-// recycled
-void whisker_ecs_e_make_unmanaged(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
-{
-    atomic_store(&entities->entities[entity_id.index].unmanaged, true);
-}
-
-// set an entity to managed state
-void whisker_ecs_e_make_managed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
-{
-    atomic_store(&entities->entities[entity_id.index].unmanaged, false);
-}
-
-// add a deferred entity action to be processed at a later time
-// note: typically it would be the end of an update
-void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action)
-{
-	size_t deferred_action_idx = atomic_fetch_add(&entities->deferred_actions_length, 1);
-
-	if((deferred_action_idx + 1) * sizeof(*entities->deferred_actions) > entities->deferred_actions_size)
-	{
-		pthread_mutex_lock(&entities->deferred_actions_mutex);
-
-		whisker_arr_ensure_alloc_block_size(
-			entities->deferred_actions, 
-			(deferred_action_idx + 1),
-			WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
-		);
-
-		pthread_mutex_unlock(&entities->deferred_actions_mutex);
-	}
-	
-	entities->deferred_actions[deferred_action_idx] = action;
-}
-
-// process the deferred actions stack
-void whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
-{
-	while (entities->deferred_actions_length > 0) 
-	{
-		whisker_ecs_entity_deferred_action action = entities->deferred_actions[--entities->deferred_actions_length];
-
-		switch (action.action) {
-			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE:
-				entities->entities[action.id.index].destroyed = false;		
-				break;
-			case WHISKER_ECS_ENTITY_DEFERRED_ACTION_DESTROY:
-				whisker_ecs_e_destroy(entities, action.id);
-				break;
-		}
-	}
-}
 
 
 /***********************
@@ -1145,14 +1086,14 @@ void whisker_ecs_e_process_deferred(whisker_ecs_entities *entities)
 ***********************/
 
 // shortcut to get the entity struct from the given ID
-whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+whisker_ecs_entity* whisker_ecs_get_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	if (entity_id.index + 1 > whisker_ecs_e_count(entities))
+	if (entity_id.index + 1 > world->entities->entities_length)
 	{
 		return NULL;
 	}
 
-	return &entities->entities[entity_id.index];
+	return &world->entities->entities[entity_id.index];
 }
 
 // convert a numeric ID to an entity ID
@@ -1163,46 +1104,46 @@ inline whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id)
 
 // shortcut to get the entity with the given name
 // note: this will return NULL if no entity exists with this name
-whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name)
+whisker_ecs_entity* whisker_ecs_e_named(struct whisker_ecs_world *world, char* entity_name)
 {
 	// lookup entity by name and return a match, or NULL
-	whisker_ecs_entity_index *e_idx = whisker_trie_search_value_str(entities->entity_names, entity_name);
+	whisker_ecs_entity_index *e_idx = whisker_trie_search_value_str(world->entities->entity_names, entity_name);
 	if (e_idx == NULL)
 	{
 		return NULL;
 	}
 
-	return &entities->entities[*e_idx];
+	return &world->entities->entities[*e_idx];
 }
 
 // check if an entity is dead by comparing the provided entity version with the
 // one in the entities array
-bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id)
+bool whisker_ecs_is_entity_alive(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	return (whisker_ecs_e(entities, entity_id)->id.version == entity_id.version);
+	return (whisker_ecs_get_entity(world, entity_id)->id.version == entity_id.version);
 }
 
 // get the current count of entities in existence including alive and destroyed
-size_t whisker_ecs_e_count(whisker_ecs_entities *entities)
+size_t whisker_ecs_e_count(struct whisker_ecs_world *world)
 {
-	return entities->entities_length;
+	return world->entities->entities_length;
 }
 
 // get current count of alive entities
-size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities)
+size_t whisker_ecs_e_alive_count(struct whisker_ecs_world *world)
 {
-	return whisker_ecs_e_count(entities) - whisker_ecs_e_destroyed_count(entities);
+	return whisker_ecs_e_count(world) - whisker_ecs_e_destroyed_count(world);
 }
 
 // get current count of destroyed entities
-size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities)
+size_t whisker_ecs_e_destroyed_count(struct whisker_ecs_world *world)
 {
-	return entities->destroyed_entities_length;
+	return world->entities->destroyed_entities_length;
 }
 
 // convert a string of named entities in the format "name1,name2,name3" to an
 // array of entities, creating them if they don't already exist
-struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names_str)
+struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(struct whisker_ecs_world *world, char* entity_names_str)
 {
 	// entity list derived from string entity names
 	struct whisker_ecs_entity_id_array *entities_new = whisker_mem_xcalloc_t(1, *entities_new);
@@ -1232,7 +1173,7 @@ struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ec
 		if (entity_names[i] == 0x0)
 		{
 			// create/get entity ID for name
-			whisker_ecs_entity_id e = whisker_ecs_e_create_named(entities, entity_names + search_index);
+			whisker_ecs_entity_id e = whisker_ecs_e_create_named(world, entity_names + search_index);
 
 			/* debug_printf("%zu-%zu: %s\n", search_index, i, entity_names + search_index); */
 
@@ -1341,68 +1282,68 @@ void whisker_ecs_free_components_container(whisker_ecs_components *components)
 *  component array management functions  *
 ******************************************/
 // allocate an empty component array
-void whisker_ecs_create_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size)
+void whisker_ecs_create_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size)
 {
 	// grow the components array to fit the new component ID
-	whisker_ecs_grow_components_container_(components, component_id.index + 1);
+	whisker_ecs_grow_components_container_(world, component_id.index + 1);
 
 	// create array
 	whisker_sparse_set *ss;
-	debug_log(DEBUG, ecs:create_component_array, "creating component sparse set %zu (%zu total components) size %zu", component_id.id, components->component_ids_length + 1, component_size);
+	debug_log(DEBUG, ecs:create_component_array, "creating component sparse set %zu (%zu total components) size %zu", component_id.id, world->components->component_ids_length + 1, component_size);
 	ss = whisker_ss_create_s(component_size);
 
 	whisker_arr_ensure_alloc_block_size(
-		components->component_ids, 
-		(components->component_ids_length + 1), 
+		world->components->component_ids, 
+		(world->components->component_ids_length + 1), 
 		(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
 	);
-	components->component_ids[components->component_ids_length++] = component_id;
+	world->components->component_ids[world->components->component_ids_length++] = component_id;
 
-	components->components[component_id.index] = ss;
+	world->components->components[component_id.index] = ss;
 }
 
 // grow components array size if required to the nearest block size
-void whisker_ecs_grow_components_container_(whisker_ecs_components *components, size_t capacity)
+void whisker_ecs_grow_components_container_(struct whisker_ecs_world *world, size_t capacity)
 {
-	if (components->components_length < capacity)
+	if (world->components->components_length < capacity)
 	{
-		pthread_mutex_lock(&components->grow_components_mutex);
+		pthread_mutex_lock(&world->components->grow_components_mutex);
 
 		whisker_arr_ensure_alloc_block_size(
-			components->components, 
+			world->components->components, 
 			(capacity), 
 			(WHISKER_ECS_COMPONENT_SET_REALLOC_BLOCK_SIZE)
 		);
-		if (capacity > components->components_length)
+		if (capacity > world->components->components_length)
 		{
-			components->components_length = capacity;
+			world->components->components_length = capacity;
 		}
 
-		pthread_mutex_unlock(&components->grow_components_mutex);
+		pthread_mutex_unlock(&world->components->grow_components_mutex);
 	}
 }
 
 // get the component array for the provided component ID 
 // note: will create if it doesn't exist
-whisker_sparse_set *whisker_ecs_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
+whisker_sparse_set *whisker_ecs_get_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id)
 {
-	whisker_ecs_grow_components_container_(components, component_id.index + 1);
-	return components->components[component_id.index];
+	whisker_ecs_grow_components_container_(world, component_id.index + 1);
+	return world->components->components[component_id.index];
 }
 
 // deallocate component array for the provided component ID
-void whisker_ecs_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
+void whisker_ecs_free_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id)
 {
-	whisker_sparse_set* component_array = whisker_ecs_get_component_array(components, component_id);
+	whisker_sparse_set* component_array = whisker_ecs_get_component_array(world, component_id);
 
 	whisker_ss_free_all(component_array);
 }
 
 // sort the given component array's sparse set
 // note: this is executed after a component has array has been modified
-void whisker_ecs_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id)
+void whisker_ecs_sort_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id)
 {
-	whisker_ss_sort(whisker_ecs_get_component_array(components, component_id));
+	whisker_ss_sort(whisker_ecs_get_component_array(world, component_id));
 }
 
 
@@ -1416,44 +1357,44 @@ void whisker_ecs_sort_component_array(whisker_ecs_components *components, whiske
 ************************************/
 
 // set a component by ID on the given entity
-void whisker_ecs_set_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
+void whisker_ecs_set_component_(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component)
 {
 	// grow array of sparse sets if required
-	whisker_ecs_grow_components_container_(components, component_id.index + 1);
+	whisker_ecs_grow_components_container_(world, component_id.index + 1);
 
 	// create a sparse set for the component if its null
-	if (components->components_length < component_id.index + 1 || components->components[component_id.index] == NULL)
+	if (world->components->components_length < component_id.index + 1 || world->components->components[component_id.index] == NULL)
 	{
-		whisker_ecs_create_component_array(components, component_id, component_size);
+		whisker_ecs_create_component_array(world, component_id, component_size);
 	}
 
 	// get the component array
-	whisker_sparse_set* component_array = whisker_ecs_get_component_array(components, component_id);
+	whisker_sparse_set* component_array = whisker_ecs_get_component_array(world, component_id);
 
 	// set the component
 	whisker_ss_set(component_array, entity_id.index, component);
 }
 
 // remove a component by ID from an entity
-void whisker_ecs_remove_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_component_(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id)
 {
 	// get component array
-	whisker_sparse_set* component_array = whisker_ecs_get_component_array(components, component_id);
+	whisker_sparse_set* component_array = whisker_ecs_get_component_array(world, component_id);
 
 	// remove component
 	whisker_ss_remove(component_array, entity_id.index);
 }
 
 // remove all of the components on an entity
-void whisker_ecs_remove_all_components_(whisker_ecs_components *components, whisker_ecs_entity_id entity_id)
+void whisker_ecs_remove_all_components_(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id)
 {
-	for (int ci = 0; ci < components->components_length; ++ci)
+	for (int ci = 0; ci < world->components->components_length; ++ci)
 	{
 		whisker_ecs_entity_id component_id = whisker_ecs_e_id(ci);
 
-		if (components->components[ci] != NULL)
+		if (world->components->components[ci] != NULL)
 		{
-			whisker_ecs_remove_component_(components, component_id, entity_id);
+			whisker_ecs_remove_component_(world, component_id, entity_id);
 		}
 	}
 }
@@ -1583,14 +1524,13 @@ void whisker_ecs_free_system(whisker_ecs_system *system)
 /*****************************
 *  system update functions  *
 *****************************/
-static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase_time_step *time_step_container);
 static whisker_ecs_system_iterator* system_update_get_system_iterator(whisker_ecs_system_context *default_context, int index, whisker_ecs_entities *entities);
 static void system_update_queue_system_work(whisker_ecs_system *system);
 static void system_update_execute_system(whisker_ecs_system *system);
 static void system_update_set_context_values(whisker_ecs_system_context *context, whisker_ecs_system *system);
 static void system_update_execute_system(whisker_ecs_system *system);
-static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
+static void system_update_process_phase(struct whisker_ecs_world *world, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context);
 
 
 static int system_update_advance_process_phase_time_step(whisker_ecs_system_process_phase_time_step *time_step_container)
@@ -1629,28 +1569,28 @@ void whisker_ecs_reset_process_phase_time_steps_(whisker_ecs_systems *systems)
 // update all systems in the given process phase
 void whisker_ecs_update_process_phase(struct whisker_ecs_world *world, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
 {
-	system_update_process_phase(world->systems, world->entities, process_phase, default_context);
+	system_update_process_phase(world, process_phase, default_context);
 }
 
-static void system_update_process_phase(whisker_ecs_systems *systems, whisker_ecs_entities *entities, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
+static void system_update_process_phase(struct whisker_ecs_world *world, whisker_ecs_system_process_phase *process_phase, whisker_ecs_system_context *default_context)
 {
-    if (whisker_ecs_e(entities, process_phase->id)->unmanaged)
+    if (whisker_ecs_get_entity(world, process_phase->id)->unmanaged)
     {
     	return;
     }
 
-    whisker_ecs_system_process_phase_time_step *time_step_container = &systems->process_phase_time_steps[process_phase->time_step_id];
+    whisker_ecs_system_process_phase_time_step *time_step_container = &world->systems->process_phase_time_steps[process_phase->time_step_id];
 
     int update_count = system_update_advance_process_phase_time_step(time_step_container);
 
     for (int ui = 0; ui < update_count; ++ui)
     {
-        whisker_ecs_system_iterator *system_itor = system_update_get_system_iterator(default_context, process_phase->id.index, entities);
+        whisker_ecs_system_iterator *system_itor = system_update_get_system_iterator(default_context, process_phase->id.index, world->entities);
 
         while (whisker_ecs_iterate(system_itor))
         {
             int *system_idx = whisker_ecs_itor_get(system_itor, 0);
-            whisker_ecs_system *system = &systems->systems[*system_idx];
+            whisker_ecs_system *system = &world->systems->systems[*system_idx];
 
             system->delta_time = time_step_container->time_step.delta_time_fixed;
             system->process_phase_time_step = &time_step_container->time_step;
@@ -1770,7 +1710,7 @@ whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *conte
 		whisker_sparse_set *component_array;
 		if (itor->component_arrays[i] == NULL)
 		{
-			component_array = whisker_ecs_get_component_array(context->world->components, itor->component_ids_rw[i]);
+			component_array = whisker_ecs_get_component_array(context->world, itor->component_ids_rw[i]);
 			if (component_array == NULL)
 			{
 				itor->master_index = UINT64_MAX;
@@ -1801,7 +1741,7 @@ whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *conte
 		size_t array_offset = itor->component_ids_rw_length + i;
 		if (itor->component_arrays[array_offset] == NULL)
 		{
-			component_array = whisker_ecs_get_component_array(context->world->components, itor->component_ids_opt[i]);
+			component_array = whisker_ecs_get_component_array(context->world, itor->component_ids_opt[i]);
 			if (component_array == NULL)
 			{
 				continue;
@@ -1869,7 +1809,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// rw components include read and write component IDs
 	if (itor->component_ids_rw == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world->entities, combined_components);
+		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world, combined_components);
 		itor->component_ids_rw = e_arr->arr;
 		itor->component_ids_rw_length = e_arr->arr_length;
 		itor->component_ids_rw_size = e_arr->arr_size;
@@ -1891,7 +1831,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// note: these do not resize the main component arrays
 	if (itor->component_ids_w == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world->entities, write_components);
+		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world, write_components);
 		itor->component_ids_w = e_arr->arr;
 		itor->component_ids_w_length = e_arr->arr_length;
 		itor->component_ids_w_size = e_arr->arr_size;
@@ -1908,7 +1848,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// note: these belong at the end of the component arrays
 	if (itor->component_ids_opt == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world->entities, optional_components);
+		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_e_from_named_entities(context->world, optional_components);
 		itor->component_ids_opt = e_arr->arr;
 		itor->component_ids_opt_length = e_arr->arr_length;
 		itor->component_ids_opt_size = e_arr->arr_size;
@@ -1957,7 +1897,7 @@ static void itor_set_master_components(whisker_ecs_system_iterator *itor) {
 		// skip entities marked as destroyed
 		// note: if an entity is marked destroyed but still has components, then it's
 		// an entity with destroyed state managed externally
-        if (whisker_ecs_e(itor->world->entities, itor->entity_id)->unmanaged)
+        if (whisker_ecs_get_entity(itor->world, itor->entity_id)->unmanaged)
         {
         	itor_increment_cursor(itor);
         	continue;
@@ -2044,8 +1984,8 @@ void whisker_ecs_init_entity_pool(whisker_ecs_pool *pool, struct whisker_ecs_wor
 	pool->stat_cache_misses = 0;
 
 	// create prototype entity
-	pool->prototype_entity_id = whisker_ecs_e_create(world->entities);
-	whisker_ecs_e_make_unmanaged(world->entities, pool->prototype_entity_id);
+	pool->prototype_entity_id = whisker_ecs_e_create(world);
+	whisker_ecs_set_entity_unmanaged(world, pool->prototype_entity_id);
 
 	pthread_mutex_init(&pool->entity_pool_mutex, NULL);
 
@@ -2097,13 +2037,13 @@ void whisker_ecs_set_entity_pool_component_f(whisker_ecs_pool *pool, whisker_ecs
 	}
 
 	// set component data
-	whisker_ecs_set_component_(pool->world->components, component_id, component_size, pool->prototype_entity_id, prototype_value);
+	whisker_ecs_set_component_(pool->world, component_id, component_size, pool->prototype_entity_id, prototype_value);
 }
 
 // set a named component on the prototype entity for a pool
 void whisker_ecs_set_entity_pool_named_component_f(whisker_ecs_pool *pool, char* component_name, size_t component_size, void *prototype_value)
 {
-	whisker_ecs_set_entity_pool_component_f(pool, whisker_ecs_e_create_named(pool->world->entities, component_name), component_size, prototype_value);
+	whisker_ecs_set_entity_pool_component_f(pool, whisker_ecs_e_create_named(pool->world, component_name), component_size, prototype_value);
 }
 
 // set the prototype entity for this pool, clearing previously set component IDs
@@ -2160,7 +2100,7 @@ whisker_ecs_entity_id whisker_ecs_request_pool_entity(whisker_ecs_pool *pool)
 // issue a real create request for an entity this pool can use
 whisker_ecs_entity_id whisker_ecs_create_pool_entity_deferred(whisker_ecs_pool *pool)
 {
-	whisker_ecs_entity_id e = whisker_ecs_e_create_new_deferred(pool->world->entities);
+	whisker_ecs_entity_id e = whisker_ecs_e_create_new_deferred(pool->world);
 
 	// make sure to perform the soft-recycle actions on the entity
 	pool->world->entities->entities[e.index].unmanaged = true;
@@ -2175,7 +2115,7 @@ void whisker_ecs_init_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id 
 	// copy component data from prototype entity
 	for (size_t i = 0; i < pool->component_ids_length; ++i)
 	{
-		whisker_sparse_set *component_array = whisker_ecs_get_component_array(pool->world->components, pool->component_ids[i]);
+		whisker_sparse_set *component_array = whisker_ecs_get_component_array(pool->world, pool->component_ids[i]);
 		/* whisker_ss_set(component_array, entity_id.index, whisker_ss_get(component_array, pool->prototype_entity_id.index)); */
 		whisker_ecs_create_deferred_component_action(
 			pool->world,
@@ -2200,7 +2140,7 @@ void whisker_ecs_init_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_id 
 	}
 
 	// turn into managed entity
-	whisker_ecs_e_make_managed(pool->world->entities, entity_id);
+	whisker_ecs_set_entity_managed(pool->world, entity_id);
 }
 
 // de-initialise the entity and handle component actions
@@ -2222,7 +2162,7 @@ void whisker_ecs_deinit_pool_entity(whisker_ecs_pool *pool, whisker_ecs_entity_i
 	}
 
 	// turn into unmanaged entity
-	whisker_ecs_e_make_unmanaged(pool->world->entities, entity_id);
+	whisker_ecs_set_entity_unmanaged(pool->world, entity_id);
 }
 
 // return an entity to the pool

@@ -32,7 +32,7 @@ void whisker_ecs_module_component_change_events_system(whisker_ecs_system_contex
 			// holds the name of the event to create
 			char* event_name; 
 			char* event_name_target; 
-			char* component_name = whisker_ecs_e(context->world->entities, action->component_id)->name;
+			char* component_name = whisker_ecs_get_entity(context->world, action->component_id)->name;
 
 			// skip actions with propagate disabled or any component containing
 			if (!action->propagate || (component_name != NULL && strstr(component_name, "ev_") != NULL))

@@ -431,7 +431,7 @@ typedef struct whisker_ecs_components
 */
 struct whisker_ecs_component_sort_request 
 {
-	whisker_ecs_components *components;
+	struct whisker_ecs_world *world;
 	whisker_ecs_entity_id component_id;
 };
 
@@ -850,13 +850,12 @@ void whisker_ecs_update_process_deferred_entity_actions_(whisker_ecs *ecs);
 whisker_ecs_entity_id whisker_ecs_create_entity(struct whisker_ecs_world *world);
 whisker_ecs_entity_id whisker_ecs_create_named_entity(struct whisker_ecs_world *world, char* name);
 void whisker_ecs_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
-void whisker_ecs_soft_destroy_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
-void whisker_ecs_soft_revive_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+void whisker_ecs_set_entity_unmanaged(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+void whisker_ecs_set_entity_managed(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
 whisker_ecs_entity_id whisker_ecs_create_entity_deferred(struct whisker_ecs_world *world);
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(struct whisker_ecs_world *world, char* name);
 void whisker_ecs_destroy_entity_deferred(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
-bool whisker_ecs_is_alive(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
-void whisker_ecs_create_deferred_entity_action(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action);
+void whisker_ecs_create_deferred_entity_action(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action);
 
 // component functions
 whisker_ecs_entity_id whisker_ecs_component_id(struct whisker_ecs_world *world, char* component_name);
@@ -880,33 +879,29 @@ void whisker_ecs_system_deregister_startup_phase(whisker_ecs_system_context *con
 
 
 // entity management functions
-whisker_ecs_entity_id whisker_ecs_e_create(whisker_ecs_entities *entities);
-whisker_ecs_entity_id whisker_ecs_e_create_deferred(whisker_ecs_entities *entities);
-whisker_ecs_entity_id whisker_ecs_e_create_new_deferred(whisker_ecs_entities *entities);
-whisker_ecs_entity_id whisker_ecs_e_create_(whisker_ecs_entities *entities);
-whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(whisker_ecs_entities *entities);
-whisker_ecs_entity_id  whisker_ecs_e_create_new_(whisker_ecs_entities *entities);
-void whisker_ecs_e_set_name(whisker_ecs_entities *entities, char *name, whisker_ecs_entity_id entity_id);
-whisker_ecs_entity_id whisker_ecs_e_create_named(whisker_ecs_entities *entities, char *name);
-whisker_ecs_entity_id whisker_ecs_e_create_named_deferred(whisker_ecs_entities *entities, char *name);
-whisker_ecs_entity_id whisker_ecs_e_create_named_(whisker_ecs_entities *entities, char *name);
-void whisker_ecs_e_recycle(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
-void whisker_ecs_e_destroy(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
-void whisker_ecs_e_destroy_deferred(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
-void whisker_ecs_e_add_deffered_action(whisker_ecs_entities *entities, whisker_ecs_entity_deferred_action action);
-void whisker_ecs_e_process_deferred(whisker_ecs_entities *entities);
-void whisker_ecs_e_make_unmanaged(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
-void whisker_ecs_e_make_managed(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+whisker_ecs_entity_id whisker_ecs_e_create(struct whisker_ecs_world *world);
+whisker_ecs_entity_id whisker_ecs_e_create_deferred(struct whisker_ecs_world *world);
+whisker_ecs_entity_id whisker_ecs_e_create_new_deferred(struct whisker_ecs_world *world);
+whisker_ecs_entity_id whisker_ecs_e_create_(struct whisker_ecs_world *world);
+whisker_ecs_entity_index whisker_ecs_e_pop_recycled_(struct whisker_ecs_world *world);
+whisker_ecs_entity_id  whisker_ecs_e_create_new_(struct whisker_ecs_world *world);
+void whisker_ecs_e_set_name(struct whisker_ecs_world *world, char *name, whisker_ecs_entity_id entity_id);
+whisker_ecs_entity_id whisker_ecs_e_create_named(struct whisker_ecs_world *world, char *name);
+whisker_ecs_entity_id whisker_ecs_e_create_named_deferred(struct whisker_ecs_world *world, char *name);
+whisker_ecs_entity_id whisker_ecs_e_create_named_(struct whisker_ecs_world *world, char *name);
+void whisker_ecs_e_recycle(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+void whisker_ecs_e_destroy(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+void whisker_ecs_e_destroy_deferred(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
 
 // utility functions
-whisker_ecs_entity* whisker_ecs_e(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
+whisker_ecs_entity* whisker_ecs_get_entity(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
 whisker_ecs_entity_id whisker_ecs_e_id(whisker_ecs_entity_id_raw id);
-whisker_ecs_entity* whisker_ecs_e_named(whisker_ecs_entities *entities, char* entity_name);
-bool whisker_ecs_e_is_alive(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id);
-size_t whisker_ecs_e_count(whisker_ecs_entities *entities);
-size_t whisker_ecs_e_alive_count(whisker_ecs_entities *entities);
-size_t whisker_ecs_e_destroyed_count(whisker_ecs_entities *entities);
-struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(whisker_ecs_entities *entities, char* entity_names);
+whisker_ecs_entity* whisker_ecs_e_named(struct whisker_ecs_world *world, char* entity_name);
+bool whisker_ecs_is_entity_alive(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+size_t whisker_ecs_e_count(struct whisker_ecs_world *world);
+size_t whisker_ecs_e_alive_count(struct whisker_ecs_world *world);
+size_t whisker_ecs_e_destroyed_count(struct whisker_ecs_world *world);
+struct whisker_ecs_entity_id_array* whisker_ecs_e_from_named_entities(struct whisker_ecs_world *world, char* entity_names);
 int whisker_ecs_e_compare_entity_ids_(const void *id_a, const void *id_b);
 void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities, size_t length);
 
@@ -919,16 +914,16 @@ void whisker_ecs_e_sort_entity_array(whisker_ecs_entity_id *entities, size_t len
 
 
 // component array management
-void whisker_ecs_create_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size);
-void whisker_ecs_grow_components_container_(whisker_ecs_components *components, size_t capacity);
-whisker_sparse_set *whisker_ecs_get_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-void whisker_ecs_free_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
-void whisker_ecs_sort_component_array(whisker_ecs_components *components, whisker_ecs_entity_id component_id);
+void whisker_ecs_create_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size);
+void whisker_ecs_grow_components_container_(struct whisker_ecs_world *world, size_t capacity);
+whisker_sparse_set *whisker_ecs_get_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id);
+void whisker_ecs_free_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id);
+void whisker_ecs_sort_component_array(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id);
 
 // component management
-void whisker_ecs_set_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component);
-void whisker_ecs_remove_component_(whisker_ecs_components *components, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void whisker_ecs_remove_all_components_(whisker_ecs_components *components, whisker_ecs_entity_id entity_id);
+void whisker_ecs_set_component_(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void* component);
+void whisker_ecs_remove_component_(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
+void whisker_ecs_remove_all_components_(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
 
 
 //////////////////
