@@ -84,8 +84,8 @@ void whisker_ecs_module_component_change_events_system(whisker_ecs_system_contex
 			}
 
 			// create and fire event on the entity
-			whisker_ecs_entity_id event_entity = whisker_ecs_e_create_named(context->world->entities, event_name);
-			whisker_ecs_entity_id event_entity_target = whisker_ecs_e_create_named(context->world->entities, event_name_target);
+			whisker_ecs_entity_id event_entity = whisker_ecs_create_named_entity(context->world, event_name);
+			whisker_ecs_entity_id event_entity_target = whisker_ecs_create_named_entity(context->world, event_name_target);
 
 
 			// first fire the targetted event as a new event

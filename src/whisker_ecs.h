@@ -893,6 +893,7 @@ whisker_ecs_entity_id whisker_ecs_create_entity_deferred(struct whisker_ecs_worl
 whisker_ecs_entity_id whisker_ecs_create_named_entity_deferred(struct whisker_ecs_world *world, char* name);
 void whisker_ecs_destroy_entity_deferred(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
 bool whisker_ecs_is_alive(struct whisker_ecs_world *world, whisker_ecs_entity_id entity_id);
+void whisker_ecs_create_deferred_entity_action(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action);
 
 // component functions
 whisker_ecs_entity_id whisker_ecs_component_id(struct whisker_ecs_world *world, char* component_name);
@@ -905,7 +906,7 @@ void *whisker_ecs_get_component(struct whisker_ecs_world *world, whisker_ecs_ent
 void *whisker_ecs_set_component(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value);
 void whisker_ecs_remove_component(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
 bool whisker_ecs_has_component(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, whisker_ecs_entity_id entity_id);
-void whisker_ecs_create_deferred_component_action(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action);
+void whisker_ecs_create_deferred_component_action(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, bool propagate);
 
 // built-in systems
 void whisker_ecs_system_deregister_startup_phase(whisker_ecs_system_context *context);

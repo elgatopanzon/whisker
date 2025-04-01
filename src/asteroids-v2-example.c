@@ -543,7 +543,6 @@ void asteroids_system_destroy_offscreen(whisker_ecs_system_context *context)
 			)
 		{
 			debug_log(DEBUG, system:destroy_offscreen, "e = %zu %fx%f", itor->entity_id.id, pos_2d->x, pos_2d->y);
-			/* whisker_ecs_c_set_component(system->components, itor->component_ids_opt[0], sizeof(bool), itor->entity_id, &(bool){false}); */
 			whisker_ecs_set_tag(context->world, itor->component_ids_opt[0], itor->entity_id);
 		}
 	}
@@ -1003,8 +1002,8 @@ void asteroids_system_draw_frame_time(whisker_ecs_system_context *context)
 		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8) + 4, font_size, BLACK);
 		DrawText(process_frametime, 400, asteroids_screen_height - (font_size + 8), font_size, RED);
 
-		size_t entity_count = whisker_ecs_e_count(context->world->entities);
-		size_t entity_count_alive = whisker_ecs_e_alive_count(context->world->entities);
+		size_t entity_count = context->world->entities->entities_length;
+		size_t entity_count_alive = context->world->entities->entities_length - context->world->entities->destroyed_entities_length;
 
 		const char* s1 = TextFormat("AC %d", asteroid_count);
 		const char* s2 = TextFormat("EA %d", entity_count_alive);

@@ -380,7 +380,7 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 
 					/* printf("deferred component: destroying non-matching pool component %zu (%s) from entity %zu\n", component_id, whisker_ecs_e(ecs->entities, component_id)->name, action->id); */
 
-					whisker_ecs_create_deferred_component_action(ecs->world, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE);
+					whisker_ecs_create_deferred_component_action(ecs->world, component_id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, true);
 				}
 
 				if (ecs->world->entities->entities[action->id.index].destroyed)
@@ -393,7 +393,7 @@ void whisker_ecs_update_pre_process_destroyed_entities_(whisker_ecs *ecs)
 			}
 
 			/* whisker_ecs_c_remove_all_components(ecs->components, action->id); */
-			whisker_ecs_create_deferred_component_action(ecs->world, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL);
+			whisker_ecs_create_deferred_component_action(ecs->world, action->id, 0, action->id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE_ALL, true);
 
 		}
 	}
@@ -559,6 +559,28 @@ void whisker_ecs_destroy_entity_deferred(struct whisker_ecs_world *world, whiske
 	return;
 }
 
+// create a deferred entity action
+void whisker_ecs_create_deferred_entity_action(whisker_ecs_entities *entities, whisker_ecs_entity_id entity_id, WHISKER_ECS_ENTITY_DEFERRED_ACTION action)
+{
+	whisker_ecs_entity_deferred_action deferred_action = {.id = entity_id, .action = WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE};
+
+	size_t deferred_action_idx = atomic_fetch_add(&entities->deferred_actions_length, 1);
+
+	if((deferred_action_idx + 1) * sizeof(*entities->deferred_actions) > entities->deferred_actions_size)
+	{
+		pthread_mutex_lock(&entities->deferred_actions_mutex);
+
+		whisker_arr_ensure_alloc_block_size(
+			entities->deferred_actions, 
+			(deferred_action_idx + 1),
+			WHISKER_ECS_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
+		);
+
+		pthread_mutex_unlock(&entities->deferred_actions_mutex);
+	}
+	
+	entities->deferred_actions[deferred_action_idx] = deferred_action;
+}
 
 
 
@@ -643,7 +665,8 @@ void *whisker_ecs_set_component(struct whisker_ecs_world *world, whisker_ecs_ent
 		component_size,
 		entity_id,
 		value,
-		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET
+		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET,
+		true
 	);
 
 	return value;
@@ -658,7 +681,8 @@ void whisker_ecs_remove_component(struct whisker_ecs_world *world, whisker_ecs_e
 		0,
 		entity_id,
 		NULL,
-		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE
+		WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE,
+		true
 	);
 }
 
@@ -669,9 +693,9 @@ bool whisker_ecs_has_component(struct whisker_ecs_world *world, whisker_ecs_enti
 }
 
 // create a deferred component action to be processed later
-void whisker_ecs_create_deferred_component_action(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action)
+void whisker_ecs_create_deferred_component_action(struct whisker_ecs_world *world, whisker_ecs_entity_id component_id, size_t component_size, whisker_ecs_entity_id entity_id, void *value, enum WHISKER_ECS_COMPONENT_DEFERRED_ACTION action, bool propagate)
 {
-	whisker_ecs_c_create_deferred_action(world->components, component_id, entity_id, action, value, component_size, true);
+	whisker_ecs_c_create_deferred_action(world->components, component_id, entity_id, action, value, component_size, propagate);
 }
 
 /**********************
