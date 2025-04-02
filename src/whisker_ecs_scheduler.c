@@ -18,10 +18,10 @@ struct w_system *w_register_system(struct w_ecs *ecs, void (*system_ptr)(struct 
 	debug_log(DEBUG, ecs:register_system, "registering system %s process phase %s", system_name, process_phase_name);
 
 	// get the entity for the process phase
-	w_entity_id phase_e = w_create_named_entity(ecs->world, process_phase_name);
+	w_entity_id phase_e = w_create_named_entity_non_deferred(ecs->world, process_phase_name);
 
 	// create an entity for this system with it's name
-	w_entity_id e = w_create_named_entity(ecs->world, system_name);
+	w_entity_id e = w_create_named_entity_non_deferred(ecs->world, system_name);
 
 	// add process phase component to system
 	w_set_named_component(ecs->world, process_phase_name, sizeof(bool), e, &(bool){0});
@@ -95,7 +95,7 @@ size_t w_register_process_phase_time_step(struct w_ecs *ecs, w_time_step time_st
 // note: update_rate_sec set to 0 = uncapped processing with variable delta time
 w_entity_id w_register_process_phase(struct w_ecs *ecs, char *phase_name, size_t time_step_id)
 {
-	w_entity_id component_id = w_create_named_entity(ecs->world, phase_name);
+	w_entity_id component_id = w_create_named_entity_non_deferred(ecs->world, phase_name);
 
 	// add component ID to system's process phase list
 	struct w_process_phase process_phase = {
@@ -126,7 +126,7 @@ void w_set_process_phase_order(struct w_ecs *ecs, char **phase_names, size_t pha
 	
 	for (int i = 0; i < phase_count; ++i)
 	{
-		w_entity_id component_id = w_create_named_entity(ecs->world, phase_names[i]);
+		w_entity_id component_id = w_create_named_entity_non_deferred(ecs->world, phase_names[i]);
 
 		bool exists = false;
 

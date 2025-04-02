@@ -88,20 +88,20 @@ void w_free_entities_all_(struct w_entities *entities)
 ***********************/
 
 // request an entity ID to be created or recycled
-w_entity_id w_create_entity(struct w_world *world)
+w_entity_id w_create_entity_non_deferred(struct w_world *world)
 {
 	return w_entity_api_create_(world);
 }
 
 // request an entity ID to be created or recycled, providing a name
 // note: names are unique, creating an entity with the same name returns the existing entity if it exists
-w_entity_id w_create_named_entity(struct w_world *world, char* name)
+w_entity_id w_create_named_entity_non_deferred(struct w_world *world, char* name)
 {
 	return w_entity_api_create_named_(world, name);
 }
 
 // immediately destroy the given entity ID
-void w_destroy_entity(struct w_world *world, w_entity_id entity_id)
+void w_destroy_entity_non_deferred(struct w_world *world, w_entity_id entity_id)
 {
 	struct w_entity *e = w_get_entity(world, entity_id);
 	if (e->managed_by != NULL)
@@ -128,19 +128,19 @@ void w_set_entity_managed(struct w_world *world, w_entity_id entity_id)
 }
 
 // request to create an entity, deferring the creation until end of current frame
-w_entity_id w_create_entity_deferred(struct w_world *world)
+w_entity_id w_create_entity(struct w_world *world)
 {
 	return w_entity_api_create_deferred_(world);
 }
 
 // request to create an entity with a name, deferring the creation until end of current frame
-w_entity_id w_create_named_entity_deferred(struct w_world *world, char* name)
+w_entity_id w_create_named_entity(struct w_world *world, char* name)
 {
 	return w_entity_api_create_named_deferred_(world, name);
 }
 
 // request to destroy the provided entity ID at the end of current frame
-void w_destroy_entity_deferred(struct w_world *world, w_entity_id entity_id)
+void w_destroy_entity(struct w_world *world, w_entity_id entity_id)
 {
 	w_entity_api_destroy_deferred_(world, entity_id);
 	return;

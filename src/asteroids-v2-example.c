@@ -770,7 +770,7 @@ void asteroids_system_entity_deferred_destroy(struct w_sys_context *context)
 	{
 		/* debug_printf("destroying entity %zu %d\n", itor->entity_id); */
 
-		w_destroy_entity_deferred(context->world, itor->entity_id);
+		w_destroy_entity(context->world, itor->entity_id);
 		wm_event_create_and_fire_named(context->world, test_event);
 	}
 }
@@ -1381,7 +1381,7 @@ void asteroids_game_draw_frame()
 
 void asteroids_create_player_entity()
 {
-	w_entity_id e = w_create_named_entity_deferred(asteroids_ecs->world, "player");
+	w_entity_id e = w_create_named_entity(asteroids_ecs->world, "player");
 
 	Vector2 position = asteroids_screen_center;
 

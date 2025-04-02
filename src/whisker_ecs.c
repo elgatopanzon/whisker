@@ -29,7 +29,7 @@ struct w_ecs *w_ecs_create()
 
 
 	// reserve 1 entity for system use
-	w_create_entity(new->world);
+	w_create_entity_non_deferred(new->world);
 
 	// create a dummy system to use by the system context
 	struct w_system system = {

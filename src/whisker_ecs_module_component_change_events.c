@@ -84,8 +84,8 @@ void wm_component_change_events_system(struct w_sys_context *context)
 			}
 
 			// create and fire event on the entity
-			w_entity_id event_entity = w_create_named_entity(context->world, event_name);
-			w_entity_id event_entity_target = w_create_named_entity(context->world, event_name_target);
+			w_entity_id event_entity = w_create_named_entity_non_deferred(context->world, event_name);
+			w_entity_id event_entity_target = w_create_named_entity_non_deferred(context->world, event_name_target);
 
 
 			// first fire the targetted event as a new event

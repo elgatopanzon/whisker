@@ -49,11 +49,11 @@ static struct w_pool *wm_event_get_pool(struct w_world *world)
 
 static w_entity_id wm_event_get_pool_entity(struct w_world *world)
 {
-	return w_create_named_entity(world, "w_module_event_pool");
+	return w_create_named_entity_non_deferred(world, "w_module_event_pool");
 }
 static w_entity_id wm_event_get_module_entity(struct w_world *world)
 {
-	return w_create_named_entity(world, "w_module_event");
+	return w_create_named_entity_non_deferred(world, "w_module_event");
 }
 
 
@@ -67,7 +67,7 @@ w_entity_id wm_event_create_event(struct w_world *world)
 	w_create_deferred_entity_action(pool->world, ev, W_ENTITY_DEFERRED_ACTION_CREATE);
 
 	// set the t_event component on the entity
-	wm_event_set_data_f(world, ev, w_create_named_entity(pool->world, "w_module_event"), sizeof(bool), &(bool){0});
+	wm_event_set_data_f(world, ev, w_create_named_entity_non_deferred(pool->world, "w_module_event"), sizeof(bool), &(bool){0});
 
 	// make the entity unmanaged
 	w_set_entity_unmanaged(pool->world, ev);
@@ -137,7 +137,7 @@ void wm_event_set_fire_on_data_f(struct w_world *world, w_entity_id event_compon
 	};
 
 	// create a data cull event for this entity to remove the fire_on data
-	w_entity_id cull_ev = wm_event_create_with_data_f(world, w_create_named_entity(world, "w_module_event_cull_data"), sizeof(cull_component), &cull_component);
+	w_entity_id cull_ev = wm_event_create_with_data_f(world, w_create_named_entity_non_deferred(world, "w_module_event_cull_data"), sizeof(cull_component), &cull_component);
 	wm_event_fire(world, cull_ev);
 }
 
@@ -157,7 +157,7 @@ void wm_event_system_cull_events(struct w_sys_context *context)
 
 		w_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, W_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 
-		w_destroy_entity_deferred(context->world, itor->entity_id);
+		w_destroy_entity(context->world, itor->entity_id);
 	}
 }
 

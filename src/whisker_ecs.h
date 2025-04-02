@@ -833,23 +833,21 @@ void w_free_entity_pool_all(struct w_pool *pool);
 w_entity_id w_create_entity(struct w_world *world);
 w_entity_id w_create_named_entity(struct w_world *world, char* name);
 
-/* create/destroy an entity - deferred
-*
-*  issuing a deferred entity request defers the action until the end of the
-*  current process phase.
-*  currently supported actions are creation and destruction.
-*/
-w_entity_id w_create_entity_deferred(struct w_world *world);
-w_entity_id w_create_named_entity_deferred(struct w_world *world, char* name);
-void w_destroy_entity_deferred(struct w_world *world, w_entity_id entity_id);
-void w_create_deferred_entity_action(struct w_world *world, w_entity_id entity_id, enum W_ENTITY_DEFERRED_ACTION action);
-
 /* destroy an entity
 *
 *  when an entity destruction request is made, the entity is immediately
 *  destroyed and recycled for use by future creation requests.
 */
 void w_destroy_entity(struct w_world *world, w_entity_id entity_id);
+
+/* create/destory an entity - non-deferred
+*
+*  the non-deferred versions of the create/destroy entity functions perform the
+*  action instantly
+*/
+w_entity_id w_create_entity_non_deferred(struct w_world *world);
+w_entity_id w_create_named_entity_non_deferred(struct w_world *world, char* name);
+void w_destroy_entity_non_deferred(struct w_world *world, w_entity_id entity_id);
 
 /* entity alive check
 *
@@ -896,6 +894,7 @@ size_t w_destroyed_entity_count(struct w_world *world);
 struct w_entity_id_arr* w_batch_create_named_entities(struct w_world *world, char* entity_names);
 int w_compared_entity_ids_(const void *id_a, const void *id_b);
 void w_sort_entity_array_(w_entity_id *entities, size_t length);
+void w_create_deferred_entity_action(struct w_world *world, w_entity_id entity_id, enum W_ENTITY_DEFERRED_ACTION action);
 
 /******************
 *  Entity Pools  *
