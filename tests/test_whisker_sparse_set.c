@@ -15,7 +15,7 @@
 
 START_TEST(test_whisker_sparse_set_create)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	w_sparse_set_free_all(ss);
 }
@@ -23,15 +23,11 @@ END_TEST
 
 START_TEST(test_whisker_sparse_set_get_nonexistant_sparse_index)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	// try to get a non-existant sparse index
 	uint64_t dense_index = w_sparse_set_get_dense_index_(ss, 123);
 	ck_assert_uint_eq(dense_index, UINT64_MAX);
-
-	// test large index, it will try looking up in the TRIE
-	uint64_t dense_index2 = w_sparse_set_get_dense_index_(ss, 4294967296871282);
-	ck_assert_uint_eq(dense_index2, UINT64_MAX);
 
 	w_sparse_set_free_all(ss);
 }
@@ -39,7 +35,7 @@ END_TEST
 
 START_TEST(test_whisker_sparse_set_contains)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	// check for index which doesn't exist
 	ck_assert_int_eq(false, w_sparse_set_contains(ss, 123456));
@@ -51,17 +47,13 @@ START_TEST(test_whisker_sparse_set_contains)
 	// check again
 	ck_assert_int_eq(true, w_sparse_set_contains(ss, 123456));
 
-	// test large index, it will try looking up in the TRIE
-	uint64_t dense_index2 = w_sparse_set_get_dense_index_(ss, 4294967296871282);
-	ck_assert_uint_eq(dense_index2, UINT64_MAX);
-
 	w_sparse_set_free_all(ss);
 }
 END_TEST
 
 START_TEST(test_whisker_sparse_set_get_and_remove)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	// set a value
 	int created = 123;
@@ -117,27 +109,15 @@ START_TEST(test_whisker_sparse_set_get_and_remove)
 }
 END_TEST
 
-START_TEST(test_whisker_sparse_set_get_and_create_large)
-{
-	w_sparse_set *ss = whisker_ss_create_t(int);
-
-	// get a value with a large index
-	int *created = w_sparse_set_get(ss, 4294967296);
-	ck_assert_ptr_eq(NULL, created);
-
-	w_sparse_set_free_all(ss);
-}
-END_TEST
-
 START_TEST(test_whisker_sparse_set_set)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	// set a value
 	int val = 12312;
-	w_sparse_set_set(ss, 4294967296, &val);
+	w_sparse_set_set(ss, 1, &val);
 
-	int *created = w_sparse_set_get(ss, 4294967296);
+	int *created = w_sparse_set_get(ss, 1);
 	ck_assert_int_eq(12312, *created);
 
 	w_sparse_set_free_all(ss);
@@ -146,7 +126,7 @@ END_TEST
 
 START_TEST(test_whisker_sparse_set_sort_by_index)
 {
-	w_sparse_set *ss = whisker_ss_create_t(int);
+	w_sparse_set *ss = w_sparse_set_create_t(int);
 
 	// set some values
 	w_sparse_set_set(ss, 1, &(int){7});
@@ -217,7 +197,6 @@ Suite* whisker_sparse_set_suite(void)
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_nonexistant_sparse_index);
 	tcase_add_test(tc_core, test_whisker_sparse_set_contains);
 	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_remove);
-	tcase_add_test(tc_core, test_whisker_sparse_set_get_and_create_large);
 	tcase_add_test(tc_core, test_whisker_sparse_set_set);
 	tcase_add_test(tc_core, test_whisker_sparse_set_sort_by_index);
 

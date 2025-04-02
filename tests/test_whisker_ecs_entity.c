@@ -16,7 +16,7 @@
 
 START_TEST(test_whisker_ecs_entity_create_entities_struct)
 {
-	w_entities *entities = w_create_and_init_entities_container_();
+	struct w_entities *entities = w_create_and_init_entities_container_();
 
 	// verify empty arrays
 	// note: starts with 1, since it contains entity 0
@@ -32,17 +32,18 @@ END_TEST
 START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 {
 	// create entities instance
-	w_entities *entities = w_create_and_init_entities_container_();
+	struct w_entities *entities = w_create_and_init_entities_container_();
+	struct w_world world = {.entities = entities};
 
 	// create some entities
-	w_entity_id e1 = w_entity_api_create_unsafe_(entities);
-	w_entity_id e2 = w_entity_api_create_unsafe_(entities);
-	w_entity_id e3 = w_entity_api_create_unsafe_(entities);
+	w_entity_id e1 = w_entity_api_create_unsafe_(&world);
+	w_entity_id e2 = w_entity_api_create_unsafe_(&world);
+	w_entity_id e3 = w_entity_api_create_unsafe_(&world);
 
 	// validate entity count
 	// note: since we added 3 and 0 already exists, the length is 4
 	ck_assert_uint_eq(3, entities->entities_length);
-	ck_assert_uint_eq(3, w_alive_entity_count(entities));
+	ck_assert_uint_eq(3, w_alive_entity_count(&world));
 	
 	// validate returned indexes
 	ck_assert_uint_eq(0, e1.index);
@@ -53,29 +54,29 @@ START_TEST(test_whisker_ecs_entity_create_destroy_and_recycle)
 	ck_assert_uint_eq(0, e3.version);
 
 	// validate indexes with obtained entity pointers
-	ck_assert_uint_eq(0, w_get_entity(entities, e1)->id.index);
-	ck_assert_uint_eq(1, w_get_entity(entities, e2)->id.index);
-	ck_assert_uint_eq(2, w_get_entity(entities, e3)->id.index);
+	ck_assert_uint_eq(0, w_get_entity(&world, e1)->id.index);
+	ck_assert_uint_eq(1, w_get_entity(&world, e2)->id.index);
+	ck_assert_uint_eq(2, w_get_entity(&world, e3)->id.index);
 
 	// make sure entities are alive
-	ck_assert_int_eq(true, w_is_entity_alive(entities, e1));
-	ck_assert_int_eq(true, w_is_entity_alive(entities, e2));
-	ck_assert_int_eq(true, w_is_entity_alive(entities, e3));
+	ck_assert_int_eq(true, w_is_entity_alive(&world, e1));
+	ck_assert_int_eq(true, w_is_entity_alive(&world, e2));
+	ck_assert_int_eq(true, w_is_entity_alive(&world, e3));
 
 	// destroy e1 and e3 and check they are dead
-	whisker_ecs_destroy_entity_(entities, e1);
-	whisker_ecs_destroy_entity_(entities, e3);
-	ck_assert_int_eq(false, w_is_entity_alive(entities, e1));
-	ck_assert_int_eq(false, w_is_entity_alive(entities, e3));
+	w_destroy_entity_non_deferred(&world, e1);
+	w_destroy_entity_non_deferred(&world, e3);
+	ck_assert_int_eq(false, w_is_entity_alive(&world, e1));
+	ck_assert_int_eq(false, w_is_entity_alive(&world, e3));
 
 	// verify the versions
 	ck_assert_uint_eq(0, e1.version);
-	ck_assert_uint_eq(1, w_get_entity(entities, e1)->id.version);
+	ck_assert_uint_eq(1, w_get_entity(&world, e1)->id.version);
 	ck_assert_uint_eq(0, e3.version);
-	ck_assert_uint_eq(1, w_get_entity(entities, e3)->id.version);
+	ck_assert_uint_eq(1, w_get_entity(&world, e3)->id.version);
 
 	// create a new entity (it should recycle 3 with version 1 first)
-	w_entity_id e4 = w_entity_api_create_unsafe_(entities);
+	w_entity_id e4 = w_entity_api_create_unsafe_(&world);
 	ck_assert_uint_eq(2, e4.index);
 	ck_assert_uint_eq(1, e4.version);
 
@@ -86,17 +87,18 @@ END_TEST
 
 START_TEST(test_whisker_ecs_create_and_set_entity_name)
 {
-	w_entities *entities = w_create_and_init_entities_container_();
+	struct w_entities *entities = w_create_and_init_entities_container_();
+	struct w_world world = {.entities = entities};
 
 	// create some named entities
-	w_entity_id e1 = w_entity_api_create_named_(entities, "e1");
-	w_entity_id e2 = w_entity_api_create_named_(entities, "e2");
-	w_entity_id e3 = w_entity_api_create_named_(entities, "e3");
+	w_entity_id e1 = w_entity_api_create_named_(&world, "e1");
+	w_entity_id e2 = w_entity_api_create_named_(&world, "e2");
+	w_entity_id e3 = w_entity_api_create_named_(&world, "e3");
 
 	// get entity struct by name
-	w_entity *e1_fetched = w_get_named_entity(entities, "e1");
-	w_entity *e2_fetched = w_get_named_entity(entities, "e2");
-	w_entity *e3_fetched = w_get_named_entity(entities, "e3");
+	struct w_entity *e1_fetched = w_get_named_entity(&world, "e1");
+	struct w_entity *e2_fetched = w_get_named_entity(&world, "e2");
+	struct w_entity *e3_fetched = w_get_named_entity(&world, "e3");
 
 	// validate returned indexes
 	ck_assert_uint_eq(0, e1_fetched->id.index);
@@ -109,14 +111,14 @@ START_TEST(test_whisker_ecs_create_and_set_entity_name)
 	ck_assert_str_eq("e3", e3_fetched->name);
 
 	// create an entity with the same name, to get the existing entity
-	w_entity_id e4 = w_entity_api_create_named_(entities, "e3");
+	w_entity_id e4 = w_entity_api_create_named_(&world, "e3");
 	ck_assert_uint_eq(2, e4.index);
 
 	// destroy an entity, validate the key no longer works
-	w_entity *e4_fetched = w_get_named_entity(entities, "e3");
-	whisker_ecs_destroy_entity_(entities, e4);
+	struct w_entity *e4_fetched = w_get_named_entity(&world, "e3");
+	w_destroy_entity_non_deferred(&world, e4);
 	ck_assert(e4_fetched->name == NULL);
-	ck_assert(w_get_named_entity(entities, "e3") == NULL);
+	ck_assert(w_get_named_entity(&world, "e3") == NULL);
 
 	// free
 	w_free_entities_all_(entities);
@@ -126,10 +128,11 @@ END_TEST
 START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 {
 	// create entities list
-	w_entities *en = w_create_and_init_entities_container_();
+	struct w_entities *en = w_create_and_init_entities_container_();
+	struct w_world world = {.entities = en};
 
 	// create archetype from named entities
-	struct w_entity_id_arr *a1 = whisker_ecs_array_from_named_entities(en, "test1,test2");
+	struct w_entity_id_arr *a1 = w_batch_create_named_entities(&world, "test1,test2");
 	ck_assert_int_eq(2, a1->arr_length);
 
 	// verify the entity IDs created
@@ -140,7 +143,7 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	}
 
 	// create the archetype from same named entities
-	struct w_entity_id_arr *a2 = whisker_ecs_array_from_named_entities(en, "test1,test2");
+	struct w_entity_id_arr *a2 = w_batch_create_named_entities(&world, "test1,test2");
 	ck_assert_int_eq(2, a2->arr_length);
 
 	// verify the entity ids are the same
@@ -150,11 +153,11 @@ START_TEST(test_whisker_ecs_entity_named_entities_to_id)
 	}
 
 	// create some new named entities
-	w_entity_id e3 = w_entity_api_create_named_(en, "test3");
-	w_entity_id e4 = w_entity_api_create_named_(en, "test4");
+	w_entity_id e3 = w_entity_api_create_named_(&world, "test3");
+	w_entity_id e4 = w_entity_api_create_named_(&world, "test4");
 
 	// create new archetype from the named entities
-	struct w_entity_id_arr *a3 = whisker_ecs_array_from_named_entities(en, "test3,test4,test1");
+	struct w_entity_id_arr *a3 = w_batch_create_named_entities(&world, "test3,test4,test1");
 	ck_assert_int_eq(3, a3->arr_length);
 
 	// verify the entity IDs created

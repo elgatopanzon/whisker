@@ -24,7 +24,7 @@ END_TEST
 START_TEST(test_whisker_buffered_sparse_set_set_and_get_correct_buffer)
 {
 	// create a buffered sparse set
-	w_buffered_sparse_set *bss = whisker_bss_create_and_init_t(2, uint64_t);
+	w_buffered_sparse_set *bss = w_buf_sparse_set_create_and_init_t(2, uint64_t);
 
 	// set: sets data on the current back buffer
 	uint64_t val = 1234;
@@ -52,7 +52,7 @@ END_TEST
 START_TEST(test_whisker_buffered_sparse_set_sync_and_swap)
 {
 	// create a buffered sparse set
-	w_buffered_sparse_set *bss = whisker_bss_create_and_init_t(2, uint64_t);
+	w_buffered_sparse_set *bss = w_buf_sparse_set_create_and_init_t(2, uint64_t);
 
 	// frame 0: set some initial values
 	// this populates the current back buffer and front buffer is empty
