@@ -96,7 +96,7 @@ extern const char* E_WHISKER_DICT_STR[];
 typedef struct whisker_dict_header
 {
 	// the Trie pointer containing all the data
-	whisker_trie* trie;
+	w_trie_node* trie;
 
 	// cache array of the keys
 	whisker_array_header keys_header;

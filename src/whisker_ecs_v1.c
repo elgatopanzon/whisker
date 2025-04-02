@@ -35,14 +35,14 @@ E_WHISKER_ARR whisker_arr_try_resize_if_required_(void** arr, size_t elements)
 E_WHISKER_ARR whisker_arr_create_f(size_t type_size, size_t length, void** arr)
 {
 	// alloc whisker_mem block for the array + header struct
-	whisker_memory_block* block = whisker_mem_block_create_and_init(type_size * length, sizeof(whisker_array_header));
+	w_mem_block* block = w_mem_block_create_and_init(type_size * length, sizeof(whisker_array_header));
 
 	// set header values
 	whisker_array_header* header = block->header;
 	header->element_size = type_size;
 	header->length = length;
 	header->size = type_size * length;
-	header->swap_buffer = whisker_mem_xcalloc(1, type_size);
+	header->swap_buffer = w_mem_xcalloc(1, type_size);
 
 	// set array pointer to data pointer
 	*arr = block->data;
@@ -68,14 +68,14 @@ E_WHISKER_ARR whisker_arr_resize_f(void** arr, size_t elements, bool allow_shrin
 		return E_WHISKER_ARR_OK;
 	}
 
-	whisker_memory_block block = {
+	w_mem_block block = {
 		.header = header,
 		.header_size = sizeof(whisker_array_header),
 		.data_size = header->size,
 	};
 
 	// try to realloc the underlying block to the new size
-	whisker_mem_block_realloc(&block, elements * header->element_size);
+	w_mem_block_realloc(&block, elements * header->element_size);
 
 	// set new pointer and update length
 	*arr = block.data;
@@ -263,7 +263,7 @@ void* whisker_arr_grow_get_f(void** arr, size_t index)
 E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t capacity)
 {
 	// create memory block for the dict header
-	whisker_memory_block* block = whisker_mem_block_create_and_init(element_size * capacity, sizeof(whisker_dict_header));
+	w_mem_block* block = w_mem_block_create_and_init(element_size * capacity, sizeof(whisker_dict_header));
 
 	// create an array for the keys cache
 	// this will be stored in the dict header as a pointer
@@ -275,7 +275,7 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 	}
 
 	// create Trie to hold keys and values pointers into the dict array
-	whisker_trie* trie = whisker_mem_xcalloc_t(1, whisker_trie);
+	w_trie_node* trie = w_mem_xcalloc_t(1, w_trie_node);
 
 	// set dict header values
 	whisker_dict_header* header = block->header;
@@ -286,7 +286,7 @@ E_WHISKER_DICT whisker_dict_create_f(void** dict, size_t element_size, size_t ca
 	header->arr_header.length = capacity;
 	header->arr_header.element_size = element_size;
 	header->arr_header.size = capacity * element_size;
-	header->arr_header.swap_buffer = whisker_mem_xmalloc(element_size);
+	header->arr_header.swap_buffer = w_mem_xmalloc(element_size);
 	
 	*dict = block->data;
 	free(block);
@@ -334,15 +334,15 @@ E_WHISKER_DICT whisker_dict_add_f(void** dict, void *key, size_t key_size, void*
 	memcpy(array_dest, value, header->arr_header.element_size);
 
 	// create wstring from key and add it to keys array
-	void* key_mem = whisker_mem_xmalloc(key_size);
+	void* key_mem = w_mem_xmalloc(key_size);
 	memcpy(key_mem, key, key_size);
 	whisker_arr_push(&header->keys, &key_mem);
 
 	// add the key pointing to the dict array index
-	size_t *array_index = whisker_mem_xmalloc_t(*array_index);
+	size_t *array_index = w_mem_xmalloc_t(*array_index);
 
 	*array_index = header->arr_header.length - 1;
-	if (!whisker_trie_set_value(header->trie, key, key_size, array_index))
+	if (!w_trie_set_value(header->trie, key, key_size, array_index))
 	{
 		return E_WHISKER_DICT_TRIE;
 	}
@@ -357,7 +357,7 @@ E_WHISKER_DICT whisker_dict_get_index(void* dict, void *key, size_t key_size, si
 
 	// try to get the node with the pointer to the value
 	// if we can't get the value, then it doesn't exist in the dict
-	size_t* index_pointer = whisker_trie_search_value_f(header->trie, key, key_size);
+	size_t* index_pointer = w_trie_search_value_f(header->trie, key, key_size);
 	if (index_pointer == NULL)
 	{
 		return E_WHISKER_DICT_MISSING_KEY;
@@ -417,7 +417,7 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, void *key, size_t key_size)
 	}
 
 	// remove trie value for key 
-	whisker_trie* removed_node = whisker_trie_search_node_(header->trie, key, key_size, 0, false);
+	w_trie_node* removed_node = w_trie_search_node_(header->trie, key, key_size, 0, false);
 	if (removed_node == NULL)
 	{
 		return E_WHISKER_DICT_TRIE;
@@ -435,7 +435,7 @@ E_WHISKER_DICT whisker_dict_remove_f(void** dict, void *key, size_t key_size)
 		whisker_dict_copy(*dict, end_key, key_size, ((char*)*dict) + (removed_index * header->arr_header.element_size));
 
 		// free the end node's index value
-		whisker_trie* end_node = whisker_trie_search_node_(header->trie, end_key, key_size, 0, false);
+		w_trie_node* end_node = w_trie_search_node_(header->trie, end_key, key_size, 0, false);
 		if (end_node == NULL)
 		{
 			return E_WHISKER_DICT_TRIE;
@@ -480,7 +480,7 @@ E_WHISKER_DICT whisker_dict_clear_f(void** dict)
 E_WHISKER_DICT whisker_dict_free(void* dict)
 {
 	whisker_dict_header* header = whisker_dict_get_header(dict);
-	whisker_trie_free_all(header->trie);
+	w_trie_free_all(header->trie);
 
 	// free each key string
 	for (int i = 0; i < header->arr_header.length; ++i)
@@ -522,12 +522,12 @@ void whisker_dict_order_by_key_(void **keys, void *values, size_t length, size_t
                 memcpy((char*)values + j * value_size, value_temp, value_size);
 
 				// swap index nodes
-				whisker_trie* key_i_node = whisker_trie_search_node_(header->trie, keys[i], key_size, 0, false);
+				w_trie_node* key_i_node = w_trie_search_node_(header->trie, keys[i], key_size, 0, false);
 				if (key_i_node == NULL)
 				{
 					return;
 				}
-				whisker_trie* key_j_node = whisker_trie_search_node_(header->trie, keys[j], key_size, 0, false);
+				w_trie_node* key_j_node = w_trie_search_node_(header->trie, keys[j], key_size, 0, false);
 				if (key_j_node == NULL)
 				{
 					return;
@@ -553,14 +553,14 @@ E_WHISKER_DICT whisker_dict_resize_(void** dict, size_t capacity)
 	{
 		// build block from dict pointer
 		whisker_dict_header* header = whisker_dict_get_header(*dict);
-		whisker_memory_block block = {
+		w_mem_block block = {
 			.header = header,
 			.header_size = sizeof(whisker_dict_header),
 			.data_size = header_old.arr_header.size,
 		};
 
 		// try to realloc the underlying block to the new size
-		whisker_mem_block_realloc(&block, capacity * header->arr_header.element_size);
+		w_mem_block_realloc(&block, capacity * header->arr_header.element_size);
 
 		// set new pointers and update length
 		*dict = block.data;
@@ -593,7 +593,7 @@ whisker_dict_header* whisker_dict_get_header(void* dict)
 // note: O(1) lookup on the trie based on key length
 bool whisker_dict_contains_key(void* dict, void *key, size_t key_size)
 {
-	return (whisker_trie_search_value_f(whisker_dict_get_header(dict)->trie, key, key_size) != NULL);
+	return (w_trie_search_value_f(whisker_dict_get_header(dict)->trie, key, key_size) != NULL);
 }
 
 // check if the dict contains the provided value

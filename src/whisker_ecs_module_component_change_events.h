@@ -18,10 +18,10 @@
  * operate on the list before it's emptied as part of the end of frame operations
  */
 
-void whisker_ecs_module_component_change_events_init(whisker_ecs *ecs);
+void wm_component_change_events_init(struct w_ecs *ecs);
 
 // ECS systems
-void whisker_ecs_module_component_change_events_system(whisker_ecs_system_context *context);
+void wm_component_change_events_system(struct w_sys_context *context);
 
 #endif /* WHISKER_ECS_MODULE_COMPONENT_CHANGE_EVENTS_H */
 

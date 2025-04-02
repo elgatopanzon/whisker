@@ -20,9 +20,9 @@ START_TEST(test_whisker_mem_try_malloc_block)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
+	w_mem_block* block = w_mem_block_create_and_init(data_size, header_size);
 
-	whisker_mem_block_free_all(block);
+	w_mem_block_free_all(block);
 
 	return;
 }
@@ -34,16 +34,16 @@ START_TEST(test_whisker_mem_try_realloc_block_data)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
+	w_mem_block* block = w_mem_block_create_and_init(data_size, header_size);
 
 	// realloc the block and double it's size
 	void* data_prev = block->data;
-	whisker_mem_block_realloc(block, data_size * 2);
+	w_mem_block_realloc(block, data_size * 2);
 
 	// check the data size changed
 	ck_assert_uint_eq(block->data_size, data_size * 2);
 
-	whisker_mem_block_free_all(block);
+	w_mem_block_free_all(block);
 
 	return;
 }
@@ -55,12 +55,12 @@ START_TEST(test_whisker_mem_block_header_from_data_pointer)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
+	w_mem_block* block = w_mem_block_create_and_init(data_size, header_size);
 
 	// check the obtained header matches the one from the block
-	ck_assert(whisker_mem_block_header_from_data_pointer(block->data, header_size) == block->header);
+	ck_assert(w_mem_block_header_from_data_pointer(block->data, header_size) == block->header);
 
-	whisker_mem_block_free_all(block);
+	w_mem_block_free_all(block);
 
 	return;
 }
@@ -73,22 +73,22 @@ struct whisker_test_struct_12b
 START_TEST(test_whisker_mem_calc_header_size)
 {
 	// check header size matches when both data types are the same
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(uint64_t), sizeof(uint64_t)), sizeof(uint64_t));
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(uint64_t), sizeof(uint64_t)), sizeof(uint64_t));
 
 	// check smaller header size is rounded up to data size 
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(uint8_t), sizeof(uint64_t)), sizeof(uint64_t));
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(uint8_t), sizeof(uint64_t)), sizeof(uint64_t));
 	
 	// check larger header size is padded to multiple of data size 
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(uint32_t), sizeof(uint8_t)), sizeof(uint8_t) * 4);
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(uint32_t), sizeof(uint8_t)), sizeof(uint8_t) * 4);
 
 	// check with data size byte and larger header size
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(uint16_t), sizeof(char)), sizeof(char) * 2);
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(uint16_t), sizeof(char)), sizeof(char) * 2);
 
 	// check with a mismatches struct e.g. 12 bytes
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(uint32_t), sizeof(struct whisker_test_struct_12b)), sizeof(uint32_t) * 3);
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(uint32_t), sizeof(struct whisker_test_struct_12b)), sizeof(uint32_t) * 3);
 
 	// check with 12 byte struct as header
-	ck_assert_uint_eq(whisker_mem_block_calc_header_size(sizeof(struct whisker_test_struct_12b), sizeof(uint8_t)), sizeof(uint8_t) * 12);
+	ck_assert_uint_eq(w_mem_block_calc_header_size(sizeof(struct whisker_test_struct_12b), sizeof(uint8_t)), sizeof(uint8_t) * 12);
 }
 END_TEST
 
@@ -98,7 +98,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 	size_t header_size = sizeof(uint64_t);
 	size_t data_size = sizeof(uint64_t) * 100;
 
-	whisker_memory_block* block = whisker_mem_block_create_and_init(data_size, header_size);
+	w_mem_block* block = w_mem_block_create_and_init(data_size, header_size);
 
 	// verify data bytes are 0
 	for (int i = 0; i < block->data_size; ++i)
@@ -113,7 +113,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 	}
 
 	// double the size of the block with a realloc
-	whisker_mem_block_realloc(block, block->data_size * 2);
+	w_mem_block_realloc(block, block->data_size * 2);
 
 	// verify data bytes are 0 except first 10
 	for (int i = 0; i < block->data_size; ++i)
@@ -128,7 +128,7 @@ START_TEST(test_whisker_mem_realloc_zero)
 		}
 	}
 
-	whisker_mem_block_free_all(block);
+	w_mem_block_free_all(block);
 
 	return;
 }

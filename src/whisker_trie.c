@@ -11,7 +11,7 @@
 
 // internal function to recursively traverse the tree looking for a matching
 // node for a given key, accepting position
-whisker_trie *whisker_trie_search_node_(whisker_trie* root, void* key, size_t key_size, int key_position, bool create_missing_nodes)
+w_trie_node *w_trie_search_node_(w_trie_node* root, void* key, size_t key_size, int key_position, bool create_missing_nodes)
 {
 	// loop over the key starting at the current key position
 	// each part of the loop checks for the node's matching index
@@ -29,12 +29,12 @@ whisker_trie *whisker_trie_search_node_(whisker_trie* root, void* key, size_t ke
 		// if create_missing_nodes is true, we create this node and move on!
 		if (root->nodes[key_index] == NULL && create_missing_nodes)
 		{
-			whisker_trie* missing_node = whisker_mem_xcalloc_t(1, whisker_trie);
+			w_trie_node* missing_node = w_mem_xcalloc_t(1, w_trie_node);
 
 			root->nodes[key_index] = missing_node;
 		}
 
-		return whisker_trie_search_node_(root->nodes[key_index], key, key_size, i + 1, create_missing_nodes);
+		return w_trie_search_node_(root->nodes[key_index], key, key_size, i + 1, create_missing_nodes);
 	}
 
 	// check if this is the end of the key
@@ -48,29 +48,29 @@ whisker_trie *whisker_trie_search_node_(whisker_trie* root, void* key, size_t ke
 }
 
 // free a trie node and all of it's linked children
-void whisker_trie_free_nodes(whisker_trie* node)
+void w_trie_free_nodes(w_trie_node* node)
 {
 	// recursive free of child nodes
-	whisker_trie** nodes = node->nodes;
-	for (int i = 0; i < WHISKER_TRIE_NODE_CAPACITY; ++i)
+	w_trie_node** nodes = node->nodes;
+	for (int i = 0; i < W_NODE_CAPACITY; ++i)
 	{
 		if (nodes[i] != NULL)
 		{
-			whisker_trie_free_nodes(nodes[i]);
+			w_trie_free_nodes(nodes[i]);
 			free(nodes[i]);
 		}
 	}
 }
 
 // call free on all the node value pointers
-void whisker_trie_free_node_values(whisker_trie* node)
+void w_trie_free_node_values(w_trie_node* node)
 {
-	whisker_trie** nodes = node->nodes;
-	for (int i = 0; i < WHISKER_TRIE_NODE_CAPACITY; ++i)
+	w_trie_node** nodes = node->nodes;
+	for (int i = 0; i < W_NODE_CAPACITY; ++i)
 	{
 		if (nodes[i] != NULL)
 		{
-			whisker_trie_free_node_values(nodes[i]);
+			w_trie_free_node_values(nodes[i]);
 		}
 	}
 

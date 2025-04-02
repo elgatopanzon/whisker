@@ -16,18 +16,18 @@
 START_TEST(test_whisker_thread_pool_create_and_destroy)
 {
 	// create thread pool using default thread count
-	whisker_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_1");
+	w_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_1");
 
 	// threads should be alive
-	ck_assert_int_eq(whisker_tp_system_core_count(), tp->thread_count);
+	ck_assert_int_eq(w_thread_pool_system_core_count(), tp->thread_count);
 	
 	// destroy and wait for pool to stop
-	whisker_tp_free_all(tp);
+	w_thread_pool_free_all(tp);
 }
 END_TEST
 
 
-void whisker_thread_pool_test_work_func(void *arg, whisker_thread_pool_context *context)
+void whisker_thread_pool_test_work_func(void *arg, w_thread_pool_context *context)
 {
 	double *val = arg;
 	*val += 1;
@@ -36,7 +36,7 @@ void whisker_thread_pool_test_work_func(void *arg, whisker_thread_pool_context *
 START_TEST(test_whisker_thread_pool_work_test)
 {
 	// create thread pool using default thread count
-	whisker_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_2");
+	w_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_2");
 
 	// create work items
 	int work_item_count = 100;
@@ -47,11 +47,11 @@ START_TEST(test_whisker_thread_pool_work_test)
 		values[i] = i * 100;
 		values_expected[i] = values[i] + 1;
 
-		whisker_tp_queue_work(tp, whisker_thread_pool_test_work_func, &values[i]);
+		w_thread_pool_queue_work(tp, whisker_thread_pool_test_work_func, &values[i]);
 	}
 
 	// wait for pool to stop all work
-	whisker_tp_wait_work(tp);
+	w_thread_pool_wait_work(tp);
 
 	// check all work items values
 	for (int i = 0; i < work_item_count; ++i)
@@ -60,7 +60,7 @@ START_TEST(test_whisker_thread_pool_work_test)
 	}
 
 	// stop all threads and free pool
-	whisker_tp_free_all(tp);
+	w_thread_pool_free_all(tp);
 }
 END_TEST
 
@@ -71,7 +71,7 @@ struct whisker_thread_pool_pinned_test
 	size_t values_length;
 };
 
-void whisker_thread_pool_test_work_func_pinned(void *arg, whisker_thread_pool_context *t)
+void whisker_thread_pool_test_work_func_pinned(void *arg, w_thread_pool_context *t)
 {
 	struct whisker_thread_pool_pinned_test *pinned = arg;
 
@@ -88,7 +88,7 @@ void whisker_thread_pool_test_work_func_pinned(void *arg, whisker_thread_pool_co
 START_TEST(test_whisker_thread_pool_pinned_work_test)
 {
 	// create thread pool using default thread count
-	whisker_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_3");
+	w_thread_pool *tp = whisker_tp_create_and_init(0, "unit_test_3");
 
 	struct whisker_thread_pool_pinned_test pinned = {0};
 	pinned.count = 100;
@@ -101,11 +101,11 @@ START_TEST(test_whisker_thread_pool_pinned_work_test)
 		values_expected[i] = pinned.values[i] + 2;
 	}
 
-	whisker_tp_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
-	whisker_tp_wait_work(tp);
+	w_thread_pool_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
+	w_thread_pool_wait_work(tp);
 
-	whisker_tp_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
-	whisker_tp_wait_work(tp);
+	w_thread_pool_queue_work_all(tp, whisker_thread_pool_test_work_func_pinned, &pinned);
+	w_thread_pool_wait_work(tp);
 
 	// check all work items values
 	for (int i = 0; i < pinned.count; ++i)
@@ -114,7 +114,7 @@ START_TEST(test_whisker_thread_pool_pinned_work_test)
 	}
 
 	// stop all threads and free pool
-	whisker_tp_free_all(tp);
+	w_thread_pool_free_all(tp);
 }
 END_TEST
 

@@ -16,13 +16,13 @@
 
 START_TEST(test_whisker_ecs_system_create_systems_struct)
 {
-	whisker_ecs_systems *s = whisker_ecs_create_and_init_systems_container();
+	w_systems *s = wcreate_and_init_systems_container();
 
 	// verify empty arrays
 	ck_assert_int_eq(0, s->systems_length);
 
 	// free
-	whisker_ecs_free_systems_container_all(s);
+	w_free_systems_container_all(s);
 }
 END_TEST
 
@@ -30,49 +30,49 @@ END_TEST
 START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 {
 	// create entities, components and systems holders
-	whisker_ecs_systems *s = whisker_ecs_create_and_init_systems_container();
-	whisker_ecs_components *c = whisker_ecs_create_and_init_components_container();
-	whisker_ecs_entities *e = whisker_ecs_create_and_init_entities_container_();
+	w_systems *s = wcreate_and_init_systems_container();
+	w_components *c = w_create_and_init_components_container();
+	w_entities *e = w_create_and_init_entities_container_();
 
 	// create and register a system
-	whisker_ecs_system sy = {
+	w_system sy = {
 		.entities = e,
 		.components = c,
 	};
-	whisker_ecs_system *sys = whisker_ecs_s_register_system(s, c, sy);
+	w_system *sys = whisker_ecs_s_register_system(s, c, sy);
 
 	// create some entities with component names
-	whisker_ecs_entity_api_create_named_(e, "comp1");
-	whisker_ecs_entity_api_create_named_(e, "comp2");
-	whisker_ecs_entity_api_create_named_(e, "comp3");
-	whisker_ecs_entity_api_create_named_(e, "comp4");
-	whisker_ecs_entity_api_create_named_(e, "comp5");
+	w_entity_api_create_named_(e, "comp1");
+	w_entity_api_create_named_(e, "comp2");
+	w_entity_api_create_named_(e, "comp3");
+	w_entity_api_create_named_(e, "comp4");
+	w_entity_api_create_named_(e, "comp5");
 
 	// create some components
-	whisker_ecs_entity_id comp1 = whisker_ecs_entity_api_create_named_(e, "comp1");
-	whisker_ecs_entity_id comp2 = whisker_ecs_entity_api_create_named_(e, "comp2");
-	whisker_ecs_entity_id comp3 = whisker_ecs_entity_api_create_named_(e, "comp3");
-	whisker_ecs_entity_id comp4 = whisker_ecs_entity_api_create_named_(e, "comp4");
-	whisker_ecs_entity_id comp5 = whisker_ecs_entity_api_create_named_(e, "comp5");
-	whisker_ecs_entity_id comp6 = whisker_ecs_entity_api_create_named_(e, "comp6");
+	w_entity_id comp1 = w_entity_api_create_named_(e, "comp1");
+	w_entity_id comp2 = w_entity_api_create_named_(e, "comp2");
+	w_entity_id comp3 = w_entity_api_create_named_(e, "comp3");
+	w_entity_id comp4 = w_entity_api_create_named_(e, "comp4");
+	w_entity_id comp5 = w_entity_api_create_named_(e, "comp5");
+	w_entity_id comp6 = w_entity_api_create_named_(e, "comp6");
 
 	int val1 = 4345;
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(12), &val1);
-	whisker_ecs_sort_component_array(c, comp2);
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(12), &val1);
+	w_sort_component_array(c, comp2);
 	int val2 = 98798;
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(54), &val2);
-	whisker_ecs_sort_component_array(c, comp5);
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(54), &val2);
+	w_sort_component_array(c, comp5);
 	int val3 = 321;
-	whisker_ecs_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(88), &val3);
-	whisker_ecs_sort_component_array(c, comp6);
+	w_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(88), &val3);
+	w_sort_component_array(c, comp6);
 
 	// request an iterator with the created components
-	whisker_ecs_system_iterator *itor = whisker_ecs_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	w_iterator *itor = w_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
 	// get component array using cached IDs
-	whisker_sparse_set *comp2_ss = whisker_ecs_get_component_array(c, itor->component_ids_rw[1]);
-	whisker_sparse_set *comp5_ss = whisker_ecs_get_component_array(c, itor->component_ids_rw[4]);
-	whisker_sparse_set *comp6_ss = whisker_ecs_get_component_array(c, itor->component_ids_opt[0]);
+	w_sparse_set *comp2_ss = w_get_component_array(c, itor->component_ids_rw[1]);
+	w_sparse_set *comp5_ss = w_get_component_array(c, itor->component_ids_rw[4]);
+	w_sparse_set *comp6_ss = w_get_component_array(c, itor->component_ids_opt[0]);
 
 	// validate values
 	int val1_obtained = *(int*)wss_get(comp2_ss, 12);
@@ -84,52 +84,52 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	ck_assert_int_eq(321, val3_obtained);
 
 	// set some more components and do a demo iteration
-	whisker_ecs_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
+	w_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(10), &(int){ 123 });
 
-	whisker_ecs_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
+	w_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
+	w_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
 	/* whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(11), &(int){ 123 }); */
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
+	w_set_component_(c, comp6, sizeof(int), whisker_ecs_create_id(11), &(int){ 123 });
 
-	whisker_ecs_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
+	w_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
+	w_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
+	w_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(15), &(int){ 123 });
 
-	whisker_ecs_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(16), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(16), &(int){ 123 });
+	w_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(16), &(int){ 123 });
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(16), &(int){ 123 });
 	/* whisker_ecs_c_set_component(c, comp3, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 	/* whisker_ecs_c_set_component(c, comp4, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 	/* whisker_ecs_c_set_component(c, comp5, sizeof(int), whisker_ecs_e_id(16), &(int){ 123 }); */
 
-	whisker_ecs_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
+	w_set_component_(c, comp1, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
+	w_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
+	w_set_component_(c, comp3, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
+	w_set_component_(c, comp4, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(19), &(int){ 123 });
 
-	whisker_ecs_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(20), &(int){ 123 });
+	w_set_component_(c, comp5, sizeof(int), whisker_ecs_create_id(20), &(int){ 123 });
 
-	whisker_ecs_sort_component_array(c, comp1);
-	whisker_ecs_sort_component_array(c, comp2);
-	whisker_ecs_sort_component_array(c, comp3);
-	whisker_ecs_sort_component_array(c, comp4);
-	whisker_ecs_sort_component_array(c, comp5);
-	whisker_ecs_sort_component_array(c, comp6);
+	w_sort_component_array(c, comp1);
+	w_sort_component_array(c, comp2);
+	w_sort_component_array(c, comp3);
+	w_sort_component_array(c, comp4);
+	w_sort_component_array(c, comp5);
+	w_sort_component_array(c, comp6);
 
 	// get the iterator again
-	itor = whisker_ecs_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = w_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
-	whisker_ecs_entity_id expected_entities[] = {10,15,19};
-	while (whisker_ecs_iterate(itor)) 
+	w_entity_id expected_entities[] = {10,15,19};
+	while (w_iterate(itor)) 
 	{
 		printf("itor test: entity %zu\n", itor->entity_id);
 		ck_assert_uint_eq(expected_entities[itor->cursor].index, itor->entity_id.index);
@@ -137,27 +137,27 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	printf("itor test: iteration ended\n");
 
 	// test iterator reset
-	itor = whisker_ecs_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
+	itor = w_query(&sys->thread_contexts[0], 0, "comp1,comp2,comp3", "comp4,comp5", "comp6");
 
-	while (whisker_ecs_iterate(itor)) 
+	while (w_iterate(itor)) 
 	{
 		ck_assert_uint_eq(expected_entities[itor->cursor].index, itor->entity_id.index);
 	}
 
 	// get another iterator with a single component
-	itor = whisker_ecs_query(&sys->thread_contexts[0], 1, "comp1", "", "");
+	itor = w_query(&sys->thread_contexts[0], 1, "comp1", "", "");
 
-	whisker_ecs_entity_id expected_entities_smaller[] = {10,11,15,16,19};
-	while (whisker_ecs_iterate(itor)) 
+	w_entity_id expected_entities_smaller[] = {10,11,15,16,19};
+	while (w_iterate(itor)) 
 	{
 		printf("itor single test: entity %zu\n", itor->entity_id);
 		ck_assert_uint_eq(expected_entities_smaller[itor->cursor].index, itor->entity_id.index);
 	}
 	printf("itor single test: iteration ended\n");
 
-	whisker_ecs_free_entities_all_(e);
-	whisker_ecs_free_components_container_all(c);
-	whisker_ecs_free_systems_container_all(s);
+	w_free_entities_all_(e);
+	w_free_components_container_all(c);
+	w_free_systems_container_all(s);
 }
 END_TEST
 

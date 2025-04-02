@@ -8,137 +8,137 @@
 
 #include "whisker_ecs_module_event.h"
 
-static void whisker_ecs_module_event_set_pool(whisker_ecs *ecs, whisker_ecs_pool *entity_pool);
-static whisker_ecs_pool *whisker_ecs_module_event_get_pool(struct whisker_ecs_world *world);
-static whisker_ecs_entity_id whisker_ecs_module_event_get_pool_entity(struct whisker_ecs_world *world);
-static whisker_ecs_entity_id whisker_ecs_module_event_get_module_entity(struct whisker_ecs_world *world);
+static void wm_event_set_pool(struct w_ecs *ecs, struct w_pool *entity_pool);
+static struct w_pool *wm_event_get_pool(struct w_world *world);
+static w_entity_id wm_event_get_pool_entity(struct w_world *world);
+static w_entity_id wm_event_get_module_entity(struct w_world *world);
 
-void whisker_ecs_module_event_init(whisker_ecs *ecs, whisker_ecs_pool *entity_pool)
+void wm_event_init(struct w_ecs *ecs, struct w_pool *entity_pool)
 {
 	// set the pool component
-	whisker_ecs_module_event_set_pool(ecs, entity_pool);
+	wm_event_set_pool(ecs, entity_pool);
 
-	whisker_ecs_register_system(ecs, whisker_ecs_module_event_system_cull_event_components, "w_module_event_cull_events", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
-	whisker_ecs_register_system(ecs, whisker_ecs_module_event_system_cull_events, "w_module_event_cull_event_data", WHISKER_ECS_PROCESS_PHASE_FINAL, WHISKER_ECS_PROCESS_THREADED_AUTO);
+	w_register_system(ecs, wm_event_system_cull_event_components, "w_module_event_cull_events", W_PHASE_FINAL, W_SCHED_THREAD_AUTO);
+	w_register_system(ecs, wm_event_system_cull_events, "w_module_event_cull_event_data", W_PHASE_FINAL, W_SCHED_THREAD_AUTO);
 
 	// disable propagation of changes to ensure that events don't trigger new
 	// events
 	entity_pool->propagate_component_changes = false;
 
 	// set the event components for the prototype entity
-	whisker_ecs_p_set_prototype_named_tag(entity_pool, w_module_event);
-	struct whisker_ecs_module_event_cull_event_component cull = {0};
-	whisker_ecs_p_set_prototype_named_component(entity_pool, w_module_event_cull_data, cull, &cull);
+	w_pool_set_prototype_named_tag(entity_pool, w_module_event);
+	struct wm_event_cull_event_component cull = {0};
+	w_pool_set_prototype_named_component(entity_pool, w_module_event_cull_data, cull, &cull);
 }
 
-static void whisker_ecs_module_event_set_pool(whisker_ecs *ecs, whisker_ecs_pool *entity_pool)
+static void wm_event_set_pool(struct w_ecs *ecs, struct w_pool *entity_pool)
 {
-	struct whisker_ecs_module_event_pool_component pool_component = {
+	struct wm_event_pool_component pool_component = {
 		.pool = entity_pool,
 	};
-	whisker_ecs_set_component(ecs->world, whisker_ecs_module_event_get_pool_entity(ecs->world), sizeof(pool_component), whisker_ecs_module_event_get_module_entity(ecs->world), &pool_component);
+	w_set_component(ecs->world, wm_event_get_pool_entity(ecs->world), sizeof(pool_component), wm_event_get_module_entity(ecs->world), &pool_component);
 }
 
-static whisker_ecs_pool *whisker_ecs_module_event_get_pool(struct whisker_ecs_world *world)
+static struct w_pool *wm_event_get_pool(struct w_world *world)
 {
-	struct whisker_ecs_module_event_pool_component *pool_component = whisker_ecs_get_component(world, whisker_ecs_module_event_get_pool_entity(world), whisker_ecs_module_event_get_module_entity(world));
-	whisker_ecs_pool *pool = pool_component->pool;
+	struct wm_event_pool_component *pool_component = w_get_component(world, wm_event_get_pool_entity(world), wm_event_get_module_entity(world));
+	struct w_pool *pool = pool_component->pool;
 
 	return pool;
 }
 
-static whisker_ecs_entity_id whisker_ecs_module_event_get_pool_entity(struct whisker_ecs_world *world)
+static w_entity_id wm_event_get_pool_entity(struct w_world *world)
 {
-	return whisker_ecs_create_named_entity(world, "w_module_event_pool");
+	return w_create_named_entity(world, "w_module_event_pool");
 }
-static whisker_ecs_entity_id whisker_ecs_module_event_get_module_entity(struct whisker_ecs_world *world)
+static w_entity_id wm_event_get_module_entity(struct w_world *world)
 {
-	return whisker_ecs_create_named_entity(world, "w_module_event");
+	return w_create_named_entity(world, "w_module_event");
 }
 
 
 // create an entity to represent an event
-whisker_ecs_entity_id whisker_ecs_module_event_create_event(struct whisker_ecs_world *world)
+w_entity_id wm_event_create_event(struct w_world *world)
 {
-	whisker_ecs_pool *pool = whisker_ecs_module_event_get_pool(world);
-	whisker_ecs_entity_id ev = whisker_ecs_request_pool_entity(pool);
+	struct w_pool *pool = wm_event_get_pool(world);
+	w_entity_id ev = w_request_pool_entity(pool);
 
 	pool->world->entities->entities[ev.index].destroyed = true;
-	whisker_ecs_create_deferred_entity_action(pool->world, ev, WHISKER_ECS_ENTITY_DEFERRED_ACTION_CREATE);
+	w_create_deferred_entity_action(pool->world, ev, W_ENTITY_DEFERRED_ACTION_CREATE);
 
 	// set the t_event component on the entity
-	whisker_ecs_module_event_set_data_f(world, ev, whisker_ecs_create_named_entity(pool->world, "w_module_event"), sizeof(bool), &(bool){0});
+	wm_event_set_data_f(world, ev, w_create_named_entity(pool->world, "w_module_event"), sizeof(bool), &(bool){0});
 
 	// make the entity unmanaged
-	whisker_ecs_set_entity_unmanaged(pool->world, ev);
+	w_set_entity_unmanaged(pool->world, ev);
 
 	return ev;
 }
 
 // create an event without attached data
-whisker_ecs_entity_id whisker_ecs_module_event_create_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id)
+w_entity_id wm_event_create_f(struct w_world *world, w_entity_id event_component_id)
 {
-	whisker_ecs_entity_id ev = whisker_ecs_module_event_create_event(world);
-	whisker_ecs_module_event_set_data_f(world, ev, event_component_id, 0, &(bool){0});
+	w_entity_id ev = wm_event_create_event(world);
+	wm_event_set_data_f(world, ev, event_component_id, 0, &(bool){0});
 	return ev;
 }
 
 // create an event with attached data
-whisker_ecs_entity_id whisker_ecs_module_event_create_with_data_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id, size_t component_size, void *event_data)
+w_entity_id wm_event_create_with_data_f(struct w_world *world, w_entity_id event_component_id, size_t component_size, void *event_data)
 {
-	whisker_ecs_entity_id ev = whisker_ecs_module_event_create_event(world);
-	whisker_ecs_module_event_set_data_f(world, ev, event_component_id, component_size, event_data);
+	w_entity_id ev = wm_event_create_event(world);
+	wm_event_set_data_f(world, ev, event_component_id, component_size, event_data);
 	return ev;
 }
 
 // create an event entity and immediately fire it
-void whisker_ecs_module_event_create_and_fire_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id)
+void wm_event_create_and_fire_f(struct w_world *world, w_entity_id event_component_id)
 {
-	whisker_ecs_entity_id ev = whisker_ecs_module_event_create_event(world);
-	whisker_ecs_module_event_set_data_f(world, ev, event_component_id, sizeof(bool), &(bool){0});
-	whisker_ecs_module_event_fire(world, ev);
+	w_entity_id ev = wm_event_create_event(world);
+	wm_event_set_data_f(world, ev, event_component_id, sizeof(bool), &(bool){0});
+	wm_event_fire(world, ev);
 }
 
 // set component data on an event entity
-void whisker_ecs_module_event_set_data_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_entity_id, whisker_ecs_entity_id event_component_id, size_t component_size, void *event_data)
+void wm_event_set_data_f(struct w_world *world, w_entity_id event_entity_id, w_entity_id event_component_id, size_t component_size, void *event_data)
 {
-	whisker_ecs_create_deferred_component_action_(world, event_component_id, component_size, event_entity_id, event_data, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, false);
+	w_create_deferred_component_action_(world, event_component_id, component_size, event_entity_id, event_data, W_COMPONENT_DEFERRED_ACTION_SET, false);
 }
 
 // fire off an event entity
-void whisker_ecs_module_event_fire(struct whisker_ecs_world *world, whisker_ecs_entity_id event_entity_id)
+void wm_event_fire(struct w_world *world, w_entity_id event_entity_id)
 {
 	// firing an event is just making it managed again
-	whisker_ecs_set_entity_managed(world, event_entity_id);
+	w_set_entity_managed(world, event_entity_id);
 }
 
 // fire an event, attaching it instead to the given entity ID
-void whisker_ecs_module_event_fire_on_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id, whisker_ecs_entity_id fire_on_entity_id)
+void wm_event_fire_on_f(struct w_world *world, w_entity_id event_component_id, w_entity_id fire_on_entity_id)
 {
 	// add the event to the provided entity ID
-	whisker_ecs_module_event_set_fire_on_data_f(world, event_component_id, sizeof(bool), &(bool){0}, fire_on_entity_id);
+	wm_event_set_fire_on_data_f(world, event_component_id, sizeof(bool), &(bool){0}, fire_on_entity_id);
 }
 
 // fire an event, attaching it with data to the given entity ID
-void whisker_ecs_module_event_fire_on_with_data_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id, size_t component_size, void *event_data, whisker_ecs_entity_id fire_on_entity_id)
+void wm_event_fire_on_with_data_f(struct w_world *world, w_entity_id event_component_id, size_t component_size, void *event_data, w_entity_id fire_on_entity_id)
 {
-	whisker_ecs_module_event_set_fire_on_data_f(world, event_component_id, component_size, event_data, fire_on_entity_id);
+	wm_event_set_fire_on_data_f(world, event_component_id, component_size, event_data, fire_on_entity_id);
 }
 
 // set data on an entity, will be removed along with the event
-void whisker_ecs_module_event_set_fire_on_data_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_component_id, size_t component_size, void *event_data, whisker_ecs_entity_id fire_on_entity_id)
+void wm_event_set_fire_on_data_f(struct w_world *world, w_entity_id event_component_id, size_t component_size, void *event_data, w_entity_id fire_on_entity_id)
 {
-	whisker_ecs_module_event_set_data_f(world, fire_on_entity_id, event_component_id, component_size, event_data);
+	wm_event_set_data_f(world, fire_on_entity_id, event_component_id, component_size, event_data);
 
 	// make sure the event data is culled for this event
-	struct whisker_ecs_module_event_cull_event_component cull_component = {
+	struct wm_event_cull_event_component cull_component = {
 		.entity_id = fire_on_entity_id,
 		.component_id = event_component_id,
 	};
 
 	// create a data cull event for this entity to remove the fire_on data
-	whisker_ecs_entity_id cull_ev = whisker_ecs_module_event_create_with_data_f(world, whisker_ecs_create_named_entity(world, "w_module_event_cull_data"), sizeof(cull_component), &cull_component);
-	whisker_ecs_module_event_fire(world, cull_ev);
+	w_entity_id cull_ev = wm_event_create_with_data_f(world, w_create_named_entity(world, "w_module_event_cull_data"), sizeof(cull_component), &cull_component);
+	wm_event_fire(world, cull_ev);
 }
 
 /*****************
@@ -148,16 +148,16 @@ void whisker_ecs_module_event_set_fire_on_data_f(struct whisker_ecs_world *world
 // system interested in t_event entities
 // the system should be added to the last executed phase to ensure that all
 // event entities are destroyed and not picked up twice
-void whisker_ecs_module_event_system_cull_events(whisker_ecs_system_context *context)
+void wm_event_system_cull_events(struct w_sys_context *context)
 {
-	whisker_ecs_system_iterator *itor = whisker_ecs_query(context, 0, STR(w_module_event), "", "");
-	while (whisker_ecs_iterate(itor)) 
+	struct w_iterator *itor = w_query(context, 0, STR(w_module_event), "", "");
+	while (w_iterate(itor)) 
 	{
 		/* debug_log(DEBUG, ecs:system_cull_events, "culling event entity %zu", itor->entity_id.id); */
 
-		whisker_ecs_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+		w_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, W_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 
-		whisker_ecs_destroy_entity_deferred(context->world, itor->entity_id);
+		w_destroy_entity_deferred(context->world, itor->entity_id);
 	}
 }
 
@@ -166,20 +166,20 @@ void whisker_ecs_module_event_system_cull_events(whisker_ecs_system_context *con
 // each entity is a request to issue a deferred removal of component data.
 // this is because, in the case of fire_on, we don't have a t_event component
 // and we don't want to cull the actual entity.
-void whisker_ecs_module_event_system_cull_event_components(whisker_ecs_system_context *context)
+void wm_event_system_cull_event_components(struct w_sys_context *context)
 {
-	whisker_ecs_system_iterator *itor = whisker_ecs_query(context, 0, STR(w_module_event_cull_data), "", "");
-	while (whisker_ecs_iterate(itor)) 
+	struct w_iterator *itor = w_query(context, 0, STR(w_module_event_cull_data), "", "");
+	while (w_iterate(itor)) 
 	{
 		// issue the deferred component removal request
-		struct whisker_ecs_module_event_cull_event_component *cull = whisker_ecs_itor_get(itor, 0);
+		struct wm_event_cull_event_component *cull = w_itor_get(itor, 0);
 
 		if (cull->component_id.id > 0 && cull->entity_id.id > 0)
 		{
-			/* debug_log(DEBUG, ecs:system_cull_events, "event: culling fire_on component %s (%zu) from entity %zu", whisker_ecs_e(context->world->entities, cull->component_id)->name, cull->component_id.id, cull->entity_id.id); */
+			/* debug_log(DEBUG, ecs:system_cull_events, "event: culling fire_on component %s (%zu) from entity %zu", w_get_entity(context->world->entities, cull->component_id)->name, cull->component_id.id, cull->entity_id.id); */
 
-			whisker_ecs_create_deferred_component_action_(context->world, cull->component_id, 0, cull->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+			w_create_deferred_component_action_(context->world, cull->component_id, 0, cull->entity_id, NULL, W_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 		}
-		whisker_ecs_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+		w_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, W_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 	}
 }

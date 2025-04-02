@@ -11,26 +11,26 @@
 /*************************
 *  iterator functions   *
 *************************/
-static bool itor_is_iteration_active(whisker_ecs_system_iterator *itor);
-static void itor_increment_cursor(whisker_ecs_system_iterator *itor);
-static void itor_set_master_components(whisker_ecs_system_iterator *itor);
-static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor);
-static void itor_update_master_index(whisker_ecs_system_iterator *itor);
+static bool itor_is_iteration_active(struct w_iterator *itor);
+static void itor_increment_cursor(struct w_iterator *itor);
+static void itor_set_master_components(struct w_iterator *itor);
+static int itor_find_and_set_cursor_components(struct w_iterator *itor);
+static void itor_update_master_index(struct w_iterator *itor);
 
 // create and init an iterator instance
-whisker_ecs_system_iterator *whisker_ecs_create_iterator()
+struct w_iterator *w_create_iterator()
 {
-	whisker_ecs_system_iterator *itor_new = whisker_mem_xcalloc_t(1, *itor_new);
+	struct w_iterator *itor_new = w_mem_xcalloc_t(1, *itor_new);
 
 	// create sparse sets for component pointers
-	whisker_arr_init_t(itor_new->component_arrays, 1);
-	whisker_arr_init_t(itor_new->component_arrays_cursors, 1);
+	w_array_init_t(itor_new->component_arrays, 1);
+	w_array_init_t(itor_new->component_arrays_cursors, 1);
 
 	return itor_new;
 }
 
 // free instance of iterator and all data
-void whisker_ecs_free_iterator(whisker_ecs_system_iterator *itor)
+void w_free_iterator(struct w_iterator *itor)
 {
 	free_null(itor->component_ids_rw);
 	free_null(itor->component_ids_w);
@@ -41,22 +41,22 @@ void whisker_ecs_free_iterator(whisker_ecs_system_iterator *itor)
 
 // get an iterator instance with the given itor_index
 // note: this will init the iterator if one does not exist at the index
-whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
+struct w_iterator *w_query(struct w_sys_context *context, size_t itor_index, char *read_components, char *write_components, char *optional_components)
 {
-	whisker_ecs_system_iterator *itor;
+	struct w_iterator *itor;
 
 	// check if iterator index is set
-	if (!whisker_ss_contains(context->iterators, itor_index))
+	if (!w_sparse_set_contains(context->iterators, itor_index))
 	{
-		itor = whisker_ecs_create_iterator();
-		whisker_ss_set(context->iterators, itor_index, itor);
+		itor = w_create_iterator();
+		w_sparse_set_set(context->iterators, itor_index, itor);
 
 		free(itor);
-		itor = whisker_ss_get(context->iterators, itor_index);
-		whisker_ecs_init_iterator(context, itor, read_components, write_components, optional_components);
+		itor = w_sparse_set_get(context->iterators, itor_index);
+		w_init_iterator(context, itor, read_components, write_components, optional_components);
 	}
 
-	itor = whisker_ss_get(context->iterators, itor_index);
+	itor = w_sparse_set_get(context->iterators, itor_index);
 	if (itor == NULL)
 	{
 		// TODO: panic here
@@ -68,15 +68,15 @@ whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *conte
 	itor->cursor = UINT64_MAX;
 	itor->cursor_max = 0;
 	itor->count = 0;
-	itor->entity_id = whisker_ecs_entity_id_from_raw(UINT64_MAX);
+	itor->entity_id = w_entity_id_from_raw(UINT64_MAX);
 
 	// find the master iterator by finding the smallest set
 	for (int i = 0; i < itor->component_ids_rw_length; ++i)
 	{
-		whisker_sparse_set *component_array;
+		w_sparse_set *component_array;
 		if (itor->component_arrays[i] == NULL)
 		{
-			component_array = whisker_ecs_get_component_array(context->world, itor->component_ids_rw[i]);
+			component_array = w_get_component_array(context->world, itor->component_ids_rw[i]);
 			if (component_array == NULL)
 			{
 				itor->master_index = UINT64_MAX;
@@ -103,11 +103,11 @@ whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *conte
 	// try to cache optional components when they are NULL
 	for (int i = 0; i < itor->component_ids_opt_length; ++i)
 	{
-		whisker_sparse_set *component_array;
+		w_sparse_set *component_array;
 		size_t array_offset = itor->component_ids_rw_length + i;
 		if (itor->component_arrays[array_offset] == NULL)
 		{
-			component_array = whisker_ecs_get_component_array(context->world, itor->component_ids_opt[i]);
+			component_array = w_get_component_array(context->world, itor->component_ids_opt[i]);
 			if (component_array == NULL)
 			{
 				continue;
@@ -150,13 +150,13 @@ whisker_ecs_system_iterator *whisker_ecs_query(whisker_ecs_system_context *conte
 }
 
 // init the provided iterator and cache the given components
-void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_system_iterator *itor, char *read_components, char *write_components, char *optional_components)
+void w_init_iterator(struct w_sys_context *context, struct w_iterator *itor, char *read_components, char *write_components, char *optional_components)
 {
 	itor->world = context->world;
 
 	// convert read and write component names to component sparse sets
 	char *combined_components;
-	combined_components = whisker_mem_xmalloc(strlen(read_components) + strlen(write_components) + 2);
+	combined_components = w_mem_xmalloc(strlen(read_components) + strlen(write_components) + 2);
 	if (combined_components == NULL)
 	{
 		return;
@@ -175,7 +175,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// rw components include read and write component IDs
 	if (itor->component_ids_rw == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_batch_create_named_entities(context->world, combined_components);
+		struct w_entity_id_arr *e_arr = w_batch_create_named_entities(context->world, combined_components);
 		itor->component_ids_rw = e_arr->arr;
 		itor->component_ids_rw_length = e_arr->arr_length;
 		itor->component_ids_rw_size = e_arr->arr_size;
@@ -188,8 +188,8 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 			return;
 		}
 
-		whisker_arr_ensure_alloc(itor->component_arrays, itor->component_ids_rw_length);
-		whisker_arr_ensure_alloc(itor->component_arrays_cursors, itor->component_ids_rw_length);
+		w_array_ensure_alloc(itor->component_arrays, itor->component_ids_rw_length);
+		w_array_ensure_alloc(itor->component_arrays_cursors, itor->component_ids_rw_length);
 	}
 	free(combined_components);
 
@@ -197,7 +197,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// note: these do not resize the main component arrays
 	if (itor->component_ids_w == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_batch_create_named_entities(context->world, write_components);
+		struct w_entity_id_arr *e_arr = w_batch_create_named_entities(context->world, write_components);
 		itor->component_ids_w = e_arr->arr;
 		itor->component_ids_w_length = e_arr->arr_length;
 		itor->component_ids_w_size = e_arr->arr_size;
@@ -214,7 +214,7 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 	// note: these belong at the end of the component arrays
 	if (itor->component_ids_opt == NULL)
 	{
-		struct whisker_ecs_entity_id_array *e_arr = whisker_ecs_batch_create_named_entities(context->world, optional_components);
+		struct w_entity_id_arr *e_arr = w_batch_create_named_entities(context->world, optional_components);
 		itor->component_ids_opt = e_arr->arr;
 		itor->component_ids_opt_length = e_arr->arr_length;
 		itor->component_ids_opt_size = e_arr->arr_size;
@@ -225,15 +225,15 @@ void whisker_ecs_init_iterator(whisker_ecs_system_context *context, whisker_ecs_
 			// TODO: panic here
 			return;
 		}
-		whisker_arr_ensure_alloc(itor->component_arrays, (itor->component_ids_rw_length + itor->component_ids_opt_length));
-		whisker_arr_ensure_alloc(itor->component_arrays_cursors, (itor->component_ids_rw_length + itor->component_ids_opt_length));
+		w_array_ensure_alloc(itor->component_arrays, (itor->component_ids_rw_length + itor->component_ids_opt_length));
+		w_array_ensure_alloc(itor->component_arrays_cursors, (itor->component_ids_rw_length + itor->component_ids_opt_length));
 	}
 }
 
 
 // step through an iterator incrementing the cursor
 // note: returns false to indicate the iteration has reached the end
-bool whisker_ecs_iterate(whisker_ecs_system_iterator *itor) 
+bool w_iterate(struct w_iterator *itor) 
 {
     if (!itor_is_iteration_active(itor)) { return false; }
 
@@ -246,24 +246,24 @@ bool whisker_ecs_iterate(whisker_ecs_system_iterator *itor)
     return cursor_state == 0;
 }
 
-static bool itor_is_iteration_active(whisker_ecs_system_iterator *itor) {
+static bool itor_is_iteration_active(struct w_iterator *itor) {
     return (itor->master_index != UINT64_MAX && itor->count > 0);
 }
 
-static void itor_increment_cursor(whisker_ecs_system_iterator *itor) {
+static void itor_increment_cursor(struct w_iterator *itor) {
     itor->cursor++;
 }
 
-static void itor_set_master_components(whisker_ecs_system_iterator *itor) {
+static void itor_set_master_components(struct w_iterator *itor) {
 	while (itor->cursor < itor->cursor_max) 
 	{
-    	whisker_sparse_set *master_set = itor->component_arrays[itor->master_index];
+    	w_sparse_set *master_set = itor->component_arrays[itor->master_index];
     	itor->entity_id.id = master_set->sparse_index[itor->cursor];
 
 		// skip entities marked as destroyed
 		// note: if an entity is marked destroyed but still has components, then it's
 		// an entity with destroyed state managed externally
-        if (whisker_ecs_get_entity(itor->world, itor->entity_id)->unmanaged)
+        if (w_get_entity(itor->world, itor->entity_id)->unmanaged)
         {
         	itor_increment_cursor(itor);
         	continue;
@@ -274,12 +274,12 @@ static void itor_set_master_components(whisker_ecs_system_iterator *itor) {
 
 }
 
-static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor) {
+static int itor_find_and_set_cursor_components(struct w_iterator *itor) {
     int cursor_state = 0;
     size_t rw_length = itor->component_ids_rw_length;
     for (int ci = 0; ci < rw_length; ++ci) {
-        whisker_sparse_set *set = itor->component_arrays[ci];
-        whisker_ecs_entity_id_raw cursor_entity = set->sparse_index[itor->cursor];
+        w_sparse_set *set = itor->component_arrays[ci];
+        w_entity_id_raw cursor_entity = set->sparse_index[itor->cursor];
 
 
         if (cursor_entity == itor->entity_id.id) {
@@ -312,7 +312,7 @@ static int itor_find_and_set_cursor_components(whisker_ecs_system_iterator *itor
     return cursor_state;
 }
 
-static void itor_update_master_index(whisker_ecs_system_iterator *itor) {
+static void itor_update_master_index(struct w_iterator *itor) {
     if (itor->cursor + 1 >= itor->cursor_max) {
         itor->master_index = UINT64_MAX;
     }

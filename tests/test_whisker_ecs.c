@@ -16,14 +16,14 @@
 
 START_TEST(test_whisker_ecs_create)
 {
-	whisker_ecs *ecs = whisker_ecs_create();
+	w_ecs *ecs = w_ecs_create();
 
 	// verify the lengths of some of the struct's arrays
 	ck_assert_int_eq(0, ecs->world->components->components_length);
 	// note: includes dummy system now
 	ck_assert_int_eq(1, ecs->world->systems->systems_length);
 	
-	whisker_ecs_free(ecs);
+	w_ecs_free(ecs);
 }
 END_TEST
 

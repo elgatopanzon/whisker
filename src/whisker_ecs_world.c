@@ -9,21 +9,21 @@
 #include "whisker_ecs.h"
 
 // allocate an ECS world object
-struct whisker_ecs_world *whisker_ecs_world_create()
+struct w_world *w_world_create()
 {
-	return whisker_mem_xcalloc_t(1, struct whisker_ecs_world);
+	return w_mem_xcalloc_t(1, struct w_world);
 }
 
 // allocate and init an ECS world object
-struct whisker_ecs_world *whisker_ecs_world_create_and_init(whisker_ecs_entities *entities, whisker_ecs_components *components, whisker_ecs_systems *systems)
+struct w_world *w_world_create_and_init(struct w_entities *entities, struct w_components *components, struct w_systems *systems)
 {
-	struct whisker_ecs_world *world = whisker_ecs_world_create();
-	whisker_ecs_world_init(world, entities, components, systems);
+	struct w_world *world = w_world_create();
+	w_world_init(world, entities, components, systems);
 	return world;
 }
 
 // init an ECS world object
-void whisker_ecs_world_init(struct whisker_ecs_world *world, whisker_ecs_entities *entities, whisker_ecs_components *components, whisker_ecs_systems *systems)
+void w_world_init(struct w_world *world, struct w_entities *entities, struct w_components *components, struct w_systems *systems)
 {
 	world->entities = entities;
 	world->components = components;

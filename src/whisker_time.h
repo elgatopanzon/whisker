@@ -76,16 +76,16 @@ typedef struct whisker_time_step
 	// running stats
 	uint64_t tick_count;
 	uint64_t update_tick_count;
-} whisker_time_step;
+} w_time_step;
 
 // time functions
-uint64_t whisker_time_get_precise_time();
+uint64_t w_time_precise();
 
 // time step functions
-whisker_time_step whisker_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled);
-int whisker_time_step_step_get_update_count(whisker_time_step *time_step);
-void whisker_time_step_do_step(whisker_time_step *time_step);
-void whisker_time_step_set_update_rate(whisker_time_step *time_step, double update_rate_sec);
+w_time_step w_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled);
+int w_time_step_advance(w_time_step *time_step);
+void w_time_step_do_step_(w_time_step *time_step);
+void w_time_step_set_rate(w_time_step *time_step, double update_rate_sec);
 
 #endif /* WHISKER_TIME_H */
 

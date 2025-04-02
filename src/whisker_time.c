@@ -25,7 +25,7 @@
 #endif
 
 // get precise time in nanoseconds
-uint64_t whisker_time_get_precise_time()
+uint64_t w_time_precise()
 {
     struct timespec time;
     clock_gettime(CLOCK_MONOTONIC, &time);
@@ -35,7 +35,7 @@ uint64_t whisker_time_get_precise_time()
 /*************************
 *  time step functions  *
 *************************/
-void whisker_debug_print_time_step(whisker_time_step *time_step)
+void w_debug_print_time_step(w_time_step *time_step)
 {
 	debug_printf("debug: time_step: \n");
 	debug_printf("debug: time_step.update_rate_sec: %f\n", time_step->update_rate_sec);
@@ -63,9 +63,9 @@ void whisker_debug_print_time_step(whisker_time_step *time_step)
 
 // create and init a whisker_time_step struct to be used with the time step
 // should update function
-whisker_time_step whisker_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled)
+w_time_step w_time_step_create(double update_rate_sec, int update_count_max, bool uncapped, bool delta_clamp_enabled, bool delta_snap_enabled, bool delta_average_enabled, bool delta_accumulation_enabled, bool delta_accumulation_clamp_enabled)
 {
-	whisker_time_step time_step = {
+	w_time_step time_step = {
 		.delta_clamp_enabled = delta_clamp_enabled,
 		.delta_snap_enabled = delta_snap_enabled,
 		.delta_average_enabled = delta_average_enabled,
@@ -83,19 +83,19 @@ whisker_time_step whisker_time_step_create(double update_rate_sec, int update_co
 
 	time_step.delta_snap_max_error = time_step.time_resolution * WHISKER_TIME_STEP_SNAP_ERROR_MULTIPLIER;
 
-	whisker_time_step_set_update_rate(&time_step, update_rate_sec);
+	w_time_step_set_rate(&time_step, update_rate_sec);
 
 	time_step.update_time_current = 0;
 	time_step.delta_accumulation = 0;
-	time_step.update_time_prev = whisker_time_get_precise_time();
+	time_step.update_time_prev = w_time_precise();
 
 	return time_step;
 }
 
 // step the time step and return the desired number of updates to do
-int whisker_time_step_step_get_update_count(whisker_time_step *time_step)
+int w_time_step_advance(w_time_step *time_step)
 {
-	whisker_time_step_do_step(time_step);
+	w_time_step_do_step_(time_step);
 	/* whisker_debug_print_time_step(time_step); */
 
 	// always return update in uncapped and override delta_time to variable time
@@ -122,10 +122,10 @@ int whisker_time_step_step_get_update_count(whisker_time_step *time_step)
 }
 
 // advance time step on whisker_time_step struct
-void whisker_time_step_do_step(whisker_time_step *time_step)
+void w_time_step_do_step_(w_time_step *time_step)
 {
 	// update delta time
-	time_step->update_time_current = whisker_time_get_precise_time();
+	time_step->update_time_current = w_time_precise();
 	time_step->delta_time_real = time_step->update_time_current - time_step->update_time_prev;
 	time_step->update_time_prev = time_step->update_time_current;
 
@@ -197,7 +197,7 @@ void whisker_time_step_do_step(whisker_time_step *time_step)
 }
 
 // set the desired update rate in seconds
-void whisker_time_step_set_update_rate(whisker_time_step *time_step, double update_rate_sec)
+void w_time_step_set_rate(w_time_step *time_step, double update_rate_sec)
 {
 	time_step->update_rate_sec = update_rate_sec;
 
