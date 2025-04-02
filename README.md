@@ -6,7 +6,7 @@ Game development and ECS library written in C.
 
 Make sure that you have [CMake](http://www.cmake.org/) and a C compiler installed.
 
-Then open a terminal, go to the source directory and type the following commands:
+Then open a terminal, then from the project directory and type the following commands:
 
     $ mkdir build
     $ cd build
@@ -18,7 +18,7 @@ Then open a terminal, go to the source directory and type the following commands
 	
 ## Running examples
 
-An example of Asteroids is included named `asteroids-example`.
+An example of Asteroids is included named `asteroids-example-v2`, and a deprecated one using the v1 ECS.
 
 ## License
 
