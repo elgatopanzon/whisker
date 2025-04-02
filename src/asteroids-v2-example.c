@@ -13,6 +13,7 @@
 #include "whisker_ecs.h"
 #include "whisker_ecs_module_event.h"
 #include "whisker_ecs_module_component_change_events.h"
+#include "whisker_ecs_module_resource.h"
 
 const int asteroids_screen_width = 800;
 const int asteroids_screen_height = 800;
@@ -164,6 +165,12 @@ void asteroids_init_ecs()
 	asteroids_bullets_pool = w_create_and_init_entity_pool(asteroids_ecs->world, 8, 4);
 	asteroids_event_pool = w_create_and_init_entity_pool(asteroids_ecs->world, 128, 64);
 
+	// create ECS resources
+	wm_resource_create(asteroids_ecs->world, "asteroids_asteroids_pool", asteroids_asteroids_pool);
+	wm_resource_create(asteroids_ecs->world, "asteroids_collisions_pool", asteroids_collisions_pool);
+	wm_resource_create(asteroids_ecs->world, "asteroids_bullets_pool", asteroids_bullets_pool);
+	wm_resource_create(asteroids_ecs->world, "asteroids_event_pool", asteroids_event_pool);
+
 	// custom process phase list
 	w_array_declare(char *, process_phases);
 	w_array_init_t(process_phases, 15);
@@ -282,7 +289,8 @@ void asteroids_system_asteroid_spawn(struct w_sys_context *context)
 			ASTEROIDS_ASTEROID_SIZE size = asteroid_sizes[size_i];
 
 			// create an entity id
-			w_entity_id e = w_request_pool_entity(asteroids_asteroids_pool);
+			struct w_pool *pool = wm_resource(context->world, "asteroids_asteroids_pool");
+			w_entity_id e = w_request_pool_entity(pool);
 
 			// set the entity component data
 			float rotation = (float)(rand() % 360);
@@ -297,7 +305,7 @@ void asteroids_system_asteroid_spawn(struct w_sys_context *context)
     		w_set_tag(context->world, itor->component_ids_opt[7], e);
     		w_set_tag(context->world, itor->component_ids_opt[8], e);
 
-			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f (pool size %zu)", e.index, size, position.x, position.y, asteroids_asteroids_pool->entity_pool_length);
+			debug_log(DEBUG, spawn_asteroid, "entity %d size %d at %fx%f (pool size %zu)", e.index, size, position.x, position.y, pool->entity_pool_length);
 		}
 	}
 }
@@ -505,7 +513,8 @@ void asteroids_system_collision(struct w_sys_context *context)
     			*pos_2d = Vector2Add(*pos_2d, correction);
     			*colliding_position = Vector2Subtract(*colliding_position, correction);
 
-    			w_entity_id collision_e = w_request_pool_entity(asteroids_collisions_pool);
+				struct w_pool *pool = wm_resource(context->world, "asteroids_collisions_pool");
+				w_entity_id collision_e = w_request_pool_entity(pool);
 
     			asteroids_component_collision col = {};
     			col.entity_a = entities[i].id;
