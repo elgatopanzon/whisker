@@ -102,7 +102,7 @@ void whisker_ecs_module_event_create_and_fire_f(struct whisker_ecs_world *world,
 // set component data on an event entity
 void whisker_ecs_module_event_set_data_f(struct whisker_ecs_world *world, whisker_ecs_entity_id event_entity_id, whisker_ecs_entity_id event_component_id, size_t component_size, void *event_data)
 {
-	whisker_ecs_create_deferred_component_action(world, event_component_id, component_size, event_entity_id, event_data, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, false);
+	whisker_ecs_create_deferred_component_action_(world, event_component_id, component_size, event_entity_id, event_data, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_SET, false);
 }
 
 // fire off an event entity
@@ -155,7 +155,7 @@ void whisker_ecs_module_event_system_cull_events(whisker_ecs_system_context *con
 	{
 		/* debug_log(DEBUG, ecs:system_cull_events, "culling event entity %zu", itor->entity_id.id); */
 
-		whisker_ecs_create_deferred_component_action(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+		whisker_ecs_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 
 		whisker_ecs_destroy_entity_deferred(context->world, itor->entity_id);
 	}
@@ -178,8 +178,8 @@ void whisker_ecs_module_event_system_cull_event_components(whisker_ecs_system_co
 		{
 			/* debug_log(DEBUG, ecs:system_cull_events, "event: culling fire_on component %s (%zu) from entity %zu", whisker_ecs_e(context->world->entities, cull->component_id)->name, cull->component_id.id, cull->entity_id.id); */
 
-			whisker_ecs_create_deferred_component_action(context->world, cull->component_id, 0, cull->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+			whisker_ecs_create_deferred_component_action_(context->world, cull->component_id, 0, cull->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 		}
-		whisker_ecs_create_deferred_component_action(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
+		whisker_ecs_create_deferred_component_action_(context->world, itor->component_ids_rw[0], 0, itor->entity_id, NULL, WHISKER_ECS_COMPONENT_DEFERRED_ACTION_REMOVE, false);
 	}
 }

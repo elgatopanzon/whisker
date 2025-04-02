@@ -42,19 +42,19 @@ START_TEST(test_whisker_ecs_system_get_iterator_and_iterate)
 	whisker_ecs_system *sys = whisker_ecs_s_register_system(s, c, sy);
 
 	// create some entities with component names
-	whisker_ecs_e_create_named(e, "comp1");
-	whisker_ecs_e_create_named(e, "comp2");
-	whisker_ecs_e_create_named(e, "comp3");
-	whisker_ecs_e_create_named(e, "comp4");
-	whisker_ecs_e_create_named(e, "comp5");
+	whisker_ecs_entity_api_create_named_(e, "comp1");
+	whisker_ecs_entity_api_create_named_(e, "comp2");
+	whisker_ecs_entity_api_create_named_(e, "comp3");
+	whisker_ecs_entity_api_create_named_(e, "comp4");
+	whisker_ecs_entity_api_create_named_(e, "comp5");
 
 	// create some components
-	whisker_ecs_entity_id comp1 = whisker_ecs_e_create_named(e, "comp1");
-	whisker_ecs_entity_id comp2 = whisker_ecs_e_create_named(e, "comp2");
-	whisker_ecs_entity_id comp3 = whisker_ecs_e_create_named(e, "comp3");
-	whisker_ecs_entity_id comp4 = whisker_ecs_e_create_named(e, "comp4");
-	whisker_ecs_entity_id comp5 = whisker_ecs_e_create_named(e, "comp5");
-	whisker_ecs_entity_id comp6 = whisker_ecs_e_create_named(e, "comp6");
+	whisker_ecs_entity_id comp1 = whisker_ecs_entity_api_create_named_(e, "comp1");
+	whisker_ecs_entity_id comp2 = whisker_ecs_entity_api_create_named_(e, "comp2");
+	whisker_ecs_entity_id comp3 = whisker_ecs_entity_api_create_named_(e, "comp3");
+	whisker_ecs_entity_id comp4 = whisker_ecs_entity_api_create_named_(e, "comp4");
+	whisker_ecs_entity_id comp5 = whisker_ecs_entity_api_create_named_(e, "comp5");
+	whisker_ecs_entity_id comp6 = whisker_ecs_entity_api_create_named_(e, "comp6");
 
 	int val1 = 4345;
 	whisker_ecs_set_component_(c, comp2, sizeof(int), whisker_ecs_create_id(12), &val1);
