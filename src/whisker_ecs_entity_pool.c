@@ -70,18 +70,16 @@ void w_set_entity_pool_component_f(struct w_pool *pool, w_entity_id component_id
 		// ensure space for component IDs
 		size_t component_idx = atomic_fetch_add(&pool->component_ids_length, 1);
 		
+		pthread_mutex_lock(&pool->entity_pool_mutex);
 		if((component_idx + 1) * sizeof(*pool->component_ids) > pool->component_ids_size)
 		{
-			pthread_mutex_lock(&pool->entity_pool_mutex);
-
 			w_array_ensure_alloc_block_size(
 				pool->component_ids, 
 				(component_idx + 1),
 				W_POOL_REALLOC_BLOCK_SIZE
 			);
-
-			pthread_mutex_unlock(&pool->entity_pool_mutex);
 		}
+		pthread_mutex_unlock(&pool->entity_pool_mutex);
 
 		pool->component_ids[component_idx] = component_id;
 		w_sparse_set_set(pool->component_ids_set, component_id.index, &component_id);
@@ -255,19 +253,19 @@ void w_add_pool_entity_(struct w_pool *pool, w_entity_id entity_id)
 	// grow array if required using lock
 	size_t entity_idx = atomic_fetch_add(&pool->entity_pool_length, 1);
 
+	pthread_mutex_lock(&pool->entity_pool_mutex);
+
 	if((entity_idx + 1) * sizeof(*pool->entity_pool) > pool->entity_pool_size)
 	{
-		pthread_mutex_lock(&pool->entity_pool_mutex);
-
 		w_array_ensure_alloc_block_size(
 			pool->entity_pool, 
 			(entity_idx + 1),
 			W_POOL_REALLOC_BLOCK_SIZE
 		);
-
-		pthread_mutex_unlock(&pool->entity_pool_mutex);
 	}
 
 	pool->entity_pool[entity_idx] = entity_id;
 	pool->world->entities->entities[entity_id.index].id.version++;
+
+	pthread_mutex_unlock(&pool->entity_pool_mutex);
 }

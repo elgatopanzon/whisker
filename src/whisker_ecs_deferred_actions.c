@@ -169,51 +169,49 @@ void w_create_deferred_component_action_(struct w_world *world, w_entity_id comp
 	// increment and fetch a stable deferred action index
 	size_t deferred_action_idx = atomic_fetch_add(&world->components->deferred_actions_length, 1);
 
+	pthread_mutex_lock(&world->components->deferred_actions_mutex);
+
 	if((deferred_action_idx + 1) * sizeof(*world->components->deferred_actions) > world->components->deferred_actions_size)
 	{
-		pthread_mutex_lock(&world->components->deferred_actions_mutex);
-
 		w_array_ensure_alloc_block_size(
 			world->components->deferred_actions, 
 			(deferred_action_idx + 1),
 			W_COMPONENT_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
 		);
-
-		pthread_mutex_unlock(&world->components->deferred_actions_mutex);
 	}
 
-	world->components->deferred_actions[deferred_action_idx].component_id = component_id;
-	world->components->deferred_actions[deferred_action_idx].entity_id = entity_id;
-	world->components->deferred_actions[deferred_action_idx].data_size = component_size;
-	world->components->deferred_actions[deferred_action_idx].data_offset = 0;
-	world->components->deferred_actions[deferred_action_idx].action = action;
-	world->components->deferred_actions[deferred_action_idx].propagate = propagate;
+	world->components->deferred_actions[deferred_action_idx] = (struct w_component_deferred_action) {
+		.component_id = component_id,
+		.entity_id = entity_id,
+		.data_size = component_size,
+		.data_offset = 0,
+		.action = action,
+		.propagate = propagate,
+	};
+
+	pthread_mutex_unlock(&world->components->deferred_actions_mutex);
 
 	if (component_size > 0)
 	{
 		size_t current_size_pos = atomic_fetch_add(&world->components->deferred_actions_data_length, component_size);
 
 		// reallocate the deferred actions data array if required
+		pthread_mutex_lock(&world->components->deferred_actions_mutex);
+
 		if(current_size_pos + component_size > world->components->deferred_actions_data_size)
 		{
-			pthread_mutex_lock(&world->components->deferred_actions_mutex);
-
-			// double check to protect from stomping
-			if(current_size_pos + component_size > world->components->deferred_actions_data_size)
-			{
-				world->components->deferred_actions_data = w_mem_xrecalloc(
-					world->components->deferred_actions_data,
-					world->components->deferred_actions_data_size,
-					((current_size_pos + component_size) + W_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE)
-				);
-				world->components->deferred_actions_data_size = (current_size_pos + component_size) + W_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
-			}
-
-			pthread_mutex_unlock(&world->components->deferred_actions_mutex);
+			world->components->deferred_actions_data = w_mem_xrecalloc(
+				world->components->deferred_actions_data,
+				world->components->deferred_actions_data_size,
+				((current_size_pos + component_size) + W_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE)
+			);
+			world->components->deferred_actions_data_size = (current_size_pos + component_size) + W_COMPONENT_DEFERRED_ACTION_DATA_REALLOC_BLOCK_SIZE;
 		}
 
 		void *next_data_pointer = (char*)world->components->deferred_actions_data + current_size_pos;
 		memcpy(next_data_pointer, value, component_size);
 		world->components->deferred_actions[deferred_action_idx].data_offset = current_size_pos;
+
+		pthread_mutex_unlock(&world->components->deferred_actions_mutex);
 	}
 }

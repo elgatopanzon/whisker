@@ -153,20 +153,19 @@ void w_create_deferred_entity_action(struct w_world *world, w_entity_id entity_i
 
 	size_t deferred_action_idx = atomic_fetch_add(&world->entities->deferred_actions_length, 1);
 
+	pthread_mutex_lock(&world->entities->deferred_actions_mutex);
 	if((deferred_action_idx + 1) * sizeof(*world->entities->deferred_actions) > world->entities->deferred_actions_size)
 	{
-		pthread_mutex_lock(&world->entities->deferred_actions_mutex);
-
 		w_array_ensure_alloc_block_size(
 			world->entities->deferred_actions, 
 			(deferred_action_idx + 1),
 			W_ENTITY_DEFERRED_ACTION_REALLOC_BLOCK_SIZE
 		);
-
-		pthread_mutex_unlock(&world->entities->deferred_actions_mutex);
 	}
 	
 	world->entities->deferred_actions[deferred_action_idx] = deferred_action;
+
+	pthread_mutex_unlock(&world->entities->deferred_actions_mutex);
 }
 
 
