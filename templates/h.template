@@ -1,0 +1,15 @@
+/**
+ * @author      : {{NAME}} ({{EMAIL}})
+ * @file        : {{FILE}}
+ * @created     : {{TIMESTAMP}}
+ * @description : {{CURSOR}}
+ */
+
+#include "whisker_std.h"
+
+#ifndef {{MACRO_GUARD}}
+#define {{MACRO_GUARD}}
+
+{{CURSOR}}
+
+#endif /* {{MACRO_GUARD}} */
