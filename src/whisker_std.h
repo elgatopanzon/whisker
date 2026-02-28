@@ -52,10 +52,12 @@
       #include <stdatomic.h>
     #endif
     #include <stdnoreturn.h>
-    #ifndef __STDC_NO_THREADS__
-      #include <threads.h>
+	#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && defined(__has_include)
+        #if __has_include(<threads.h>) && !defined(__STDC_NO_THREADS__)                     
+        	#include <threads.h>                                                              
+        #endif                                                                              
     #endif
-    #include <uchar.h>
+  #include <uchar.h>
   #endif
 
   #if __STDC_VERSION__ >= 201710
