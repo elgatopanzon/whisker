@@ -360,4 +360,108 @@ UBENCH_F(bench_fragmentation, malloc_50_cycles)
 }
 
 
+// adversarial fragmentation: stresses malloc heap with hole creation and size mismatch
+// arena version shows consistent performance; malloc version degrades as fragmentation accumulates
+#define ADVERSARIAL_CYCLES 100
+#define ADVERSARIAL_BATCH 64
+#define ADVERSARIAL_SURVIVOR_COUNT 8
+
+static const size_t adversarial_sizes[] = {16, 64, 256, 1024};
+#define ADVERSARIAL_SIZE_COUNT 4
+
+// arena fixture: only needs the arena (no per-alloc tracking required)
+struct bench_adversarial_frag { struct w_arena arena; };
+UBENCH_F_SETUP(bench_adversarial_frag) { w_arena_init(&ubench_fixture->arena, BLOCK_SIZE_DEFAULT); }
+UBENCH_F_TEARDOWN(bench_adversarial_frag) { w_arena_free(&ubench_fixture->arena); }
+
+UBENCH_F(bench_adversarial_frag, arena_100_cycles)
+{
+	// allocate same mixed sizes as malloc version, clear per cycle - no fragmentation possible
+	for (int cycle = 0; cycle < ADVERSARIAL_CYCLES; cycle++)
+	{
+		for (int i = 0; i < ADVERSARIAL_BATCH * 2; i++)
+		{
+			void *p = w_arena_malloc(&ubench_fixture->arena, adversarial_sizes[i % ADVERSARIAL_SIZE_COUNT]);
+			UBENCH_DO_NOTHING(p);
+		}
+		w_arena_clear(&ubench_fixture->arena);
+	}
+}
+
+// malloc fixture: needs tracking arrays for batch_a, batch_b, and cross-cycle survivors
+struct bench_adversarial_malloc
+{
+	void *batch_a[ADVERSARIAL_BATCH];
+	void *batch_b[ADVERSARIAL_BATCH];
+	void *survivors[ADVERSARIAL_CYCLES * ADVERSARIAL_SURVIVOR_COUNT];
+	int survivor_count;
+};
+UBENCH_F_SETUP(bench_adversarial_malloc) { ubench_fixture->survivor_count = 0; }
+UBENCH_F_TEARDOWN(bench_adversarial_malloc)
+{
+	// safety net: free any survivors if benchmark body exited early
+	for (int i = 0; i < ubench_fixture->survivor_count; i++)
+	{
+		free(ubench_fixture->survivors[i]);
+	}
+}
+
+UBENCH_F(bench_adversarial_malloc, malloc_100_cycles)
+{
+	ubench_fixture->survivor_count = 0;
+	for (int cycle = 0; cycle < ADVERSARIAL_CYCLES; cycle++)
+	{
+		// phase 1: allocate batch_a with mixed sizes
+		for (int i = 0; i < ADVERSARIAL_BATCH; i++)
+		{
+			ubench_fixture->batch_a[i] = malloc(adversarial_sizes[i % ADVERSARIAL_SIZE_COUNT]);
+			UBENCH_DO_NOTHING(ubench_fixture->batch_a[i]);
+		}
+		// phase 2: free odd-indexed in reverse order (LIFO) -- creates holes in the heap
+		for (int i = ADVERSARIAL_BATCH - 1; i >= 0; i--)
+		{
+			if (i % 2 == 1)
+			{
+				free(ubench_fixture->batch_a[i]);
+				ubench_fixture->batch_a[i] = NULL;
+			}
+		}
+		// phase 3: allocate batch_b with offset sizes -- fills holes imperfectly due to size mismatch
+		for (int i = 0; i < ADVERSARIAL_BATCH; i++)
+		{
+			ubench_fixture->batch_b[i] = malloc(adversarial_sizes[(i + 2) % ADVERSARIAL_SIZE_COUNT]);
+			UBENCH_DO_NOTHING(ubench_fixture->batch_b[i]);
+		}
+		// phase 4: free even-indexed from batch_a in reverse order
+		for (int i = ADVERSARIAL_BATCH - 1; i >= 0; i--)
+		{
+			if (ubench_fixture->batch_a[i] != NULL)
+			{
+				free(ubench_fixture->batch_a[i]);
+				ubench_fixture->batch_a[i] = NULL;
+			}
+		}
+		// phase 5: keep first ADVERSARIAL_SURVIVOR_COUNT of batch_b alive across cycles (long-lived mix)
+		for (int i = 0; i < ADVERSARIAL_BATCH; i++)
+		{
+			if (i < ADVERSARIAL_SURVIVOR_COUNT)
+			{
+				ubench_fixture->survivors[ubench_fixture->survivor_count++] = ubench_fixture->batch_b[i];
+			}
+			else
+			{
+				free(ubench_fixture->batch_b[i]);
+			}
+			ubench_fixture->batch_b[i] = NULL;
+		}
+	}
+	// free all cross-cycle survivors accumulated during benchmark
+	for (int i = 0; i < ubench_fixture->survivor_count; i++)
+	{
+		free(ubench_fixture->survivors[i]);
+	}
+	ubench_fixture->survivor_count = 0;
+}
+
+
 UBENCH_MAIN();
