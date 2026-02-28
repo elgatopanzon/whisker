@@ -134,7 +134,7 @@ void w_mem_register_alloc_warning_callback(w_mem_alloc_warning_func alloc_warnin
 }
 // register a global callback function and argument to call when an alloc
 // failure occurs and the program is about to abort
-void w_mem_register_alloc_panic_callback(w_mem_alloc_warning_func alloc_panic_func, void *alloc_panic_func_arg)
+void w_mem_register_alloc_panic_callback(w_mem_alloc_panic_func alloc_panic_func, void *alloc_panic_func_arg)
 {
 	alloc_panic_callback_ = alloc_panic_func;
 	alloc_panic_callback_arg_ = alloc_panic_func_arg;
