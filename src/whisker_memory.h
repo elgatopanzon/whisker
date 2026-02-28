@@ -2,7 +2,7 @@
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_memory
  * @created     : Tuesday Feb 04, 2025 19:08:06 CST
- * @description : safe memory allocation, memory block management, and x-style allocation macros
+ * @description : safe memory allocation and x-style allocation macros
  */
 
 #include <stdlib.h>
@@ -50,24 +50,5 @@ void w_mem_handle_alloc_failed_(size_t size, void *realloc_ptr, size_t source_li
 #define w_mem_xrealloc_t(ptr, t) w_mem_xrealloc(ptr, sizeof(t))
 
 #define free_null(p) if (p) { free(p); p = NULL; }
-
-// memory blocks
-// a block is a managed header and data pointer
-typedef struct w_mem_block
-{
-	void* header;
-	size_t header_size;
-	void* data;
-	size_t data_size;
-} w_mem_block;
-
-w_mem_block *w_mem_block_create(size_t data_size, size_t header_size);
-void w_mem_block_init(w_mem_block *block);
-w_mem_block *w_mem_block_create_and_init(size_t data_size, size_t header_size);
-void w_mem_block_realloc(w_mem_block* block, size_t size);
-void w_mem_block_free(w_mem_block* block);
-void w_mem_block_free_all(w_mem_block* block);
-void* w_mem_block_header_from_data_pointer(char* data, size_t header_size);
-size_t w_mem_block_calc_header_size(size_t header_type_size, size_t data_type_size);
 
 #endif // end of include guard WHISKER_MEMORY_H
