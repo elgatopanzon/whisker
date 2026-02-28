@@ -21,5 +21,15 @@
 #define JOIN_STR_NEXT(A,B) STR(A##B)
 #define JOIN_STR(A, B) JOIN_STR_NEXT(A,B)
 
+// align pointer to alignment
+#define ALIGN_UP(x, align) (((x) + (align) - 1) & ~((align) - 1))
+
+// math helpers
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+// branch prediction hints
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 #endif // WHISKER_MACROS_H
 
