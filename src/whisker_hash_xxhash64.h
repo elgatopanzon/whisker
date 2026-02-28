@@ -17,6 +17,12 @@
 #define XXHASH64_PRIME_4 0x85EBCA77C2B2AE63ULL
 #define XXHASH64_PRIME_5 0x27D4EB2F165667C5ULL
 
+// convenience macros
+// string literal
+#define w_xxhash64_str(s) w_xxhash64_hash((s), sizeof(s) - 1, 0)
+// any value
+#define w_xxhash64(val) w_xxhash64_hash(&(val), sizeof(val), 0)
+
 // internal hashing functions
 static inline uint64_t w_xxhash64_rotate_left_(uint64_t x, int r);
 static inline uint64_t w_xxhash64_round_(uint64_t acc, uint64_t input);
