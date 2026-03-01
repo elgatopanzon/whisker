@@ -227,10 +227,15 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 // set value in typed hashmap
 #define w_hashmap_t_set(map, k, v) do { \
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
+	uint64_t hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	w_hashmap_t_set_with_hash(map, k, v, hash); \
+} while (0)
+
+#define w_hashmap_t_set_with_hash(map, k, v, hash) do { \
+	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
 	__typeof__((map)->buckets[0].entries[0].value) _val = (v); \
-	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
-	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
-	size_t _bidx = _hash & ((map)->buckets_length - 1); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(hash); \
+	size_t _bidx = hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
 	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	if (_idx >= 0) { _bkt->entries[_idx].value = _val; } \
@@ -249,9 +254,14 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 // get value from typed hashmap (returns pointer or NULL)
 #define w_hashmap_t_get(map, k, out_ptr) do { \
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
-	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
-	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
-	size_t _bidx = _hash & ((map)->buckets_length - 1); \
+	uint64_t hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	w_hashmap_t_get_with_hash(map, k, out_ptr, hash);  \
+} while (0)
+
+#define w_hashmap_t_get_with_hash(map, k, out_ptr, hash) do { \
+	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(hash); \
+	size_t _bidx = hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
 	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	(out_ptr) = (_idx >= 0) ? &_bkt->entries[_idx].value : NULL; \
@@ -260,9 +270,14 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 // remove value from typed hashmap
 #define w_hashmap_t_remove(map, k, removed) do { \
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
-	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
-	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
-	size_t _bidx = _hash & ((map)->buckets_length - 1); \
+	uint64_t hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	w_hashmap_t_remove_with_hash(map, k, removed, hash); \
+} while (0)
+
+#define w_hashmap_t_remove_with_hash(map, k, removed, hash) do { \
+	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(hash); \
+	size_t _bidx = hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
 	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	if (_idx < 0) { (removed) = false; } \
