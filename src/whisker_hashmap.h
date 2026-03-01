@@ -135,6 +135,14 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 *  type-safe macro hashmap   *
 *****************************/
 
+// SSE2 support for Swiss Table fingerprint comparison
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
+
+// extract fingerprint from hash (upper 7 bits, stored in byte with high bit set)
+#define w_hashmap_t_fingerprint_(hash) ((uint8_t)(((hash) >> 57) | 0x80))
+
 // declare entry struct for typed hashmap
 #define w_hashmap_t_entry(name) struct name##_entry
 
@@ -144,7 +152,7 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 // declare all structs for typed hashmap
 #define w_hashmap_t_declare(key_type, value_type, name) \
 	w_hashmap_t_entry(name) { key_type key; value_type value; }; \
-	w_hashmap_t_bucket(name) { w_array_declare(w_hashmap_t_entry(name), entries); }; \
+	w_hashmap_t_bucket(name) { w_array_declare(w_hashmap_t_entry(name), entries); uint8_t *fingerprints; size_t fingerprints_capacity; }; \
 	struct name { w_array_declare(w_hashmap_t_bucket(name), buckets); size_t total_entries; w_hashmap_hash_fn hash_fn; w_hashmap_equality_fn equality_fn; };
 
 // init typed hashmap with arena
@@ -161,18 +169,58 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 #define w_hashmap_t_free(map) do { \
 	for (size_t _i = 0; _i < (map)->buckets_length; _i++) { \
 		if ((map)->buckets[_i].entries) { free_null((map)->buckets[_i].entries); } \
+		if ((map)->buckets[_i].fingerprints) { free_null((map)->buckets[_i].fingerprints); } \
 	} \
 	(map)->buckets = NULL; \
 	(map)->total_entries = 0; \
 } while (0)
 
-// find entry in bucket (internal)
-#define w_hashmap_t_bucket_find_(map, bucket, k, result) do { \
+// find entry in bucket using fingerprint filtering (internal)
+#define w_hashmap_t_bucket_find_(map, bucket, k, fp, result) do { \
 	(result) = -1; \
-	for (size_t _i = 0; _i < (bucket)->entries_length; _i++) { \
-		if ((map)->equality_fn(&(bucket)->entries[_i].key, &(k), sizeof(k))) { \
+	size_t _len = (bucket)->entries_length; \
+	if (_len == 0) break; \
+	uint8_t *_fps = (bucket)->fingerprints; \
+	size_t _i = 0; \
+	/* SSE2 path: compare 16 fingerprints at once */ \
+	W_HASHMAP_T_SIMD_FIND_((map), (bucket), (k), (fp), _fps, _len, _i, (result)); \
+	if ((result) >= 0) break; \
+	/* scalar fallback for remaining elements */ \
+	for (; _i < _len; _i++) { \
+		if (_fps[_i] == (fp) && (map)->equality_fn(&(bucket)->entries[_i].key, &(k), sizeof(k))) { \
 			(result) = (int32_t)_i; break; \
 		} \
+	} \
+} while (0)
+
+#ifdef __SSE2__
+#define W_HASHMAP_T_SIMD_FIND_(map, bucket, k, fp, fps, len, i, result) do { \
+	__m128i _needle = _mm_set1_epi8((char)(fp)); \
+	int _found = 0; \
+	for (; !_found && (i) + 16 <= (len); (i) += 16) { \
+		__m128i _chunk = _mm_loadu_si128((const __m128i *)(&(fps)[(i)])); \
+		__m128i _cmp = _mm_cmpeq_epi8(_chunk, _needle); \
+		int _mask = _mm_movemask_epi8(_cmp); \
+		while (_mask && !_found) { \
+			int _bit = __builtin_ctz(_mask); \
+			size_t _idx = (i) + _bit; \
+			if ((map)->equality_fn(&(bucket)->entries[_idx].key, &(k), sizeof(k))) { \
+				(result) = (int32_t)_idx; \
+				_found = 1; \
+			} \
+			_mask &= _mask - 1; \
+		} \
+	} \
+} while (0)
+#else
+#define W_HASHMAP_T_SIMD_FIND_(map, bucket, k, fp, fps, len, i, result) ((void)0)
+#endif
+
+// ensure fingerprint array capacity matches entries capacity
+#define w_hashmap_t_ensure_fp_capacity_(bkt, newcap) do { \
+	if ((bkt)->fingerprints_capacity < (newcap)) { \
+		(bkt)->fingerprints = w_mem_xrealloc((bkt)->fingerprints, (newcap)); \
+		(bkt)->fingerprints_capacity = (newcap); \
 	} \
 } while (0)
 
@@ -181,15 +229,18 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
 	__typeof__((map)->buckets[0].entries[0].value) _val = (v); \
 	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
 	size_t _bidx = _hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
-	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _idx); \
+	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	if (_idx >= 0) { _bkt->entries[_idx].value = _val; } \
 	else { \
 		size_t _newcap = _bkt->entries_length == 0 ? 4 : _bkt->entries_length * 2; \
 		w_array_ensure_alloc(_bkt->entries, _newcap); \
+		w_hashmap_t_ensure_fp_capacity_(_bkt, _newcap); \
 		_bkt->entries[_bkt->entries_length].key = _key; \
 		_bkt->entries[_bkt->entries_length].value = _val; \
+		_bkt->fingerprints[_bkt->entries_length] = _fp; \
 		_bkt->entries_length++; \
 		(map)->total_entries++; \
 	} \
@@ -199,9 +250,10 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 #define w_hashmap_t_get(map, k, out_ptr) do { \
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
 	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
 	size_t _bidx = _hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
-	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _idx); \
+	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	(out_ptr) = (_idx >= 0) ? &_bkt->entries[_idx].value : NULL; \
 } while (0)
 
@@ -209,13 +261,15 @@ size_t w_hashmap_total_entries(struct w_hashmap *map);
 #define w_hashmap_t_remove(map, k, removed) do { \
 	__typeof__((map)->buckets[0].entries[0].key) _key = (k); \
 	uint64_t _hash = (map)->hash_fn(&_key, sizeof(_key), 0); \
+	uint8_t _fp = w_hashmap_t_fingerprint_(_hash); \
 	size_t _bidx = _hash & ((map)->buckets_length - 1); \
 	__typeof__((map)->buckets) _bkt = &(map)->buckets[_bidx]; \
-	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _idx); \
+	int32_t _idx; w_hashmap_t_bucket_find_((map), _bkt, _key, _fp, _idx); \
 	if (_idx < 0) { (removed) = false; } \
 	else { \
 		if ((size_t)_idx < _bkt->entries_length - 1) { \
 			_bkt->entries[_idx] = _bkt->entries[_bkt->entries_length - 1]; \
+			_bkt->fingerprints[_idx] = _bkt->fingerprints[_bkt->entries_length - 1]; \
 		} \
 		_bkt->entries_length--; \
 		(map)->total_entries--; \
