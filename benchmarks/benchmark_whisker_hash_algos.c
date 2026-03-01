@@ -494,13 +494,13 @@ UBENCH_F_TEARDOWN(bench_hash_macro) { (void)ubench_fixture; }
 
 UBENCH_F(bench_hash_macro, xxhash64_str_macro)
 {
-	ubench_fixture->result = w_xxhash64_str("test_string_key");
+	ubench_fixture->result = w_xxhash64_str("test_string_key", 0);
 	UBENCH_DO_NOTHING(&ubench_fixture->result);
 }
 
 UBENCH_F(bench_hash_macro, fnv1a_str_macro)
 {
-	ubench_fixture->result = w_fnv1a_str("test_string_key");
+	ubench_fixture->result = w_fnv1a_str("test_string_key", 0);
 	UBENCH_DO_NOTHING(&ubench_fixture->result);
 }
 

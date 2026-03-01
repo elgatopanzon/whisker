@@ -18,8 +18,9 @@
 #define XXHASH64_PRIME_5 0x27D4EB2F165667C5ULL
 
 // convenience macros
-// string literal
-#define w_xxhash64_str(s) w_xxhash64_hash((s), sizeof(s) - 1, 0)
+// string hash supports string literals and char*
+#define w_xxhash64_str(s, seed) w_xxhash64_hash((s), strlen(s), (seed))
+#define w_xxhash64_strn(s, len, seed) w_xxhash64((s), (len), (seed))
 // any value
 #define w_xxhash64(val) w_xxhash64_hash(&(val), sizeof(val), 0)
 

@@ -14,8 +14,9 @@
 #define FNV_1A_64_PRIME        0x100000001b3ULL
 
 // convenience macros
-// string literal
-#define w_fnv1a_str(s) w_fnv1a_hash((s), sizeof(s) - 1, 0)
+// string hash supports string literals and char*
+#define w_fnv1a_str(s, seed) w_fnv1a_hash((s), strlen(s), (seed))
+#define w_fnv1a_strn(s, len, seed) w_fnv1a((s), (len), (seed))
 // any value
 #define w_fnv1a(val) w_fnv1a_hash(&(val), sizeof(val), 0)
 
