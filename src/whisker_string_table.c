@@ -17,6 +17,7 @@ void w_string_table_init(struct w_string_table *table, struct w_arena *arena, si
 
 	// init array
 	w_array_init_t(table->entries, entries_realloc_block_size);
+	table->entries_length = 0;
 
 	// init hashmap with string-specific hash/equality functions
 	w_hashmap_t_init(&(table->reverse_map), arena, hashmap_bucket_count, w_hashmap_hash_str, w_hashmap_eq_str);
@@ -83,4 +84,12 @@ struct w_string_table_entry *w_string_table_lookup_entry_str(struct w_string_tab
 	w_hashmap_t_get(&table->reverse_map, string, id);
 
 	return (id) ? w_string_table_lookup_entry(table, *id) : NULL;
+}
+
+w_string_table_id w_string_table_lookup_str(struct w_string_table *table, const char *string)
+{
+	w_string_table_id *id;
+	w_hashmap_t_get(&table->reverse_map, string, id);
+
+	return (id) ? *id : W_STRING_TABLE_INVALID_ID;
 }

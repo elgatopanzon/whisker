@@ -67,6 +67,8 @@ char *w_string_table_lookup(struct w_string_table *table, w_string_table_id id);
 struct w_string_table_entry *w_string_table_lookup_entry(struct w_string_table *table, w_string_table_id id);
 // lookup a string ID by string, get the entry or NULL
 struct w_string_table_entry *w_string_table_lookup_entry_str(struct w_string_table *table, const char *string);
+// lookup an ID by string
+w_string_table_id w_string_table_lookup_str(struct w_string_table *table, const char *string);
 
 #endif /* WHISKER_STRING_TABLE_H */
 
