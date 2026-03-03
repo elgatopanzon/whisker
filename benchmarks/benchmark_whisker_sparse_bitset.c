@@ -3473,6 +3473,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_SPARSE_SIMD_FUNC_2(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[2] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 2; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_FLAT_2(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 { \
@@ -3517,16 +3530,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 // 2-way ultrasparse benchmarks
 INTERSECT_1M_SPARSE_2(intersect_1m_ultrasparse_1bit_2_sparse, bs_1)
 INTERSECT_1M_SPARSE_SIMD_2(intersect_1m_ultrasparse_1bit_2_sparse_simd, bs_1)
+INTERSECT_1M_SPARSE_SIMD_FUNC_2(intersect_1m_ultrasparse_1bit_2_sparse_simd_func, bs_1)
 INTERSECT_1M_FLAT_2(intersect_1m_ultrasparse_1bit_2_flat, flat_1)
 INTERSECT_1M_FLAT_SKIP_2(intersect_1m_ultrasparse_1bit_2_flat_skip, flat_skip_1, skip_1)
 
 INTERSECT_1M_SPARSE_2(intersect_1m_ultrasparse_100_2_sparse, bs_100)
 INTERSECT_1M_SPARSE_SIMD_2(intersect_1m_ultrasparse_100_2_sparse_simd, bs_100)
+INTERSECT_1M_SPARSE_SIMD_FUNC_2(intersect_1m_ultrasparse_100_2_sparse_simd_func, bs_100)
 INTERSECT_1M_FLAT_2(intersect_1m_ultrasparse_100_2_flat, flat_100)
 INTERSECT_1M_FLAT_SKIP_2(intersect_1m_ultrasparse_100_2_flat_skip, flat_skip_100, skip_100)
 
 INTERSECT_1M_SPARSE_2(intersect_1m_ultrasparse_1k_2_sparse, bs_1k)
 INTERSECT_1M_SPARSE_SIMD_2(intersect_1m_ultrasparse_1k_2_sparse_simd, bs_1k)
+INTERSECT_1M_SPARSE_SIMD_FUNC_2(intersect_1m_ultrasparse_1k_2_sparse_simd_func, bs_1k)
 INTERSECT_1M_FLAT_2(intersect_1m_ultrasparse_1k_2_flat, flat_1k)
 INTERSECT_1M_FLAT_SKIP_2(intersect_1m_ultrasparse_1k_2_flat_skip, flat_skip_1k, skip_1k)
 
@@ -3708,6 +3724,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_SPARSE_SIMD_FUNC_3(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 3; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_FLAT_3(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 { \
@@ -3742,16 +3771,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 // 3-way ultrasparse benchmarks
 INTERSECT_1M_SPARSE_3(intersect_1m_ultrasparse_1bit_3_sparse, bs_1)
 INTERSECT_1M_SPARSE_SIMD_3(intersect_1m_ultrasparse_1bit_3_sparse_simd, bs_1)
+INTERSECT_1M_SPARSE_SIMD_FUNC_3(intersect_1m_ultrasparse_1bit_3_sparse_simd_func, bs_1)
 INTERSECT_1M_FLAT_3(intersect_1m_ultrasparse_1bit_3_flat, flat_1)
 INTERSECT_1M_FLAT_SKIP_3(intersect_1m_ultrasparse_1bit_3_flat_skip, flat_skip_1, skip_1)
 
 INTERSECT_1M_SPARSE_3(intersect_1m_ultrasparse_100_3_sparse, bs_100)
 INTERSECT_1M_SPARSE_SIMD_3(intersect_1m_ultrasparse_100_3_sparse_simd, bs_100)
+INTERSECT_1M_SPARSE_SIMD_FUNC_3(intersect_1m_ultrasparse_100_3_sparse_simd_func, bs_100)
 INTERSECT_1M_FLAT_3(intersect_1m_ultrasparse_100_3_flat, flat_100)
 INTERSECT_1M_FLAT_SKIP_3(intersect_1m_ultrasparse_100_3_flat_skip, flat_skip_100, skip_100)
 
 INTERSECT_1M_SPARSE_3(intersect_1m_ultrasparse_1k_3_sparse, bs_1k)
 INTERSECT_1M_SPARSE_SIMD_3(intersect_1m_ultrasparse_1k_3_sparse_simd, bs_1k)
+INTERSECT_1M_SPARSE_SIMD_FUNC_3(intersect_1m_ultrasparse_1k_3_sparse_simd_func, bs_1k)
 INTERSECT_1M_FLAT_3(intersect_1m_ultrasparse_1k_3_flat, flat_1k)
 INTERSECT_1M_FLAT_SKIP_3(intersect_1m_ultrasparse_1k_3_flat_skip, flat_skip_1k, skip_1k)
 
@@ -3935,6 +3967,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_SPARSE_SIMD_FUNC_5(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 5; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_FLAT_5(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 { \
@@ -3969,16 +4014,19 @@ UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 // 5-way ultrasparse benchmarks
 INTERSECT_1M_SPARSE_5(intersect_1m_ultrasparse_1bit_5_sparse, bs_1)
 INTERSECT_1M_SPARSE_SIMD_5(intersect_1m_ultrasparse_1bit_5_sparse_simd, bs_1)
+INTERSECT_1M_SPARSE_SIMD_FUNC_5(intersect_1m_ultrasparse_1bit_5_sparse_simd_func, bs_1)
 INTERSECT_1M_FLAT_5(intersect_1m_ultrasparse_1bit_5_flat, flat_1)
 INTERSECT_1M_FLAT_SKIP_5(intersect_1m_ultrasparse_1bit_5_flat_skip, flat_skip_1, skip_1)
 
 INTERSECT_1M_SPARSE_5(intersect_1m_ultrasparse_100_5_sparse, bs_100)
 INTERSECT_1M_SPARSE_SIMD_5(intersect_1m_ultrasparse_100_5_sparse_simd, bs_100)
+INTERSECT_1M_SPARSE_SIMD_FUNC_5(intersect_1m_ultrasparse_100_5_sparse_simd_func, bs_100)
 INTERSECT_1M_FLAT_5(intersect_1m_ultrasparse_100_5_flat, flat_100)
 INTERSECT_1M_FLAT_SKIP_5(intersect_1m_ultrasparse_100_5_flat_skip, flat_skip_100, skip_100)
 
 INTERSECT_1M_SPARSE_5(intersect_1m_ultrasparse_1k_5_sparse, bs_1k)
 INTERSECT_1M_SPARSE_SIMD_5(intersect_1m_ultrasparse_1k_5_sparse_simd, bs_1k)
+INTERSECT_1M_SPARSE_SIMD_FUNC_5(intersect_1m_ultrasparse_1k_5_sparse_simd_func, bs_1k)
 INTERSECT_1M_FLAT_5(intersect_1m_ultrasparse_1k_5_flat, flat_1k)
 INTERSECT_1M_FLAT_SKIP_5(intersect_1m_ultrasparse_1k_5_flat_skip, flat_skip_1k, skip_1k)
 
@@ -4132,6 +4180,19 @@ UBENCH_F(bitset_intersect_1m_low_2, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_2(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_low_2, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[2] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 2; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_LOW_FLAT_2(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_low_2, name) \
 { \
@@ -4162,11 +4223,13 @@ UBENCH_F(bitset_intersect_1m_low_2, name) \
 
 INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_10pct_2_sparse, bs_10)
 INTERSECT_1M_LOW_SPARSE_SIMD_2(intersect_1m_low_10pct_2_sparse_simd, bs_10)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_2(intersect_1m_low_10pct_2_sparse_simd_func, bs_10)
 INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_10pct_2_flat, flat_10)
 INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_10pct_2_flat_skip, flat_skip_10, skip_10)
 
 INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_15pct_2_sparse, bs_15)
 INTERSECT_1M_LOW_SPARSE_SIMD_2(intersect_1m_low_15pct_2_sparse_simd, bs_15)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_2(intersect_1m_low_15pct_2_sparse_simd_func, bs_15)
 INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_15pct_2_flat, flat_15)
 INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_15pct_2_flat_skip, flat_skip_15, skip_15)
 
@@ -4315,6 +4378,19 @@ UBENCH_F(bitset_intersect_1m_low_3, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_3(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_low_3, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 3; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_LOW_FLAT_3(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_low_3, name) \
 { \
@@ -4345,11 +4421,13 @@ UBENCH_F(bitset_intersect_1m_low_3, name) \
 
 INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_10pct_3_sparse, bs_10)
 INTERSECT_1M_LOW_SPARSE_SIMD_3(intersect_1m_low_10pct_3_sparse_simd, bs_10)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_3(intersect_1m_low_10pct_3_sparse_simd_func, bs_10)
 INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_10pct_3_flat, flat_10)
 INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_10pct_3_flat_skip, flat_skip_10, skip_10)
 
 INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_15pct_3_sparse, bs_15)
 INTERSECT_1M_LOW_SPARSE_SIMD_3(intersect_1m_low_15pct_3_sparse_simd, bs_15)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_3(intersect_1m_low_15pct_3_sparse_simd_func, bs_15)
 INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_15pct_3_flat, flat_15)
 INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_15pct_3_flat_skip, flat_skip_15, skip_15)
 
@@ -4500,6 +4578,19 @@ UBENCH_F(bitset_intersect_1m_low_5, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_5(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_low_5, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 5; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_LOW_FLAT_5(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_low_5, name) \
 { \
@@ -4530,11 +4621,13 @@ UBENCH_F(bitset_intersect_1m_low_5, name) \
 
 INTERSECT_1M_LOW_SPARSE_5(intersect_1m_low_10pct_5_sparse, bs_10)
 INTERSECT_1M_LOW_SPARSE_SIMD_5(intersect_1m_low_10pct_5_sparse_simd, bs_10)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_5(intersect_1m_low_10pct_5_sparse_simd_func, bs_10)
 INTERSECT_1M_LOW_FLAT_5(intersect_1m_low_10pct_5_flat, flat_10)
 INTERSECT_1M_LOW_FLAT_SKIP_5(intersect_1m_low_10pct_5_flat_skip, flat_skip_10, skip_10)
 
 INTERSECT_1M_LOW_SPARSE_5(intersect_1m_low_15pct_5_sparse, bs_15)
 INTERSECT_1M_LOW_SPARSE_SIMD_5(intersect_1m_low_15pct_5_sparse_simd, bs_15)
+INTERSECT_1M_LOW_SPARSE_SIMD_FUNC_5(intersect_1m_low_15pct_5_sparse_simd_func, bs_15)
 INTERSECT_1M_LOW_FLAT_5(intersect_1m_low_15pct_5_flat, flat_15)
 INTERSECT_1M_LOW_FLAT_SKIP_5(intersect_1m_low_15pct_5_flat_skip, flat_skip_15, skip_15)
 
@@ -4688,6 +4781,19 @@ UBENCH_F(bitset_intersect_1m_high_2, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_2(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_high_2, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[2] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 2; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_HIGH_FLAT_2(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_high_2, name) \
 { \
@@ -4718,11 +4824,13 @@ UBENCH_F(bitset_intersect_1m_high_2, name) \
 
 INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_70pct_2_sparse, bs_70)
 INTERSECT_1M_HIGH_SPARSE_SIMD_2(intersect_1m_high_70pct_2_sparse_simd, bs_70)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_2(intersect_1m_high_70pct_2_sparse_simd_func, bs_70)
 INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_70pct_2_flat, flat_70)
 INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_70pct_2_flat_skip, flat_skip_70, skip_70)
 
 INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_90pct_2_sparse, bs_90)
 INTERSECT_1M_HIGH_SPARSE_SIMD_2(intersect_1m_high_90pct_2_sparse_simd, bs_90)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_2(intersect_1m_high_90pct_2_sparse_simd_func, bs_90)
 INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_90pct_2_flat, flat_90)
 INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_90pct_2_flat_skip, flat_skip_90, skip_90)
 
@@ -4871,6 +4979,19 @@ UBENCH_F(bitset_intersect_1m_high_3, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_3(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_high_3, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 3; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_HIGH_FLAT_3(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_high_3, name) \
 { \
@@ -4901,11 +5022,13 @@ UBENCH_F(bitset_intersect_1m_high_3, name) \
 
 INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_70pct_3_sparse, bs_70)
 INTERSECT_1M_HIGH_SPARSE_SIMD_3(intersect_1m_high_70pct_3_sparse_simd, bs_70)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_3(intersect_1m_high_70pct_3_sparse_simd_func, bs_70)
 INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_70pct_3_flat, flat_70)
 INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_70pct_3_flat_skip, flat_skip_70, skip_70)
 
 INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_90pct_3_sparse, bs_90)
 INTERSECT_1M_HIGH_SPARSE_SIMD_3(intersect_1m_high_90pct_3_sparse_simd, bs_90)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_3(intersect_1m_high_90pct_3_sparse_simd_func, bs_90)
 INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_90pct_3_flat, flat_90)
 INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_90pct_3_flat_skip, flat_skip_90, skip_90)
 
@@ -5056,6 +5179,19 @@ UBENCH_F(bitset_intersect_1m_high_5, name) \
 	UBENCH_DO_NOTHING(&ubench_fixture->result); \
 }
 
+#define INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_5(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_high_5, name) \
+{ \
+	struct w_sparse_bitset *bs_ptrs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
+	struct w_sparse_bitset_intersect_cache cache = {0}; \
+	cache.bitsets = bs_ptrs; \
+	cache.bitsets_length = 5; \
+	uint64_t count = w_sparse_bitset_intersect(&cache); \
+	for (uint64_t i = 0; i < count; i++) ubench_fixture->result[i] = cache.indexes[i]; \
+	w_sparse_bitset_intersect_free_cache(&cache); \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
 #define INTERSECT_1M_HIGH_FLAT_5(name, flat_arr) \
 UBENCH_F(bitset_intersect_1m_high_5, name) \
 { \
@@ -5086,11 +5222,13 @@ UBENCH_F(bitset_intersect_1m_high_5, name) \
 
 INTERSECT_1M_HIGH_SPARSE_5(intersect_1m_high_70pct_5_sparse, bs_70)
 INTERSECT_1M_HIGH_SPARSE_SIMD_5(intersect_1m_high_70pct_5_sparse_simd, bs_70)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_5(intersect_1m_high_70pct_5_sparse_simd_func, bs_70)
 INTERSECT_1M_HIGH_FLAT_5(intersect_1m_high_70pct_5_flat, flat_70)
 INTERSECT_1M_HIGH_FLAT_SKIP_5(intersect_1m_high_70pct_5_flat_skip, flat_skip_70, skip_70)
 
 INTERSECT_1M_HIGH_SPARSE_5(intersect_1m_high_90pct_5_sparse, bs_90)
 INTERSECT_1M_HIGH_SPARSE_SIMD_5(intersect_1m_high_90pct_5_sparse_simd, bs_90)
+INTERSECT_1M_HIGH_SPARSE_SIMD_FUNC_5(intersect_1m_high_90pct_5_sparse_simd_func, bs_90)
 INTERSECT_1M_HIGH_FLAT_5(intersect_1m_high_90pct_5_flat, flat_90)
 INTERSECT_1M_HIGH_FLAT_SKIP_5(intersect_1m_high_90pct_5_flat_skip, flat_skip_90, skip_90)
 

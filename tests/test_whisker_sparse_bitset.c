@@ -414,6 +414,251 @@ END_TEST
 
 
 /*****************************
+*  intersect tcase           *
+*****************************/
+
+// intersect fixtures
+static struct w_sparse_bitset g_bitset2;
+static struct w_sparse_bitset g_bitset3;
+static struct w_sparse_bitset_intersect_cache g_intersect_cache;
+
+static void sparse_bitset_intersect_setup(void)
+{
+	w_arena_init(&g_arena, 64 * 1024);
+	w_sparse_bitset_init(&g_bitset, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	w_sparse_bitset_init(&g_bitset2, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	w_sparse_bitset_init(&g_bitset3, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	memset(&g_intersect_cache, 0, sizeof(g_intersect_cache));
+}
+
+static void sparse_bitset_intersect_teardown(void)
+{
+	w_sparse_bitset_intersect_free_cache(&g_intersect_cache);
+	free_null(g_intersect_cache.bitsets);
+	w_sparse_bitset_free(&g_bitset);
+	w_sparse_bitset_free(&g_bitset2);
+	w_sparse_bitset_free(&g_bitset3);
+	w_arena_free(&g_arena);
+}
+
+START_TEST(test_intersect_empty_bitsets_array)
+{
+	// no bitsets in cache
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 0);
+}
+END_TEST
+
+START_TEST(test_intersect_single_bitset)
+{
+	// single bitset returns all its set bits
+	w_sparse_bitset_set(&g_bitset, 10);
+	w_sparse_bitset_set(&g_bitset, 100);
+	w_sparse_bitset_set(&g_bitset, 1000);
+
+	w_array_init_t(g_intersect_cache.bitsets, 1);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets_length = 1;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 3);
+	ck_assert_int_eq(g_intersect_cache.indexes[0], 10);
+	ck_assert_int_eq(g_intersect_cache.indexes[1], 100);
+	ck_assert_int_eq(g_intersect_cache.indexes[2], 1000);
+}
+END_TEST
+
+START_TEST(test_intersect_two_bitsets_basic)
+{
+	// two bitsets with some overlap
+	w_sparse_bitset_set(&g_bitset, 5);
+	w_sparse_bitset_set(&g_bitset, 10);
+	w_sparse_bitset_set(&g_bitset, 20);
+
+	w_sparse_bitset_set(&g_bitset2, 10);
+	w_sparse_bitset_set(&g_bitset2, 20);
+	w_sparse_bitset_set(&g_bitset2, 30);
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 2);
+	ck_assert_int_eq(g_intersect_cache.indexes[0], 10);
+	ck_assert_int_eq(g_intersect_cache.indexes[1], 20);
+}
+END_TEST
+
+START_TEST(test_intersect_three_bitsets)
+{
+	// three bitsets with limited overlap
+	w_sparse_bitset_set(&g_bitset, 10);
+	w_sparse_bitset_set(&g_bitset, 20);
+	w_sparse_bitset_set(&g_bitset, 30);
+
+	w_sparse_bitset_set(&g_bitset2, 10);
+	w_sparse_bitset_set(&g_bitset2, 20);
+	w_sparse_bitset_set(&g_bitset2, 40);
+
+	w_sparse_bitset_set(&g_bitset3, 10);
+	w_sparse_bitset_set(&g_bitset3, 30);
+	w_sparse_bitset_set(&g_bitset3, 40);
+
+	w_array_init_t(g_intersect_cache.bitsets, 3);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets[2] = &g_bitset3;
+	g_intersect_cache.bitsets_length = 3;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 1);
+	ck_assert_int_eq(g_intersect_cache.indexes[0], 10);
+}
+END_TEST
+
+START_TEST(test_intersect_no_overlap)
+{
+	// two bitsets with no overlap
+	w_sparse_bitset_set(&g_bitset, 1);
+	w_sparse_bitset_set(&g_bitset, 2);
+
+	w_sparse_bitset_set(&g_bitset2, 100);
+	w_sparse_bitset_set(&g_bitset2, 200);
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 0);
+}
+END_TEST
+
+START_TEST(test_intersect_cache_hit)
+{
+	// verify cache returns same result on second call without recompute
+	w_sparse_bitset_set(&g_bitset, 42);
+	w_sparse_bitset_set(&g_bitset2, 42);
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	// first call
+	uint64_t count1 = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count1, 1);
+	uint64_t gen1 = g_intersect_cache.cache_generation;
+
+	// second call should hit cache (same generation)
+	uint64_t count2 = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count2, 1);
+	ck_assert_int_eq(g_intersect_cache.cache_generation, gen1);
+}
+END_TEST
+
+START_TEST(test_intersect_cache_invalidation)
+{
+	// modify bitset after first intersect, verify cache regenerates
+	w_sparse_bitset_set(&g_bitset, 10);
+	w_sparse_bitset_set(&g_bitset2, 10);
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	// first call
+	uint64_t count1 = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count1, 1);
+	uint64_t gen1 = g_intersect_cache.cache_generation;
+
+	// modify bitset (this should increment generation)
+	g_bitset.generation++;
+	w_sparse_bitset_set(&g_bitset, 20);
+	w_sparse_bitset_set(&g_bitset2, 20);
+	g_bitset2.generation++;
+
+	// second call should detect change and recompute
+	uint64_t count2 = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count2, 2);
+	ck_assert(g_intersect_cache.cache_generation != gen1);
+}
+END_TEST
+
+START_TEST(test_intersect_large_sparse)
+{
+	// test with larger sparse indexes to exercise SIMD path
+	uint64_t bits[] = {1000, 5000, 10000, 50000, 100000};
+	for (int i = 0; i < 5; i++)
+	{
+		w_sparse_bitset_set(&g_bitset, bits[i]);
+		w_sparse_bitset_set(&g_bitset2, bits[i]);
+	}
+	// add non-overlapping in different pages (far apart)
+	w_sparse_bitset_set(&g_bitset, 200000);
+	w_sparse_bitset_set(&g_bitset2, 300000);
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 5);
+	for (int i = 0; i < 5; i++)
+	{
+		ck_assert_int_eq(g_intersect_cache.indexes[i], bits[i]);
+	}
+}
+END_TEST
+
+START_TEST(test_intersect_simd_alignment)
+{
+	// test bits that span SIMD boundaries (4-word aligned chunks)
+	// set bits across multiple words to exercise prefix/suffix scalar paths
+	for (int i = 0; i < 300; i++)
+	{
+		w_sparse_bitset_set(&g_bitset, i);
+		w_sparse_bitset_set(&g_bitset2, i);
+	}
+
+	w_array_init_t(g_intersect_cache.bitsets, 2);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets[1] = &g_bitset2;
+	g_intersect_cache.bitsets_length = 2;
+
+	uint64_t count = w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_int_eq(count, 300);
+	for (int i = 0; i < 300; i++)
+	{
+		ck_assert_int_eq(g_intersect_cache.indexes[i], i);
+	}
+}
+END_TEST
+
+START_TEST(test_intersect_free_cache)
+{
+	w_sparse_bitset_set(&g_bitset, 1);
+
+	w_array_init_t(g_intersect_cache.bitsets, 1);
+	g_intersect_cache.bitsets[0] = &g_bitset;
+	g_intersect_cache.bitsets_length = 1;
+
+	w_sparse_bitset_intersect(&g_intersect_cache);
+	ck_assert_ptr_nonnull(g_intersect_cache.indexes);
+
+	w_sparse_bitset_intersect_free_cache(&g_intersect_cache);
+	ck_assert_ptr_null(g_intersect_cache.indexes);
+	ck_assert_int_eq(g_intersect_cache.cache_generation, 0);
+}
+END_TEST
+
+
+/*****************************
 *  stress test tcase         *
 *****************************/
 
@@ -559,6 +804,21 @@ Suite* whisker_sparse_bitset_suite(void)
 	tcase_add_test(tc_stress, test_stress_set_clear_cycle);
 	tcase_add_test(tc_stress, test_stress_large_index);
 	suite_add_tcase(s, tc_stress);
+
+	TCase *tc_intersect = tcase_create("intersect");
+	tcase_add_checked_fixture(tc_intersect, sparse_bitset_intersect_setup, sparse_bitset_intersect_teardown);
+	tcase_set_timeout(tc_intersect, 10);
+	tcase_add_test(tc_intersect, test_intersect_empty_bitsets_array);
+	tcase_add_test(tc_intersect, test_intersect_single_bitset);
+	tcase_add_test(tc_intersect, test_intersect_two_bitsets_basic);
+	tcase_add_test(tc_intersect, test_intersect_three_bitsets);
+	tcase_add_test(tc_intersect, test_intersect_no_overlap);
+	tcase_add_test(tc_intersect, test_intersect_cache_hit);
+	tcase_add_test(tc_intersect, test_intersect_cache_invalidation);
+	tcase_add_test(tc_intersect, test_intersect_large_sparse);
+	tcase_add_test(tc_intersect, test_intersect_simd_alignment);
+	tcase_add_test(tc_intersect, test_intersect_free_cache);
+	suite_add_tcase(s, tc_intersect);
 
 	return s;
 }

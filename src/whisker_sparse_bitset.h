@@ -34,6 +34,15 @@ struct w_sparse_bitset
 	w_array_declare(struct w_sparse_bitset_page, pages); 
 	w_array_declare(uint64_t, lookup_pages);
 	struct w_arena *arena;
+	uint64_t generation;
+};
+
+// intersect cache, holds a list of indexes set across bitsets
+struct w_sparse_bitset_intersect_cache
+{
+	w_array_declare(struct w_sparse_bitset *, bitsets);
+	w_array_declare(uint64_t, indexes);
+	uint64_t cache_generation;
 };
 
 // math macros
@@ -59,6 +68,13 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index);
 // check if bit index is set
 bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index);
 
+// write intersecting IDs to a result struct from multiple intersecting bitsets
+// writes into a cache struct, will init if not already setup
+// returns total count of intersections found, 0 for none or failed
+uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *intersect_cache);
+
+// free indexes and reset counts
+void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache);
 
 #endif /* WHISKER_SPARSE_BITSET_H */
 
