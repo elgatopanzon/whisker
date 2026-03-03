@@ -98,6 +98,37 @@
 #define SKIP_WORDS_SPARSE_ITER_1M    ((FLAT_WORDS_SPARSE_ITER_1M   + 63) / 64)
 #define SKIP_WORDS_SPARSE_ITER_2M    ((FLAT_WORDS_SPARSE_ITER_2M   + 63) / 64)
 
+// ultra-sparse iterate: 0.01% density with stride ~10000
+// ultrasparse_1k: 1000 bits across 10M range
+// ultrasparse_10k: 10000 bits across 100M range
+// ultrasparse_100k: 100000 bits across 1B range
+#define BENCH_ULTRASPARSE_STRIDE        10000
+#define BENCH_ULTRASPARSE_1K_COUNT      1000
+#define BENCH_ULTRASPARSE_10K_COUNT     10000
+#define BENCH_ULTRASPARSE_100K_COUNT    100000
+#define BENCH_ULTRASPARSE_1K_RANGE      ((uint64_t)BENCH_ULTRASPARSE_1K_COUNT * BENCH_ULTRASPARSE_STRIDE)
+#define BENCH_ULTRASPARSE_10K_RANGE     ((uint64_t)BENCH_ULTRASPARSE_10K_COUNT * BENCH_ULTRASPARSE_STRIDE)
+#define BENCH_ULTRASPARSE_100K_RANGE    ((uint64_t)BENCH_ULTRASPARSE_100K_COUNT * BENCH_ULTRASPARSE_STRIDE)
+
+#define FLAT_WORDS_ULTRASPARSE_1K       (BENCH_ULTRASPARSE_1K_RANGE / 64 + 1)
+#define FLAT_WORDS_ULTRASPARSE_10K      (BENCH_ULTRASPARSE_10K_RANGE / 64 + 1)
+#define FLAT_WORDS_ULTRASPARSE_100K     (BENCH_ULTRASPARSE_100K_RANGE / 64 + 1)
+
+#define SKIP_WORDS_ULTRASPARSE_1K       ((FLAT_WORDS_ULTRASPARSE_1K + 63) / 64)
+#define SKIP_WORDS_ULTRASPARSE_10K      ((FLAT_WORDS_ULTRASPARSE_10K + 63) / 64)
+#define SKIP_WORDS_ULTRASPARSE_100K     ((FLAT_WORDS_ULTRASPARSE_100K + 63) / 64)
+
+// arena sizes for ultra-sparse (100k needs large arena for 1B range)
+#define BENCH_ARENA_SIZE_64M   (64 * 1024 * 1024)
+#define BENCH_ARENA_SIZE_128M  (128 * 1024 * 1024)
+
+// intersection benchmarks: AND of multiple bitsets at 30% and 70% density
+#define BENCH_INTERSECT_RANGE       100000
+#define BENCH_INTERSECT_30_COUNT    30000
+#define BENCH_INTERSECT_70_COUNT    70000
+#define FLAT_WORDS_INTERSECT        (BENCH_INTERSECT_RANGE / 64 + 1)
+#define SKIP_WORDS_INTERSECT        ((FLAT_WORDS_INTERSECT + 63) / 64)
+
 #define FLAT_SKIP_SET(flat, skip, i) \
 	do { \
 		uint64_t _skip_w_ = (uint64_t)(i) >> 6; \
@@ -2183,6 +2214,1050 @@ UBENCH_F(bitset_iterate_sparse_2m, iterate_sparse_2m_flat_skip)
 		for (uint64_t w = base_w; w < end_w; w++)
 		{
 			uint64_t word = ubench_fixture->flat_skip[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// ITERATE ULTRA-SPARSE 1K BITS: 0.01% density, 1000 bits across 10M range
+// ============================================================================
+
+struct bitset_iterate_ultrasparse_1k
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_256;
+	uint64_t *flat;
+	uint64_t *flat_skip;
+	uint64_t *skip_table;
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_iterate_ultrasparse_1k)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE);
+	w_sparse_bitset_init(&ubench_fixture->bs_256, &ubench_fixture->arena, 256);
+	ubench_fixture->flat       = calloc(FLAT_WORDS_ULTRASPARSE_1K, sizeof(uint64_t));
+	ubench_fixture->flat_skip  = calloc(FLAT_WORDS_ULTRASPARSE_1K, sizeof(uint64_t));
+	ubench_fixture->skip_table = calloc(SKIP_WORDS_ULTRASPARSE_1K, sizeof(uint64_t));
+	ubench_fixture->result     = malloc(BENCH_ULTRASPARSE_1K_COUNT * sizeof(uint64_t));
+
+	for (uint64_t i = 0; i < BENCH_ULTRASPARSE_1K_COUNT; i++)
+	{
+		uint64_t idx = i * BENCH_ULTRASPARSE_STRIDE;
+		w_sparse_bitset_set(&ubench_fixture->bs_256, idx);
+		FLAT_SET(ubench_fixture->flat, idx);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip, ubench_fixture->skip_table, idx);
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_iterate_ultrasparse_1k)
+{
+	w_sparse_bitset_free(&ubench_fixture->bs_256);
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->flat);
+	free(ubench_fixture->flat_skip);
+	free(ubench_fixture->skip_table);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_1k, iterate_ultrasparse_1k_sparse_256)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs = &ubench_fixture->bs_256;
+	for (uint64_t li = 0; li < bs->lookup_pages_length; li++)
+	{
+		uint64_t lword = bs->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			if (page_index >= bs->pages_length) continue;
+			struct w_sparse_bitset_page *page = &bs->pages[page_index];
+			if (!page->bits || page->first_set == UINT32_MAX) continue;
+			for (uint32_t w = page->first_set; w <= page->last_set; w++)
+			{
+				uint64_t word = page->bits[w];
+				while (word)
+				{
+					int b = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs->page_size_ + w) * 64 + (uint64_t)b;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_1k, iterate_ultrasparse_1k_flat)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_ULTRASPARSE_1K; w++)
+	{
+		uint64_t word = ubench_fixture->flat[w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_1k, iterate_ultrasparse_1k_flat_skip)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_ULTRASPARSE_1K; sw++)
+	{
+		if (!ubench_fixture->skip_table[sw]) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_ULTRASPARSE_1K ? base_w + 64 : FLAT_WORDS_ULTRASPARSE_1K;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// ITERATE ULTRA-SPARSE 10K BITS: 0.01% density, 10000 bits across 100M range
+// ============================================================================
+
+struct bitset_iterate_ultrasparse_10k
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_256;
+	uint64_t *flat;
+	uint64_t *flat_skip;
+	uint64_t *skip_table;
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_iterate_ultrasparse_10k)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_16M);
+	w_sparse_bitset_init(&ubench_fixture->bs_256, &ubench_fixture->arena, 256);
+	ubench_fixture->flat       = calloc(FLAT_WORDS_ULTRASPARSE_10K, sizeof(uint64_t));
+	ubench_fixture->flat_skip  = calloc(FLAT_WORDS_ULTRASPARSE_10K, sizeof(uint64_t));
+	ubench_fixture->skip_table = calloc(SKIP_WORDS_ULTRASPARSE_10K, sizeof(uint64_t));
+	ubench_fixture->result     = malloc(BENCH_ULTRASPARSE_10K_COUNT * sizeof(uint64_t));
+
+	for (uint64_t i = 0; i < BENCH_ULTRASPARSE_10K_COUNT; i++)
+	{
+		uint64_t idx = i * BENCH_ULTRASPARSE_STRIDE;
+		w_sparse_bitset_set(&ubench_fixture->bs_256, idx);
+		FLAT_SET(ubench_fixture->flat, idx);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip, ubench_fixture->skip_table, idx);
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_iterate_ultrasparse_10k)
+{
+	w_sparse_bitset_free(&ubench_fixture->bs_256);
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->flat);
+	free(ubench_fixture->flat_skip);
+	free(ubench_fixture->skip_table);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_10k, iterate_ultrasparse_10k_sparse_256)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs = &ubench_fixture->bs_256;
+	for (uint64_t li = 0; li < bs->lookup_pages_length; li++)
+	{
+		uint64_t lword = bs->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			if (page_index >= bs->pages_length) continue;
+			struct w_sparse_bitset_page *page = &bs->pages[page_index];
+			if (!page->bits || page->first_set == UINT32_MAX) continue;
+			for (uint32_t w = page->first_set; w <= page->last_set; w++)
+			{
+				uint64_t word = page->bits[w];
+				while (word)
+				{
+					int b = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs->page_size_ + w) * 64 + (uint64_t)b;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_10k, iterate_ultrasparse_10k_flat)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_ULTRASPARSE_10K; w++)
+	{
+		uint64_t word = ubench_fixture->flat[w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_10k, iterate_ultrasparse_10k_flat_skip)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_ULTRASPARSE_10K; sw++)
+	{
+		if (!ubench_fixture->skip_table[sw]) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_ULTRASPARSE_10K ? base_w + 64 : FLAT_WORDS_ULTRASPARSE_10K;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// ITERATE ULTRA-SPARSE 100K BITS: 0.01% density, 100000 bits across 1B range
+// ============================================================================
+
+struct bitset_iterate_ultrasparse_100k
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_256;
+	uint64_t *flat;
+	uint64_t *flat_skip;
+	uint64_t *skip_table;
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_iterate_ultrasparse_100k)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_128M);
+	w_sparse_bitset_init(&ubench_fixture->bs_256, &ubench_fixture->arena, 256);
+	ubench_fixture->flat       = calloc(FLAT_WORDS_ULTRASPARSE_100K, sizeof(uint64_t));
+	ubench_fixture->flat_skip  = calloc(FLAT_WORDS_ULTRASPARSE_100K, sizeof(uint64_t));
+	ubench_fixture->skip_table = calloc(SKIP_WORDS_ULTRASPARSE_100K, sizeof(uint64_t));
+	ubench_fixture->result     = malloc(BENCH_ULTRASPARSE_100K_COUNT * sizeof(uint64_t));
+
+	for (uint64_t i = 0; i < BENCH_ULTRASPARSE_100K_COUNT; i++)
+	{
+		uint64_t idx = i * BENCH_ULTRASPARSE_STRIDE;
+		w_sparse_bitset_set(&ubench_fixture->bs_256, idx);
+		FLAT_SET(ubench_fixture->flat, idx);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip, ubench_fixture->skip_table, idx);
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_iterate_ultrasparse_100k)
+{
+	w_sparse_bitset_free(&ubench_fixture->bs_256);
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->flat);
+	free(ubench_fixture->flat_skip);
+	free(ubench_fixture->skip_table);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_100k, iterate_ultrasparse_100k_sparse_256)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs = &ubench_fixture->bs_256;
+	for (uint64_t li = 0; li < bs->lookup_pages_length; li++)
+	{
+		uint64_t lword = bs->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			if (page_index >= bs->pages_length) continue;
+			struct w_sparse_bitset_page *page = &bs->pages[page_index];
+			if (!page->bits || page->first_set == UINT32_MAX) continue;
+			for (uint32_t w = page->first_set; w <= page->last_set; w++)
+			{
+				uint64_t word = page->bits[w];
+				while (word)
+				{
+					int b = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs->page_size_ + w) * 64 + (uint64_t)b;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_100k, iterate_ultrasparse_100k_flat)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_ULTRASPARSE_100K; w++)
+	{
+		uint64_t word = ubench_fixture->flat[w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_iterate_ultrasparse_100k, iterate_ultrasparse_100k_flat_skip)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_ULTRASPARSE_100K; sw++)
+	{
+		if (!ubench_fixture->skip_table[sw]) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_ULTRASPARSE_100K ? base_w + 64 : FLAT_WORDS_ULTRASPARSE_100K;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// INTERSECTION BENCHMARKS: AND of 2, 3, and 5 bitsets at 30%/70% density
+// ============================================================================
+
+struct bitset_intersect_2
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_30_a;
+	struct w_sparse_bitset bs_30_b;
+	struct w_sparse_bitset bs_70_a;
+	struct w_sparse_bitset bs_70_b;
+	uint64_t *flat_30_a;
+	uint64_t *flat_30_b;
+	uint64_t *flat_70_a;
+	uint64_t *flat_70_b;
+	uint64_t *flat_skip_30_a;
+	uint64_t *flat_skip_30_b;
+	uint64_t *flat_skip_70_a;
+	uint64_t *flat_skip_70_b;
+	uint64_t *skip_30_a;
+	uint64_t *skip_30_b;
+	uint64_t *skip_70_a;
+	uint64_t *skip_70_b;
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_2)
+{
+	init_rand_indices();
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE);
+	w_sparse_bitset_init(&ubench_fixture->bs_30_a, &ubench_fixture->arena, 256);
+	w_sparse_bitset_init(&ubench_fixture->bs_30_b, &ubench_fixture->arena, 256);
+	w_sparse_bitset_init(&ubench_fixture->bs_70_a, &ubench_fixture->arena, 256);
+	w_sparse_bitset_init(&ubench_fixture->bs_70_b, &ubench_fixture->arena, 256);
+
+	ubench_fixture->flat_30_a = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_30_b = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_70_a = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_70_b = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_skip_30_a = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_skip_30_b = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_skip_70_a = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->flat_skip_70_b = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->skip_30_a = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->skip_30_b = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->skip_70_a = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->skip_70_b = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	ubench_fixture->result = malloc(BENCH_INTERSECT_RANGE * sizeof(uint64_t));
+
+	srand(42);
+	for (uint64_t i = 0; i < BENCH_INTERSECT_30_COUNT; i++)
+	{
+		uint64_t idx_a = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+		uint64_t idx_b = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+		w_sparse_bitset_set(&ubench_fixture->bs_30_a, idx_a);
+		w_sparse_bitset_set(&ubench_fixture->bs_30_b, idx_b);
+		FLAT_SET(ubench_fixture->flat_30_a, idx_a);
+		FLAT_SET(ubench_fixture->flat_30_b, idx_b);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip_30_a, ubench_fixture->skip_30_a, idx_a);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip_30_b, ubench_fixture->skip_30_b, idx_b);
+	}
+	for (uint64_t i = 0; i < BENCH_INTERSECT_70_COUNT; i++)
+	{
+		uint64_t idx_a = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+		uint64_t idx_b = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+		w_sparse_bitset_set(&ubench_fixture->bs_70_a, idx_a);
+		w_sparse_bitset_set(&ubench_fixture->bs_70_b, idx_b);
+		FLAT_SET(ubench_fixture->flat_70_a, idx_a);
+		FLAT_SET(ubench_fixture->flat_70_b, idx_b);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip_70_a, ubench_fixture->skip_70_a, idx_a);
+		FLAT_SKIP_SET(ubench_fixture->flat_skip_70_b, ubench_fixture->skip_70_b, idx_b);
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_2)
+{
+	w_sparse_bitset_free(&ubench_fixture->bs_30_a);
+	w_sparse_bitset_free(&ubench_fixture->bs_30_b);
+	w_sparse_bitset_free(&ubench_fixture->bs_70_a);
+	w_sparse_bitset_free(&ubench_fixture->bs_70_b);
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->flat_30_a);
+	free(ubench_fixture->flat_30_b);
+	free(ubench_fixture->flat_70_a);
+	free(ubench_fixture->flat_70_b);
+	free(ubench_fixture->flat_skip_30_a);
+	free(ubench_fixture->flat_skip_30_b);
+	free(ubench_fixture->flat_skip_70_a);
+	free(ubench_fixture->flat_skip_70_b);
+	free(ubench_fixture->skip_30_a);
+	free(ubench_fixture->skip_30_b);
+	free(ubench_fixture->skip_70_a);
+	free(ubench_fixture->skip_70_b);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_sparse_30)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *a = &ubench_fixture->bs_30_a;
+	struct w_sparse_bitset *b = &ubench_fixture->bs_30_b;
+	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			if (page_index >= a->pages_length || page_index >= b->pages_length) continue;
+			struct w_sparse_bitset_page *pa = &a->pages[page_index];
+			struct w_sparse_bitset_page *pb = &b->pages[page_index];
+			if (!pa->bits || !pb->bits) continue;
+			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set;
+			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set;
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = pa->bits[w] & pb->bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_sparse_70)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *a = &ubench_fixture->bs_70_a;
+	struct w_sparse_bitset *b = &ubench_fixture->bs_70_b;
+	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			if (page_index >= a->pages_length || page_index >= b->pages_length) continue;
+			struct w_sparse_bitset_page *pa = &a->pages[page_index];
+			struct w_sparse_bitset_page *pb = &b->pages[page_index];
+			if (!pa->bits || !pb->bits) continue;
+			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set;
+			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set;
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = pa->bits[w] & pb->bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_flat_30)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_30_a[w] & ubench_fixture->flat_30_b[w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_flat_70)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_70_a[w] & ubench_fixture->flat_70_b[w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_flat_skip_30)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_30_a[sw] & ubench_fixture->skip_30_b[sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_30_a[w] & ubench_fixture->flat_skip_30_b[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_2, intersect_2_flat_skip_70)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_70_a[sw] & ubench_fixture->skip_70_b[sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_70_a[w] & ubench_fixture->flat_skip_70_b[w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// INTERSECTION OF 3 BITSETS
+// ============================================================================
+
+struct bitset_intersect_3
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_30[3];
+	struct w_sparse_bitset bs_70[3];
+	uint64_t *flat_30[3];
+	uint64_t *flat_70[3];
+	uint64_t *flat_skip_30[3];
+	uint64_t *flat_skip_70[3];
+	uint64_t *skip_30[3];
+	uint64_t *skip_70[3];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_3)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_LARGE);
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_30[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_70[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_30[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_70[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_skip_30[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_skip_70[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->skip_30[j] = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->skip_70[j] = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_RANGE * sizeof(uint64_t));
+
+	srand(42);
+	for (int j = 0; j < 3; j++)
+	{
+		for (uint64_t i = 0; i < BENCH_INTERSECT_30_COUNT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_30[j], idx);
+			FLAT_SET(ubench_fixture->flat_30[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_30[j], ubench_fixture->skip_30[j], idx);
+		}
+		for (uint64_t i = 0; i < BENCH_INTERSECT_70_COUNT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_70[j], idx);
+			FLAT_SET(ubench_fixture->flat_70[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_70[j], ubench_fixture->skip_70[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_3)
+{
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_30[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_70[j]);
+		free(ubench_fixture->flat_30[j]);
+		free(ubench_fixture->flat_70[j]);
+		free(ubench_fixture->flat_skip_30[j]);
+		free(ubench_fixture->flat_skip_70[j]);
+		free(ubench_fixture->skip_30[j]);
+		free(ubench_fixture->skip_70[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_sparse_30)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_30[0], &ubench_fixture->bs_30[1], &ubench_fixture->bs_30[2]};
+	uint64_t max_li = bs[0]->lookup_pages_length;
+	for (int j = 1; j < 3; j++)
+		if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			bool valid = true;
+			for (int j = 0; j < 3; j++)
+				if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false;
+			if (!valid) continue;
+			uint32_t first = 0, last = UINT32_MAX;
+			for (int j = 0; j < 3; j++)
+			{
+				if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set;
+				if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set;
+			}
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_sparse_70)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_70[0], &ubench_fixture->bs_70[1], &ubench_fixture->bs_70[2]};
+	uint64_t max_li = bs[0]->lookup_pages_length;
+	for (int j = 1; j < 3; j++)
+		if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			bool valid = true;
+			for (int j = 0; j < 3; j++)
+				if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false;
+			if (!valid) continue;
+			uint32_t first = 0, last = UINT32_MAX;
+			for (int j = 0; j < 3; j++)
+			{
+				if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set;
+				if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set;
+			}
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_flat_30)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_30[0][w] & ubench_fixture->flat_30[1][w] & ubench_fixture->flat_30[2][w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_flat_70)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_70[0][w] & ubench_fixture->flat_70[1][w] & ubench_fixture->flat_70[2][w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_flat_skip_30)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_30[0][sw] & ubench_fixture->skip_30[1][sw] & ubench_fixture->skip_30[2][sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_30[0][w] & ubench_fixture->flat_skip_30[1][w] & ubench_fixture->flat_skip_30[2][w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_3, intersect_3_flat_skip_70)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_70[0][sw] & ubench_fixture->skip_70[1][sw] & ubench_fixture->skip_70[2][sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_70[0][w] & ubench_fixture->flat_skip_70[1][w] & ubench_fixture->flat_skip_70[2][w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+
+// ============================================================================
+// INTERSECTION OF 5 BITSETS
+// ============================================================================
+
+struct bitset_intersect_5
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_30[5];
+	struct w_sparse_bitset bs_70[5];
+	uint64_t *flat_30[5];
+	uint64_t *flat_70[5];
+	uint64_t *flat_skip_30[5];
+	uint64_t *flat_skip_70[5];
+	uint64_t *skip_30[5];
+	uint64_t *skip_70[5];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_5)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_16M);
+	for (int j = 0; j < 5; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_30[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_70[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_30[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_70[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_skip_30[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->flat_skip_70[j] = calloc(FLAT_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->skip_30[j] = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+		ubench_fixture->skip_70[j] = calloc(SKIP_WORDS_INTERSECT, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_RANGE * sizeof(uint64_t));
+
+	srand(42);
+	for (int j = 0; j < 5; j++)
+	{
+		for (uint64_t i = 0; i < BENCH_INTERSECT_30_COUNT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_30[j], idx);
+			FLAT_SET(ubench_fixture->flat_30[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_30[j], ubench_fixture->skip_30[j], idx);
+		}
+		for (uint64_t i = 0; i < BENCH_INTERSECT_70_COUNT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_70[j], idx);
+			FLAT_SET(ubench_fixture->flat_70[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_70[j], ubench_fixture->skip_70[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_5)
+{
+	for (int j = 0; j < 5; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_30[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_70[j]);
+		free(ubench_fixture->flat_30[j]);
+		free(ubench_fixture->flat_70[j]);
+		free(ubench_fixture->flat_skip_30[j]);
+		free(ubench_fixture->flat_skip_70[j]);
+		free(ubench_fixture->skip_30[j]);
+		free(ubench_fixture->skip_70[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_sparse_30)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs[5] = {&ubench_fixture->bs_30[0], &ubench_fixture->bs_30[1], &ubench_fixture->bs_30[2], &ubench_fixture->bs_30[3], &ubench_fixture->bs_30[4]};
+	uint64_t max_li = bs[0]->lookup_pages_length;
+	for (int j = 1; j < 5; j++)
+		if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li] & bs[3]->lookup_pages[li] & bs[4]->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			bool valid = true;
+			for (int j = 0; j < 5; j++)
+				if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false;
+			if (!valid) continue;
+			uint32_t first = 0, last = UINT32_MAX;
+			for (int j = 0; j < 5; j++)
+			{
+				if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set;
+				if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set;
+			}
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w] & bs[3]->pages[page_index].bits[w] & bs[4]->pages[page_index].bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_sparse_70)
+{
+	uint64_t count = 0;
+	struct w_sparse_bitset *bs[5] = {&ubench_fixture->bs_70[0], &ubench_fixture->bs_70[1], &ubench_fixture->bs_70[2], &ubench_fixture->bs_70[3], &ubench_fixture->bs_70[4]};
+	uint64_t max_li = bs[0]->lookup_pages_length;
+	for (int j = 1; j < 5; j++)
+		if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length;
+	for (uint64_t li = 0; li < max_li; li++)
+	{
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li] & bs[3]->lookup_pages[li] & bs[4]->lookup_pages[li];
+		while (lword)
+		{
+			int lbit = __builtin_ctzll(lword);
+			lword &= lword - 1;
+			uint64_t page_index = li * 64 + (uint64_t)lbit;
+			bool valid = true;
+			for (int j = 0; j < 5; j++)
+				if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false;
+			if (!valid) continue;
+			uint32_t first = 0, last = UINT32_MAX;
+			for (int j = 0; j < 5; j++)
+			{
+				if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set;
+				if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set;
+			}
+			if (first > last || first == UINT32_MAX) continue;
+			for (uint32_t w = first; w <= last; w++)
+			{
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w] & bs[3]->pages[page_index].bits[w] & bs[4]->pages[page_index].bits[w];
+				while (word)
+				{
+					int bit = __builtin_ctzll(word);
+					word &= word - 1;
+					ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit;
+				}
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_flat_30)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_30[0][w] & ubench_fixture->flat_30[1][w] & ubench_fixture->flat_30[2][w] & ubench_fixture->flat_30[3][w] & ubench_fixture->flat_30[4][w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_flat_70)
+{
+	uint64_t count = 0;
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT; w++)
+	{
+		uint64_t word = ubench_fixture->flat_70[0][w] & ubench_fixture->flat_70[1][w] & ubench_fixture->flat_70[2][w] & ubench_fixture->flat_70[3][w] & ubench_fixture->flat_70[4][w];
+		while (word)
+		{
+			int b = __builtin_ctzll(word);
+			word &= word - 1;
+			ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_flat_skip_30)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_30[0][sw] & ubench_fixture->skip_30[1][sw] & ubench_fixture->skip_30[2][sw] & ubench_fixture->skip_30[3][sw] & ubench_fixture->skip_30[4][sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_30[0][w] & ubench_fixture->flat_skip_30[1][w] & ubench_fixture->flat_skip_30[2][w] & ubench_fixture->flat_skip_30[3][w] & ubench_fixture->flat_skip_30[4][w];
+			while (word)
+			{
+				int b = __builtin_ctzll(word);
+				word &= word - 1;
+				ubench_fixture->result[count++] = w * 64 + (uint64_t)b;
+			}
+		}
+	}
+	UBENCH_DO_NOTHING(&ubench_fixture->result);
+}
+
+UBENCH_F(bitset_intersect_5, intersect_5_flat_skip_70)
+{
+	uint64_t count = 0;
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT; sw++)
+	{
+		uint64_t skip_word = ubench_fixture->skip_70[0][sw] & ubench_fixture->skip_70[1][sw] & ubench_fixture->skip_70[2][sw] & ubench_fixture->skip_70[3][sw] & ubench_fixture->skip_70[4][sw];
+		if (!skip_word) continue;
+		uint64_t base_w = sw * 64;
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT ? base_w + 64 : FLAT_WORDS_INTERSECT;
+		for (uint64_t w = base_w; w < end_w; w++)
+		{
+			uint64_t word = ubench_fixture->flat_skip_70[0][w] & ubench_fixture->flat_skip_70[1][w] & ubench_fixture->flat_skip_70[2][w] & ubench_fixture->flat_skip_70[3][w] & ubench_fixture->flat_skip_70[4][w];
 			while (word)
 			{
 				int b = __builtin_ctzll(word);
