@@ -3292,28 +3292,29 @@ UBENCH_F(bitset_intersect_5, intersect_5_flat_skip_70)
 // 1M INTERSECTION: ULTRA-SPARSE (1 bit, 100 bits, 1k bits in 1M range)
 // ============================================================================
 
-struct bitset_intersect_1m_ultrasparse
+// 2-way ultrasparse fixture
+struct bitset_intersect_1m_ultrasparse_2
 {
 	struct w_arena arena;
-	struct w_sparse_bitset bs_1[5];
-	struct w_sparse_bitset bs_100[5];
-	struct w_sparse_bitset bs_1k[5];
-	uint64_t *flat_1[5];
-	uint64_t *flat_100[5];
-	uint64_t *flat_1k[5];
-	uint64_t *flat_skip_1[5];
-	uint64_t *flat_skip_100[5];
-	uint64_t *flat_skip_1k[5];
-	uint64_t *skip_1[5];
-	uint64_t *skip_100[5];
-	uint64_t *skip_1k[5];
+	struct w_sparse_bitset bs_1[2];
+	struct w_sparse_bitset bs_100[2];
+	struct w_sparse_bitset bs_1k[2];
+	uint64_t *flat_1[2];
+	uint64_t *flat_100[2];
+	uint64_t *flat_1k[2];
+	uint64_t *flat_skip_1[2];
+	uint64_t *flat_skip_100[2];
+	uint64_t *flat_skip_1k[2];
+	uint64_t *skip_1[2];
+	uint64_t *skip_100[2];
+	uint64_t *skip_1k[2];
 	uint64_t *result;
 };
 
-UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse)
+UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse_2)
 {
 	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_32M);
-	for (int j = 0; j < 5; j++)
+	for (int j = 0; j < 2; j++)
 	{
 		w_sparse_bitset_init(&ubench_fixture->bs_1[j], &ubench_fixture->arena, 256);
 		w_sparse_bitset_init(&ubench_fixture->bs_100[j], &ubench_fixture->arena, 256);
@@ -3330,8 +3331,7 @@ UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse)
 	}
 	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
 
-	// same seed for all bitsets to ensure overlapping bits
-	for (int j = 0; j < 5; j++)
+	for (int j = 0; j < 2; j++)
 	{
 		srand(42);
 		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_1; i++)
@@ -3360,9 +3360,9 @@ UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse)
 	}
 }
 
-UBENCH_F_TEARDOWN(bitset_intersect_1m_ultrasparse)
+UBENCH_F_TEARDOWN(bitset_intersect_1m_ultrasparse_2)
 {
-	for (int j = 0; j < 5; j++)
+	for (int j = 0; j < 2; j++)
 	{
 		w_sparse_bitset_free(&ubench_fixture->bs_1[j]);
 		w_sparse_bitset_free(&ubench_fixture->bs_100[j]);
@@ -3383,7 +3383,7 @@ UBENCH_F_TEARDOWN(bitset_intersect_1m_ultrasparse)
 
 // 2-way intersection macros for 1M ultrasparse
 #define INTERSECT_1M_SPARSE_2(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 { \
 	uint64_t count = 0; \
 	struct w_sparse_bitset *a = &ubench_fixture->bs_arr[0]; \
@@ -3420,7 +3420,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_2(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) \
@@ -3437,7 +3437,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_SKIP_2(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_2, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) \
@@ -3473,9 +3473,99 @@ INTERSECT_1M_SPARSE_2(intersect_1m_ultrasparse_1k_2_sparse, bs_1k)
 INTERSECT_1M_FLAT_2(intersect_1m_ultrasparse_1k_2_flat, flat_1k)
 INTERSECT_1M_FLAT_SKIP_2(intersect_1m_ultrasparse_1k_2_flat_skip, flat_skip_1k, skip_1k)
 
+
+// 3-way ultrasparse fixture
+struct bitset_intersect_1m_ultrasparse_3
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_1[3];
+	struct w_sparse_bitset bs_100[3];
+	struct w_sparse_bitset bs_1k[3];
+	uint64_t *flat_1[3];
+	uint64_t *flat_100[3];
+	uint64_t *flat_1k[3];
+	uint64_t *flat_skip_1[3];
+	uint64_t *flat_skip_100[3];
+	uint64_t *flat_skip_1k[3];
+	uint64_t *skip_1[3];
+	uint64_t *skip_100[3];
+	uint64_t *skip_1k[3];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse_3)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_32M);
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_1[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_100[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_1k[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_1[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_100[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_1k[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_1[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_100[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_1k[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_1[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_100[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_1k[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 3; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_1; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_1[j], idx);
+			FLAT_SET(ubench_fixture->flat_1[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_1[j], ubench_fixture->skip_1[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_100; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_100[j], idx);
+			FLAT_SET(ubench_fixture->flat_100[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_100[j], ubench_fixture->skip_100[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_1K; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_1k[j], idx);
+			FLAT_SET(ubench_fixture->flat_1k[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_1k[j], ubench_fixture->skip_1k[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_ultrasparse_3)
+{
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_1[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_100[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_1k[j]);
+		free(ubench_fixture->flat_1[j]);
+		free(ubench_fixture->flat_100[j]);
+		free(ubench_fixture->flat_1k[j]);
+		free(ubench_fixture->flat_skip_1[j]);
+		free(ubench_fixture->flat_skip_100[j]);
+		free(ubench_fixture->flat_skip_1k[j]);
+		free(ubench_fixture->skip_1[j]);
+		free(ubench_fixture->skip_100[j]);
+		free(ubench_fixture->skip_1k[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
 // 3-way intersection macros
 #define INTERSECT_1M_SPARSE_3(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 { \
 	uint64_t count = 0; \
 	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
@@ -3509,7 +3599,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_3(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) \
@@ -3521,7 +3611,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_SKIP_3(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_3, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) \
@@ -3552,9 +3642,99 @@ INTERSECT_1M_SPARSE_3(intersect_1m_ultrasparse_1k_3_sparse, bs_1k)
 INTERSECT_1M_FLAT_3(intersect_1m_ultrasparse_1k_3_flat, flat_1k)
 INTERSECT_1M_FLAT_SKIP_3(intersect_1m_ultrasparse_1k_3_flat_skip, flat_skip_1k, skip_1k)
 
+
+// 5-way ultrasparse fixture
+struct bitset_intersect_1m_ultrasparse_5
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_1[5];
+	struct w_sparse_bitset bs_100[5];
+	struct w_sparse_bitset bs_1k[5];
+	uint64_t *flat_1[5];
+	uint64_t *flat_100[5];
+	uint64_t *flat_1k[5];
+	uint64_t *flat_skip_1[5];
+	uint64_t *flat_skip_100[5];
+	uint64_t *flat_skip_1k[5];
+	uint64_t *skip_1[5];
+	uint64_t *skip_100[5];
+	uint64_t *skip_1k[5];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_ultrasparse_5)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_32M);
+	for (int j = 0; j < 5; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_1[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_100[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_1k[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_1[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_100[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_1k[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_1[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_100[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_1k[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_1[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_100[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_1k[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 5; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_1; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_1[j], idx);
+			FLAT_SET(ubench_fixture->flat_1[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_1[j], ubench_fixture->skip_1[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_100; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_100[j], idx);
+			FLAT_SET(ubench_fixture->flat_100[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_100[j], ubench_fixture->skip_100[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_ULTRASPARSE_1K; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_1k[j], idx);
+			FLAT_SET(ubench_fixture->flat_1k[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_1k[j], ubench_fixture->skip_1k[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_ultrasparse_5)
+{
+	for (int j = 0; j < 5; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_1[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_100[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_1k[j]);
+		free(ubench_fixture->flat_1[j]);
+		free(ubench_fixture->flat_100[j]);
+		free(ubench_fixture->flat_1k[j]);
+		free(ubench_fixture->flat_skip_1[j]);
+		free(ubench_fixture->flat_skip_100[j]);
+		free(ubench_fixture->flat_skip_1k[j]);
+		free(ubench_fixture->skip_1[j]);
+		free(ubench_fixture->skip_100[j]);
+		free(ubench_fixture->skip_1k[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
 // 5-way intersection macros
 #define INTERSECT_1M_SPARSE_5(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 { \
 	uint64_t count = 0; \
 	struct w_sparse_bitset *bs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
@@ -3588,7 +3768,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_5(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) \
@@ -3600,7 +3780,7 @@ UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
 }
 
 #define INTERSECT_1M_FLAT_SKIP_5(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_ultrasparse, name) \
+UBENCH_F(bitset_intersect_1m_ultrasparse_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) \
@@ -3636,7 +3816,277 @@ INTERSECT_1M_FLAT_SKIP_5(intersect_1m_ultrasparse_1k_5_flat_skip, flat_skip_1k, 
 // 1M INTERSECTION: LOW DENSITY (10%, 15%)
 // ============================================================================
 
-struct bitset_intersect_1m_low
+// 2-way low density fixture
+struct bitset_intersect_1m_low_2
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_10[2];
+	struct w_sparse_bitset bs_15[2];
+	uint64_t *flat_10[2];
+	uint64_t *flat_15[2];
+	uint64_t *flat_skip_10[2];
+	uint64_t *flat_skip_15[2];
+	uint64_t *skip_10[2];
+	uint64_t *skip_15[2];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_low_2)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_64M);
+	for (int j = 0; j < 2; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_10[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_15[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_10[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_15[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_10[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_15[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_10[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_15[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 2; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_LOW_10PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_10[j], idx);
+			FLAT_SET(ubench_fixture->flat_10[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_10[j], ubench_fixture->skip_10[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_LOW_15PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_15[j], idx);
+			FLAT_SET(ubench_fixture->flat_15[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_15[j], ubench_fixture->skip_15[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_low_2)
+{
+	for (int j = 0; j < 2; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_10[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_15[j]);
+		free(ubench_fixture->flat_10[j]);
+		free(ubench_fixture->flat_15[j]);
+		free(ubench_fixture->flat_skip_10[j]);
+		free(ubench_fixture->flat_skip_15[j]);
+		free(ubench_fixture->skip_10[j]);
+		free(ubench_fixture->skip_15[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+// Low density 2-way
+#define INTERSECT_1M_LOW_SPARSE_2(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_low_2, name) \
+{ \
+	uint64_t count = 0; \
+	struct w_sparse_bitset *a = &ubench_fixture->bs_arr[0]; \
+	struct w_sparse_bitset *b = &ubench_fixture->bs_arr[1]; \
+	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length; \
+	for (uint64_t li = 0; li < max_li; li++) { \
+		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li]; \
+		while (lword) { \
+			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
+			uint64_t page_index = li * 64 + (uint64_t)lbit; \
+			if (page_index >= a->pages_length || page_index >= b->pages_length) continue; \
+			struct w_sparse_bitset_page *pa = &a->pages[page_index]; \
+			struct w_sparse_bitset_page *pb = &b->pages[page_index]; \
+			if (!pa->bits || !pb->bits) continue; \
+			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set; \
+			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set; \
+			if (first > last || first == UINT32_MAX) continue; \
+			for (uint32_t w = first; w <= last; w++) { \
+				uint64_t word = pa->bits[w] & pb->bits[w]; \
+				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit; } \
+			} \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_LOW_FLAT_2(name, flat_arr) \
+UBENCH_F(bitset_intersect_1m_low_2, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
+		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
+		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_LOW_FLAT_SKIP_2(name, flat_arr, skip_arr) \
+UBENCH_F(bitset_intersect_1m_low_2, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
+		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw]; \
+		if (!skip_word) continue; \
+		uint64_t base_w = sw * 64; \
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
+		for (uint64_t w = base_w; w < end_w; w++) { \
+			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
+			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_10pct_2_sparse, bs_10)
+INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_10pct_2_flat, flat_10)
+INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_10pct_2_flat_skip, flat_skip_10, skip_10)
+
+INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_15pct_2_sparse, bs_15)
+INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_15pct_2_flat, flat_15)
+INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_15pct_2_flat_skip, flat_skip_15, skip_15)
+
+
+// 3-way low density fixture
+struct bitset_intersect_1m_low_3
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_10[3];
+	struct w_sparse_bitset bs_15[3];
+	uint64_t *flat_10[3];
+	uint64_t *flat_15[3];
+	uint64_t *flat_skip_10[3];
+	uint64_t *flat_skip_15[3];
+	uint64_t *skip_10[3];
+	uint64_t *skip_15[3];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_low_3)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_64M);
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_10[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_15[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_10[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_15[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_10[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_15[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_10[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_15[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 3; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_LOW_10PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_10[j], idx);
+			FLAT_SET(ubench_fixture->flat_10[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_10[j], ubench_fixture->skip_10[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_LOW_15PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_15[j], idx);
+			FLAT_SET(ubench_fixture->flat_15[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_15[j], ubench_fixture->skip_15[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_low_3)
+{
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_10[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_15[j]);
+		free(ubench_fixture->flat_10[j]);
+		free(ubench_fixture->flat_15[j]);
+		free(ubench_fixture->flat_skip_10[j]);
+		free(ubench_fixture->flat_skip_15[j]);
+		free(ubench_fixture->skip_10[j]);
+		free(ubench_fixture->skip_15[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+// Low density 3-way
+#define INTERSECT_1M_LOW_SPARSE_3(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_low_3, name) \
+{ \
+	uint64_t count = 0; \
+	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
+	uint64_t max_li = bs[0]->lookup_pages_length; \
+	for (int j = 1; j < 3; j++) if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length; \
+	for (uint64_t li = 0; li < max_li; li++) { \
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li]; \
+		while (lword) { \
+			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
+			uint64_t page_index = li * 64 + (uint64_t)lbit; \
+			bool valid = true; \
+			for (int j = 0; j < 3; j++) if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false; \
+			if (!valid) continue; \
+			uint32_t first = 0, last = UINT32_MAX; \
+			for (int j = 0; j < 3; j++) { if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set; if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set; } \
+			if (first > last || first == UINT32_MAX) continue; \
+			for (uint32_t w = first; w <= last; w++) { \
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w]; \
+				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit; } \
+			} \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_LOW_FLAT_3(name, flat_arr) \
+UBENCH_F(bitset_intersect_1m_low_3, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
+		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
+		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_LOW_FLAT_SKIP_3(name, flat_arr, skip_arr) \
+UBENCH_F(bitset_intersect_1m_low_3, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
+		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw] & ubench_fixture->skip_arr[2][sw]; \
+		if (!skip_word) continue; \
+		uint64_t base_w = sw * 64; \
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
+		for (uint64_t w = base_w; w < end_w; w++) { \
+			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
+			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_10pct_3_sparse, bs_10)
+INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_10pct_3_flat, flat_10)
+INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_10pct_3_flat_skip, flat_skip_10, skip_10)
+
+INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_15pct_3_sparse, bs_15)
+INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_15pct_3_flat, flat_15)
+INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_15pct_3_flat_skip, flat_skip_15, skip_15)
+
+
+// 5-way low density fixture
+struct bitset_intersect_1m_low_5
 {
 	struct w_arena arena;
 	struct w_sparse_bitset bs_10[5];
@@ -3650,7 +4100,7 @@ struct bitset_intersect_1m_low
 	uint64_t *result;
 };
 
-UBENCH_F_SETUP(bitset_intersect_1m_low)
+UBENCH_F_SETUP(bitset_intersect_1m_low_5)
 {
 	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_64M);
 	for (int j = 0; j < 5; j++)
@@ -3687,7 +4137,7 @@ UBENCH_F_SETUP(bitset_intersect_1m_low)
 	}
 }
 
-UBENCH_F_TEARDOWN(bitset_intersect_1m_low)
+UBENCH_F_TEARDOWN(bitset_intersect_1m_low_5)
 {
 	for (int j = 0; j < 5; j++)
 	{
@@ -3704,138 +4154,9 @@ UBENCH_F_TEARDOWN(bitset_intersect_1m_low)
 	free(ubench_fixture->result);
 }
 
-// Low density 2-way
-#define INTERSECT_1M_LOW_SPARSE_2(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	struct w_sparse_bitset *a = &ubench_fixture->bs_arr[0]; \
-	struct w_sparse_bitset *b = &ubench_fixture->bs_arr[1]; \
-	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length; \
-	for (uint64_t li = 0; li < max_li; li++) { \
-		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li]; \
-		while (lword) { \
-			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
-			uint64_t page_index = li * 64 + (uint64_t)lbit; \
-			if (page_index >= a->pages_length || page_index >= b->pages_length) continue; \
-			struct w_sparse_bitset_page *pa = &a->pages[page_index]; \
-			struct w_sparse_bitset_page *pb = &b->pages[page_index]; \
-			if (!pa->bits || !pb->bits) continue; \
-			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set; \
-			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set; \
-			if (first > last || first == UINT32_MAX) continue; \
-			for (uint32_t w = first; w <= last; w++) { \
-				uint64_t word = pa->bits[w] & pb->bits[w]; \
-				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit; } \
-			} \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_LOW_FLAT_2(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
-		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
-		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_LOW_FLAT_SKIP_2(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
-		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw]; \
-		if (!skip_word) continue; \
-		uint64_t base_w = sw * 64; \
-		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
-		for (uint64_t w = base_w; w < end_w; w++) { \
-			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
-			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_10pct_2_sparse, bs_10)
-INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_10pct_2_flat, flat_10)
-INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_10pct_2_flat_skip, flat_skip_10, skip_10)
-
-INTERSECT_1M_LOW_SPARSE_2(intersect_1m_low_15pct_2_sparse, bs_15)
-INTERSECT_1M_LOW_FLAT_2(intersect_1m_low_15pct_2_flat, flat_15)
-INTERSECT_1M_LOW_FLAT_SKIP_2(intersect_1m_low_15pct_2_flat_skip, flat_skip_15, skip_15)
-
-// Low density 3-way
-#define INTERSECT_1M_LOW_SPARSE_3(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
-	uint64_t max_li = bs[0]->lookup_pages_length; \
-	for (int j = 1; j < 3; j++) if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length; \
-	for (uint64_t li = 0; li < max_li; li++) { \
-		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li]; \
-		while (lword) { \
-			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
-			uint64_t page_index = li * 64 + (uint64_t)lbit; \
-			bool valid = true; \
-			for (int j = 0; j < 3; j++) if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false; \
-			if (!valid) continue; \
-			uint32_t first = 0, last = UINT32_MAX; \
-			for (int j = 0; j < 3; j++) { if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set; if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set; } \
-			if (first > last || first == UINT32_MAX) continue; \
-			for (uint32_t w = first; w <= last; w++) { \
-				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w]; \
-				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit; } \
-			} \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_LOW_FLAT_3(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
-		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
-		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_LOW_FLAT_SKIP_3(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
-		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw] & ubench_fixture->skip_arr[2][sw]; \
-		if (!skip_word) continue; \
-		uint64_t base_w = sw * 64; \
-		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
-		for (uint64_t w = base_w; w < end_w; w++) { \
-			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
-			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_10pct_3_sparse, bs_10)
-INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_10pct_3_flat, flat_10)
-INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_10pct_3_flat_skip, flat_skip_10, skip_10)
-
-INTERSECT_1M_LOW_SPARSE_3(intersect_1m_low_15pct_3_sparse, bs_15)
-INTERSECT_1M_LOW_FLAT_3(intersect_1m_low_15pct_3_flat, flat_15)
-INTERSECT_1M_LOW_FLAT_SKIP_3(intersect_1m_low_15pct_3_flat_skip, flat_skip_15, skip_15)
-
 // Low density 5-way
 #define INTERSECT_1M_LOW_SPARSE_5(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
+UBENCH_F(bitset_intersect_1m_low_5, name) \
 { \
 	uint64_t count = 0; \
 	struct w_sparse_bitset *bs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
@@ -3862,7 +4183,7 @@ UBENCH_F(bitset_intersect_1m_low, name) \
 }
 
 #define INTERSECT_1M_LOW_FLAT_5(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
+UBENCH_F(bitset_intersect_1m_low_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
@@ -3873,7 +4194,7 @@ UBENCH_F(bitset_intersect_1m_low, name) \
 }
 
 #define INTERSECT_1M_LOW_FLAT_SKIP_5(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_low, name) \
+UBENCH_F(bitset_intersect_1m_low_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
@@ -3902,7 +4223,277 @@ INTERSECT_1M_LOW_FLAT_SKIP_5(intersect_1m_low_15pct_5_flat_skip, flat_skip_15, s
 // 1M INTERSECTION: HIGH DENSITY (70%, 90%)
 // ============================================================================
 
-struct bitset_intersect_1m_high
+// 2-way high density fixture
+struct bitset_intersect_1m_high_2
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_70[2];
+	struct w_sparse_bitset bs_90[2];
+	uint64_t *flat_70[2];
+	uint64_t *flat_90[2];
+	uint64_t *flat_skip_70[2];
+	uint64_t *flat_skip_90[2];
+	uint64_t *skip_70[2];
+	uint64_t *skip_90[2];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_high_2)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_128M);
+	for (int j = 0; j < 2; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_70[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_90[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_70[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_90[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_70[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_90[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_70[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_90[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 2; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_HIGH_70PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_70[j], idx);
+			FLAT_SET(ubench_fixture->flat_70[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_70[j], ubench_fixture->skip_70[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_HIGH_90PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_90[j], idx);
+			FLAT_SET(ubench_fixture->flat_90[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_90[j], ubench_fixture->skip_90[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_high_2)
+{
+	for (int j = 0; j < 2; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_70[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_90[j]);
+		free(ubench_fixture->flat_70[j]);
+		free(ubench_fixture->flat_90[j]);
+		free(ubench_fixture->flat_skip_70[j]);
+		free(ubench_fixture->flat_skip_90[j]);
+		free(ubench_fixture->skip_70[j]);
+		free(ubench_fixture->skip_90[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+// High density 2-way
+#define INTERSECT_1M_HIGH_SPARSE_2(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_high_2, name) \
+{ \
+	uint64_t count = 0; \
+	struct w_sparse_bitset *a = &ubench_fixture->bs_arr[0]; \
+	struct w_sparse_bitset *b = &ubench_fixture->bs_arr[1]; \
+	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length; \
+	for (uint64_t li = 0; li < max_li; li++) { \
+		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li]; \
+		while (lword) { \
+			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
+			uint64_t page_index = li * 64 + (uint64_t)lbit; \
+			if (page_index >= a->pages_length || page_index >= b->pages_length) continue; \
+			struct w_sparse_bitset_page *pa = &a->pages[page_index]; \
+			struct w_sparse_bitset_page *pb = &b->pages[page_index]; \
+			if (!pa->bits || !pb->bits) continue; \
+			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set; \
+			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set; \
+			if (first > last || first == UINT32_MAX) continue; \
+			for (uint32_t w = first; w <= last; w++) { \
+				uint64_t word = pa->bits[w] & pb->bits[w]; \
+				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit; } \
+			} \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_HIGH_FLAT_2(name, flat_arr) \
+UBENCH_F(bitset_intersect_1m_high_2, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
+		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
+		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_HIGH_FLAT_SKIP_2(name, flat_arr, skip_arr) \
+UBENCH_F(bitset_intersect_1m_high_2, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
+		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw]; \
+		if (!skip_word) continue; \
+		uint64_t base_w = sw * 64; \
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
+		for (uint64_t w = base_w; w < end_w; w++) { \
+			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
+			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_70pct_2_sparse, bs_70)
+INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_70pct_2_flat, flat_70)
+INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_70pct_2_flat_skip, flat_skip_70, skip_70)
+
+INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_90pct_2_sparse, bs_90)
+INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_90pct_2_flat, flat_90)
+INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_90pct_2_flat_skip, flat_skip_90, skip_90)
+
+
+// 3-way high density fixture
+struct bitset_intersect_1m_high_3
+{
+	struct w_arena arena;
+	struct w_sparse_bitset bs_70[3];
+	struct w_sparse_bitset bs_90[3];
+	uint64_t *flat_70[3];
+	uint64_t *flat_90[3];
+	uint64_t *flat_skip_70[3];
+	uint64_t *flat_skip_90[3];
+	uint64_t *skip_70[3];
+	uint64_t *skip_90[3];
+	uint64_t *result;
+};
+
+UBENCH_F_SETUP(bitset_intersect_1m_high_3)
+{
+	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_128M);
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_init(&ubench_fixture->bs_70[j], &ubench_fixture->arena, 256);
+		w_sparse_bitset_init(&ubench_fixture->bs_90[j], &ubench_fixture->arena, 256);
+		ubench_fixture->flat_70[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_90[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_70[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->flat_skip_90[j] = calloc(FLAT_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_70[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+		ubench_fixture->skip_90[j] = calloc(SKIP_WORDS_INTERSECT_1M, sizeof(uint64_t));
+	}
+	ubench_fixture->result = malloc(BENCH_INTERSECT_1M_RANGE * sizeof(uint64_t));
+
+	for (int j = 0; j < 3; j++)
+	{
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_HIGH_70PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_70[j], idx);
+			FLAT_SET(ubench_fixture->flat_70[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_70[j], ubench_fixture->skip_70[j], idx);
+		}
+		srand(42);
+		for (uint64_t i = 0; i < BENCH_INTERSECT_1M_HIGH_90PCT; i++)
+		{
+			uint64_t idx = (uint64_t)rand() % BENCH_INTERSECT_1M_RANGE;
+			w_sparse_bitset_set(&ubench_fixture->bs_90[j], idx);
+			FLAT_SET(ubench_fixture->flat_90[j], idx);
+			FLAT_SKIP_SET(ubench_fixture->flat_skip_90[j], ubench_fixture->skip_90[j], idx);
+		}
+	}
+}
+
+UBENCH_F_TEARDOWN(bitset_intersect_1m_high_3)
+{
+	for (int j = 0; j < 3; j++)
+	{
+		w_sparse_bitset_free(&ubench_fixture->bs_70[j]);
+		w_sparse_bitset_free(&ubench_fixture->bs_90[j]);
+		free(ubench_fixture->flat_70[j]);
+		free(ubench_fixture->flat_90[j]);
+		free(ubench_fixture->flat_skip_70[j]);
+		free(ubench_fixture->flat_skip_90[j]);
+		free(ubench_fixture->skip_70[j]);
+		free(ubench_fixture->skip_90[j]);
+	}
+	w_arena_free(&ubench_fixture->arena);
+	free(ubench_fixture->result);
+}
+
+// High density 3-way
+#define INTERSECT_1M_HIGH_SPARSE_3(name, bs_arr) \
+UBENCH_F(bitset_intersect_1m_high_3, name) \
+{ \
+	uint64_t count = 0; \
+	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
+	uint64_t max_li = bs[0]->lookup_pages_length; \
+	for (int j = 1; j < 3; j++) if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length; \
+	for (uint64_t li = 0; li < max_li; li++) { \
+		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li]; \
+		while (lword) { \
+			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
+			uint64_t page_index = li * 64 + (uint64_t)lbit; \
+			bool valid = true; \
+			for (int j = 0; j < 3; j++) if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false; \
+			if (!valid) continue; \
+			uint32_t first = 0, last = UINT32_MAX; \
+			for (int j = 0; j < 3; j++) { if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set; if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set; } \
+			if (first > last || first == UINT32_MAX) continue; \
+			for (uint32_t w = first; w <= last; w++) { \
+				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w]; \
+				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit; } \
+			} \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_HIGH_FLAT_3(name, flat_arr) \
+UBENCH_F(bitset_intersect_1m_high_3, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
+		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
+		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+#define INTERSECT_1M_HIGH_FLAT_SKIP_3(name, flat_arr, skip_arr) \
+UBENCH_F(bitset_intersect_1m_high_3, name) \
+{ \
+	uint64_t count = 0; \
+	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
+		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw] & ubench_fixture->skip_arr[2][sw]; \
+		if (!skip_word) continue; \
+		uint64_t base_w = sw * 64; \
+		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
+		for (uint64_t w = base_w; w < end_w; w++) { \
+			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
+			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
+		} \
+	} \
+	UBENCH_DO_NOTHING(&ubench_fixture->result); \
+}
+
+INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_70pct_3_sparse, bs_70)
+INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_70pct_3_flat, flat_70)
+INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_70pct_3_flat_skip, flat_skip_70, skip_70)
+
+INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_90pct_3_sparse, bs_90)
+INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_90pct_3_flat, flat_90)
+INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_90pct_3_flat_skip, flat_skip_90, skip_90)
+
+
+// 5-way high density fixture
+struct bitset_intersect_1m_high_5
 {
 	struct w_arena arena;
 	struct w_sparse_bitset bs_70[5];
@@ -3916,7 +4507,7 @@ struct bitset_intersect_1m_high
 	uint64_t *result;
 };
 
-UBENCH_F_SETUP(bitset_intersect_1m_high)
+UBENCH_F_SETUP(bitset_intersect_1m_high_5)
 {
 	w_arena_init(&ubench_fixture->arena, BENCH_ARENA_SIZE_128M);
 	for (int j = 0; j < 5; j++)
@@ -3953,7 +4544,7 @@ UBENCH_F_SETUP(bitset_intersect_1m_high)
 	}
 }
 
-UBENCH_F_TEARDOWN(bitset_intersect_1m_high)
+UBENCH_F_TEARDOWN(bitset_intersect_1m_high_5)
 {
 	for (int j = 0; j < 5; j++)
 	{
@@ -3970,138 +4561,9 @@ UBENCH_F_TEARDOWN(bitset_intersect_1m_high)
 	free(ubench_fixture->result);
 }
 
-// High density 2-way
-#define INTERSECT_1M_HIGH_SPARSE_2(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	struct w_sparse_bitset *a = &ubench_fixture->bs_arr[0]; \
-	struct w_sparse_bitset *b = &ubench_fixture->bs_arr[1]; \
-	uint64_t max_li = a->lookup_pages_length < b->lookup_pages_length ? a->lookup_pages_length : b->lookup_pages_length; \
-	for (uint64_t li = 0; li < max_li; li++) { \
-		uint64_t lword = a->lookup_pages[li] & b->lookup_pages[li]; \
-		while (lword) { \
-			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
-			uint64_t page_index = li * 64 + (uint64_t)lbit; \
-			if (page_index >= a->pages_length || page_index >= b->pages_length) continue; \
-			struct w_sparse_bitset_page *pa = &a->pages[page_index]; \
-			struct w_sparse_bitset_page *pb = &b->pages[page_index]; \
-			if (!pa->bits || !pb->bits) continue; \
-			uint32_t first = pa->first_set > pb->first_set ? pa->first_set : pb->first_set; \
-			uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set; \
-			if (first > last || first == UINT32_MAX) continue; \
-			for (uint32_t w = first; w <= last; w++) { \
-				uint64_t word = pa->bits[w] & pb->bits[w]; \
-				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * a->page_size_ + w) * 64 + (uint64_t)bit; } \
-			} \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_HIGH_FLAT_2(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
-		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
-		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_HIGH_FLAT_SKIP_2(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
-		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw]; \
-		if (!skip_word) continue; \
-		uint64_t base_w = sw * 64; \
-		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
-		for (uint64_t w = base_w; w < end_w; w++) { \
-			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w]; \
-			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_70pct_2_sparse, bs_70)
-INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_70pct_2_flat, flat_70)
-INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_70pct_2_flat_skip, flat_skip_70, skip_70)
-
-INTERSECT_1M_HIGH_SPARSE_2(intersect_1m_high_90pct_2_sparse, bs_90)
-INTERSECT_1M_HIGH_FLAT_2(intersect_1m_high_90pct_2_flat, flat_90)
-INTERSECT_1M_HIGH_FLAT_SKIP_2(intersect_1m_high_90pct_2_flat_skip, flat_skip_90, skip_90)
-
-// High density 3-way
-#define INTERSECT_1M_HIGH_SPARSE_3(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	struct w_sparse_bitset *bs[3] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2]}; \
-	uint64_t max_li = bs[0]->lookup_pages_length; \
-	for (int j = 1; j < 3; j++) if (bs[j]->lookup_pages_length < max_li) max_li = bs[j]->lookup_pages_length; \
-	for (uint64_t li = 0; li < max_li; li++) { \
-		uint64_t lword = bs[0]->lookup_pages[li] & bs[1]->lookup_pages[li] & bs[2]->lookup_pages[li]; \
-		while (lword) { \
-			int lbit = __builtin_ctzll(lword); lword &= lword - 1; \
-			uint64_t page_index = li * 64 + (uint64_t)lbit; \
-			bool valid = true; \
-			for (int j = 0; j < 3; j++) if (page_index >= bs[j]->pages_length || !bs[j]->pages[page_index].bits) valid = false; \
-			if (!valid) continue; \
-			uint32_t first = 0, last = UINT32_MAX; \
-			for (int j = 0; j < 3; j++) { if (bs[j]->pages[page_index].first_set > first) first = bs[j]->pages[page_index].first_set; if (bs[j]->pages[page_index].last_set < last) last = bs[j]->pages[page_index].last_set; } \
-			if (first > last || first == UINT32_MAX) continue; \
-			for (uint32_t w = first; w <= last; w++) { \
-				uint64_t word = bs[0]->pages[page_index].bits[w] & bs[1]->pages[page_index].bits[w] & bs[2]->pages[page_index].bits[w]; \
-				while (word) { int bit = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = (page_index * bs[0]->page_size_ + w) * 64 + (uint64_t)bit; } \
-			} \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_HIGH_FLAT_3(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
-		uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
-		while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-#define INTERSECT_1M_HIGH_FLAT_SKIP_3(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
-{ \
-	uint64_t count = 0; \
-	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
-		uint64_t skip_word = ubench_fixture->skip_arr[0][sw] & ubench_fixture->skip_arr[1][sw] & ubench_fixture->skip_arr[2][sw]; \
-		if (!skip_word) continue; \
-		uint64_t base_w = sw * 64; \
-		uint64_t end_w = base_w + 64 < FLAT_WORDS_INTERSECT_1M ? base_w + 64 : FLAT_WORDS_INTERSECT_1M; \
-		for (uint64_t w = base_w; w < end_w; w++) { \
-			uint64_t word = ubench_fixture->flat_arr[0][w] & ubench_fixture->flat_arr[1][w] & ubench_fixture->flat_arr[2][w]; \
-			while (word) { int b = __builtin_ctzll(word); word &= word - 1; ubench_fixture->result[count++] = w * 64 + (uint64_t)b; } \
-		} \
-	} \
-	UBENCH_DO_NOTHING(&ubench_fixture->result); \
-}
-
-INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_70pct_3_sparse, bs_70)
-INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_70pct_3_flat, flat_70)
-INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_70pct_3_flat_skip, flat_skip_70, skip_70)
-
-INTERSECT_1M_HIGH_SPARSE_3(intersect_1m_high_90pct_3_sparse, bs_90)
-INTERSECT_1M_HIGH_FLAT_3(intersect_1m_high_90pct_3_flat, flat_90)
-INTERSECT_1M_HIGH_FLAT_SKIP_3(intersect_1m_high_90pct_3_flat_skip, flat_skip_90, skip_90)
-
 // High density 5-way
 #define INTERSECT_1M_HIGH_SPARSE_5(name, bs_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
+UBENCH_F(bitset_intersect_1m_high_5, name) \
 { \
 	uint64_t count = 0; \
 	struct w_sparse_bitset *bs[5] = {&ubench_fixture->bs_arr[0], &ubench_fixture->bs_arr[1], &ubench_fixture->bs_arr[2], &ubench_fixture->bs_arr[3], &ubench_fixture->bs_arr[4]}; \
@@ -4128,7 +4590,7 @@ UBENCH_F(bitset_intersect_1m_high, name) \
 }
 
 #define INTERSECT_1M_HIGH_FLAT_5(name, flat_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
+UBENCH_F(bitset_intersect_1m_high_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t w = 0; w < FLAT_WORDS_INTERSECT_1M; w++) { \
@@ -4139,7 +4601,7 @@ UBENCH_F(bitset_intersect_1m_high, name) \
 }
 
 #define INTERSECT_1M_HIGH_FLAT_SKIP_5(name, flat_arr, skip_arr) \
-UBENCH_F(bitset_intersect_1m_high, name) \
+UBENCH_F(bitset_intersect_1m_high_5, name) \
 { \
 	uint64_t count = 0; \
 	for (uint64_t sw = 0; sw < SKIP_WORDS_INTERSECT_1M; sw++) { \
