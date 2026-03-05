@@ -31,5 +31,19 @@
 #define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+// array macros
+#define ARRAY_SELECT(result_type, array, length, param, cmp_expr) \
+({ \
+	result_type *_result = NULL; \
+	for (size_t _i = 0; _i < (length); _i++) { \
+		result_type *_item = &(array)[_i]; \
+		if (_item->param cmp_expr) { \
+			_result = _item; \
+			break; \
+		} \
+	} \
+	_result; \
+})
+
 #endif // WHISKER_MACROS_H
 
