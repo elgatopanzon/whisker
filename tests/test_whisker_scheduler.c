@@ -73,7 +73,7 @@ START_TEST(test_phase_register_returns_id)
 {
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = 0};
 	size_t id = w_scheduler_register_phase(&g_scheduler, &phase);
-	ck_assert_int_eq(id, 1);
+	ck_assert_int_eq(id, 0);
 }
 END_TEST
 
@@ -83,9 +83,9 @@ START_TEST(test_phase_register_increments_ids)
 	size_t id1 = w_scheduler_register_phase(&g_scheduler, &phase);
 	size_t id2 = w_scheduler_register_phase(&g_scheduler, &phase);
 	size_t id3 = w_scheduler_register_phase(&g_scheduler, &phase);
-	ck_assert_int_eq(id1, 1);
-	ck_assert_int_eq(id2, 2);
-	ck_assert_int_eq(id3, 3);
+	ck_assert_int_eq(id1, 0);
+	ck_assert_int_eq(id2, 1);
+	ck_assert_int_eq(id3, 2);
 }
 END_TEST
 
@@ -150,7 +150,7 @@ START_TEST(test_timestep_register_returns_id)
 {
 	struct w_scheduler_time_step ts = {.enabled = true};
 	size_t id = w_scheduler_register_time_step(&g_scheduler, &ts);
-	ck_assert_int_eq(id, 1);
+	ck_assert_int_eq(id, 0);
 }
 END_TEST
 
@@ -160,9 +160,9 @@ START_TEST(test_timestep_register_increments_ids)
 	size_t id1 = w_scheduler_register_time_step(&g_scheduler, &ts);
 	size_t id2 = w_scheduler_register_time_step(&g_scheduler, &ts);
 	size_t id3 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	ck_assert_int_eq(id1, 1);
-	ck_assert_int_eq(id2, 2);
-	ck_assert_int_eq(id3, 3);
+	ck_assert_int_eq(id1, 0);
+	ck_assert_int_eq(id2, 1);
+	ck_assert_int_eq(id3, 2);
 }
 END_TEST
 
@@ -531,9 +531,9 @@ START_TEST(test_schedule_single_phase_with_jobs)
 	ck_assert_int_eq(sched->items[2].action, W_SCHEDULER_ACTIONS_PHASE_BEGIN);
 	ck_assert_int_eq(sched->items[2].phase_id, phase_id);
 	ck_assert_int_eq(sched->items[3].action, W_SCHEDULER_ACTIONS_DISPATCH);
-	ck_assert_int_eq(sched->items[3].job_id, 100);
+	ck_assert_int_eq(sched->items[3].job_idx, 100);
 	ck_assert_int_eq(sched->items[4].action, W_SCHEDULER_ACTIONS_DISPATCH);
-	ck_assert_int_eq(sched->items[4].job_id, 200);
+	ck_assert_int_eq(sched->items[4].job_idx, 200);
 	ck_assert_int_eq(sched->items[5].action, W_SCHEDULER_ACTIONS_PHASE_END);
 	ck_assert_int_eq(sched->items[6].action, W_SCHEDULER_ACTIONS_TIMESTEP_END);
 	ck_assert_int_eq(sched->items[7].action, W_SCHEDULER_ACTIONS_SCHEDULE_END);
@@ -580,61 +580,62 @@ END_TEST
 START_TEST(test_multiple_timesteps_order)
 {
 	struct w_scheduler_time_step ts = {.enabled = true};
-	size_t t1 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	size_t t2 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	size_t t3 = w_scheduler_register_time_step(&g_scheduler, &ts);
+	struct whisker_time_step *t1 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
+	struct whisker_time_step *t2 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
+	struct whisker_time_step *t3 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
 
 	struct w_scheduler_schedule *sched = w_scheduler_get_schedule(&g_scheduler, NULL, 0);
 
 	// find timestep begin actions and verify order
-	size_t ts_order[3];
+	struct whisker_time_step *ts_order[3];
 	size_t ts_count = 0;
 	for (size_t i = 0; i < sched->items_length; i++) {
 		if (sched->items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN) {
-			ts_order[ts_count++] = sched->items[i].time_step_id;
+			ts_order[ts_count++] = sched->items[i].time_step;
 		}
 	}
 	ck_assert_int_eq(ts_count, 3);
-	ck_assert_int_eq(ts_order[0], t1);
-	ck_assert_int_eq(ts_order[1], t2);
-	ck_assert_int_eq(ts_order[2], t3);
+	ck_assert_ptr_eq(ts_order[0], t1);
+	ck_assert_ptr_eq(ts_order[1], t2);
+	ck_assert_ptr_eq(ts_order[2], t3);
 }
 END_TEST
 
 START_TEST(test_multiple_timesteps_reordered)
 {
 	struct w_scheduler_time_step ts = {.enabled = true};
-	size_t t1 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	size_t t2 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	size_t t3 = w_scheduler_register_time_step(&g_scheduler, &ts);
+	struct whisker_time_step *t1 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
+	struct whisker_time_step *t2 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
+	struct whisker_time_step *t3 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
 
 	// reorder: t3 before t1
-	w_scheduler_set_time_step_runs_before(&g_scheduler, t3, t1);
+	w_scheduler_set_time_step_runs_before(&g_scheduler, 2, 0);
 
 	struct w_scheduler_schedule *sched = w_scheduler_get_schedule(&g_scheduler, NULL, 0);
 
-	size_t ts_order[3];
+	// find timestep begin actions and verify order
+	struct whisker_time_step *ts_order[3];
 	size_t ts_count = 0;
 	for (size_t i = 0; i < sched->items_length; i++) {
 		if (sched->items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN) {
-			ts_order[ts_count++] = sched->items[i].time_step_id;
+			ts_order[ts_count++] = sched->items[i].time_step;
 		}
 	}
 	ck_assert_int_eq(ts_count, 3);
-	ck_assert_int_eq(ts_order[0], t3);
-	ck_assert_int_eq(ts_order[1], t1);
-	ck_assert_int_eq(ts_order[2], t2);
+	ck_assert_ptr_eq(ts_order[0], t3);
+	ck_assert_ptr_eq(ts_order[1], t1);
+	ck_assert_ptr_eq(ts_order[2], t2);
 }
 END_TEST
 
 START_TEST(test_phases_match_timestep)
 {
 	struct w_scheduler_time_step ts = {.enabled = true};
-	size_t ts1 = w_scheduler_register_time_step(&g_scheduler, &ts);
-	size_t ts2 = w_scheduler_register_time_step(&g_scheduler, &ts);
+	struct whisker_time_step *t1 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
+	struct whisker_time_step *t2 = &g_scheduler.time_steps[w_scheduler_register_time_step(&g_scheduler, &ts)].time_step;
 
-	struct w_scheduler_phase phase1 = {.enabled = true, .time_step_id = ts1};
-	struct w_scheduler_phase phase2 = {.enabled = true, .time_step_id = ts2};
+	struct w_scheduler_phase phase1 = {.enabled = true, .time_step_id = 0};
+	struct w_scheduler_phase phase2 = {.enabled = true, .time_step_id = 1};
 	size_t p1 = w_scheduler_register_phase(&g_scheduler, &phase1);
 	size_t p2 = w_scheduler_register_phase(&g_scheduler, &phase2);
 
@@ -651,16 +652,16 @@ START_TEST(test_phases_match_timestep)
 
 	for (size_t i = 0; i < sched->items_length; i++) {
 		if (sched->items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN) {
-			if (sched->items[i].time_step_id == ts1) in_ts1 = true;
-			else if (sched->items[i].time_step_id == ts2) in_ts2 = true;
+			if (sched->items[i].time_step == t1) in_ts1 = true;
+			else if (sched->items[i].time_step == t2) in_ts2 = true;
 		}
 		if (sched->items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_END) {
 			if (in_ts1) in_ts1 = false;
 			if (in_ts2) in_ts2 = false;
 		}
 		if (sched->items[i].action == W_SCHEDULER_ACTIONS_DISPATCH) {
-			if (sched->items[i].job_id == 10 && in_ts1) job10_in_ts1 = true;
-			if (sched->items[i].job_id == 20 && in_ts2) job20_in_ts2 = true;
+			if (sched->items[i].job_idx == 10 && in_ts1) job10_in_ts1 = true;
+			if (sched->items[i].job_idx == 20 && in_ts2) job20_in_ts2 = true;
 		}
 	}
 
@@ -769,6 +770,91 @@ END_TEST
 
 
 /*****************************
+*  schedule rebuild_count    *
+*****************************/
+
+START_TEST(test_rebuild_count_after_first_get)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	w_scheduler_register_time_step(&g_scheduler, &ts);
+
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+}
+END_TEST
+
+START_TEST(test_rebuild_count_no_change_no_rebuild)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	w_scheduler_register_time_step(&g_scheduler, &ts);
+
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+}
+END_TEST
+
+START_TEST(test_rebuild_count_register_timestep_triggers_rebuild)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	w_scheduler_register_time_step(&g_scheduler, &ts);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+
+	w_scheduler_register_time_step(&g_scheduler, &ts);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 2);
+}
+END_TEST
+
+START_TEST(test_rebuild_count_register_phase_triggers_rebuild)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t ts_id = w_scheduler_register_time_step(&g_scheduler, &ts);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_scheduler, &phase);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 2);
+}
+END_TEST
+
+START_TEST(test_rebuild_count_disable_phase_triggers_rebuild)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t ts_id = w_scheduler_register_time_step(&g_scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t phase_id = w_scheduler_register_phase(&g_scheduler, &phase);
+
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+
+	w_scheduler_set_phase_state(&g_scheduler, phase_id, false);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 2);
+}
+END_TEST
+
+START_TEST(test_rebuild_count_disable_timestep_triggers_rebuild)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t ts_id = w_scheduler_register_time_step(&g_scheduler, &ts);
+
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 1);
+
+	w_scheduler_set_time_step_state(&g_scheduler, ts_id, false);
+	w_scheduler_get_schedule(&g_scheduler, NULL, 0);
+	ck_assert_uint_eq(g_scheduler.schedule.rebuild_count, 2);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -872,6 +958,17 @@ Suite *whisker_scheduler_suite(void)
 	tcase_add_test(tc_edge, test_complex_reordering);
 	tcase_add_test(tc_edge, test_jobs_no_matching_phase);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_rebuild = tcase_create("schedule_rebuild_count");
+	tcase_add_checked_fixture(tc_rebuild, scheduler_setup, scheduler_teardown);
+	tcase_set_timeout(tc_rebuild, 10);
+	tcase_add_test(tc_rebuild, test_rebuild_count_after_first_get);
+	tcase_add_test(tc_rebuild, test_rebuild_count_no_change_no_rebuild);
+	tcase_add_test(tc_rebuild, test_rebuild_count_register_timestep_triggers_rebuild);
+	tcase_add_test(tc_rebuild, test_rebuild_count_register_phase_triggers_rebuild);
+	tcase_add_test(tc_rebuild, test_rebuild_count_disable_phase_triggers_rebuild);
+	tcase_add_test(tc_rebuild, test_rebuild_count_disable_timestep_triggers_rebuild);
+	suite_add_tcase(s, tc_rebuild);
 
 	return s;
 }

@@ -58,8 +58,8 @@ struct w_scheduler_action
 {
 	enum W_SCHEDULER_ACTIONS action;
 	size_t phase_id;
-	size_t time_step_id;
-	size_t job_id;
+	struct whisker_time_step *time_step;
+	size_t job_idx;
 };
 
 struct w_scheduler_job
@@ -72,6 +72,7 @@ struct w_scheduler_schedule
 {
 	w_array_declare(struct w_scheduler_action, items);
 	bool schedule_dirty;
+	uint64_t rebuild_count;
 };
 
 struct w_scheduler 

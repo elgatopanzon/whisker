@@ -38,6 +38,7 @@ void w_scheduler_init(struct w_scheduler *scheduler)
 	);
 	scheduler->schedule.items_length = 0;
 	scheduler->schedule.schedule_dirty = true;
+	scheduler->schedule.rebuild_count = 0;
 }
 
 void w_scheduler_free(struct w_scheduler *scheduler)
@@ -73,8 +74,8 @@ static inline void w_scheduler_rebuild_schedule_(struct w_scheduler *scheduler, 
 	struct w_scheduler_action action;
 	action.action = W_SCHEDULER_ACTIONS_SCHEDULE_BEGIN;
 	action.phase_id = 0;
-	action.time_step_id = 0;
-	action.job_id = 0;
+	action.time_step = NULL;
+	action.job_idx = 0;
 
 	// write schedule start action
 	action.action = W_SCHEDULER_ACTIONS_SCHEDULE_BEGIN;
@@ -92,7 +93,7 @@ static inline void w_scheduler_rebuild_schedule_(struct w_scheduler *scheduler, 
 
 		// push time step start action
 		action.action = W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN;
-		action.time_step_id = time_step_id;
+		action.time_step = &time_step->time_step;
 		w_scheduler_push_schedule_action_(scheduler, &action);
 
 		for (size_t pi = 0; pi < scheduler->phases_order_length; pi++)
@@ -115,7 +116,7 @@ static inline void w_scheduler_rebuild_schedule_(struct w_scheduler *scheduler, 
 				if (jobs[ji].phase_id == phase_id)
 				{
 					action.action = W_SCHEDULER_ACTIONS_DISPATCH;
-					action.job_id = jobs[ji].job_id;
+					action.job_idx = jobs[ji].job_id;
 					w_scheduler_push_schedule_action_(scheduler, &action);
 				}
 			}
@@ -133,10 +134,12 @@ static inline void w_scheduler_rebuild_schedule_(struct w_scheduler *scheduler, 
 	// write schedule end action
 	action.action = W_SCHEDULER_ACTIONS_SCHEDULE_END;
 	action.phase_id = 0;
-	action.time_step_id = 0;
-	action.job_id = 0;
+	action.time_step = NULL;
+	action.job_idx = 0;
 
 	w_scheduler_push_schedule_action_(scheduler, &action);
+
+	scheduler->schedule.rebuild_count++;
 }
 
 struct w_scheduler_schedule *w_scheduler_get_schedule(struct w_scheduler *scheduler, struct w_scheduler_job *jobs, size_t jobs_count)
@@ -171,9 +174,9 @@ size_t w_scheduler_register_phase(struct w_scheduler *scheduler, struct w_schedu
 		W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
 	);
 
-	size_t id = ++scheduler->phases_length;
-	scheduler->phases[scheduler->phases_length - 1] = *phase;
-	scheduler->phases[scheduler->phases_length - 1].id = id;
+	size_t id = scheduler->phases_length++;
+	scheduler->phases[id] = *phase;
+	scheduler->phases[id].id = id;
 
 	// append id to phase order list
 	scheduler->phases_order[scheduler->phases_order_length++] = id;
@@ -283,9 +286,9 @@ size_t w_scheduler_register_time_step(struct w_scheduler *scheduler, struct w_sc
 		W_SCHEDULER_TIMESTEPS_REALLOC_BLOCK_SIZE
 	);
 
-	size_t id = ++scheduler->time_steps_length;
-	scheduler->time_steps[scheduler->time_steps_length - 1] = *time_step;
-	scheduler->time_steps[scheduler->time_steps_length - 1].id = id;
+	size_t id = scheduler->time_steps_length++;
+	scheduler->time_steps[id] = *time_step;
+	scheduler->time_steps[id].id = id;
 
 	// append id to time_step order list
 	scheduler->time_steps_order[scheduler->time_steps_order_length++] = id;
