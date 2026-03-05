@@ -51,6 +51,8 @@ void w_command_buffer_queue(struct w_command_buffer *buffer, w_command_fn comman
 
 void w_command_buffer_flush(struct w_command_buffer *buffer)
 {
+	if (buffer->commands_length == 0) return;
+
 	for (size_t i = 0; i < buffer->commands_length; ++i)
 	{
 		struct w_command_entry *command = &buffer->commands[i];
