@@ -15,6 +15,7 @@
 #include "whisker_scheduler.h"
 #include "whisker_hook_registry.h"
 #include "whisker_command_buffer.h"
+#include "whisker_query_registry.h"
 
 #ifndef WHISKER_ECS_WORLD_H
 #define WHISKER_ECS_WORLD_H
@@ -58,6 +59,9 @@ struct w_ecs_world
 	// buffering
 	struct w_command_buffer command_buffer;
 	bool buffering_enabled;
+
+	// queries
+	struct w_query_registry queries;
 
 	enum W_WORLD_UPDATE_RESULT update_result;
 };
@@ -190,6 +194,14 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 
 // reset all scheduler time steps
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
+
+
+/*****************
+*  queries API  *
+*****************/
+
+// parse and return query struct
+struct w_query *w_ecs_get_query(struct w_ecs_world *world, char *query);
 
 
 /***********

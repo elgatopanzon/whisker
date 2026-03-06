@@ -25,6 +25,8 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 	w_command_buffer_init(&world->command_buffer);
 	world->buffering_enabled = false;
 
+	w_query_registry_init(&world->queries, world->string_table, &world->components, world->arena);
+
 	world->scheduler_jobs_dirty = true;
 	world->update_result = W_WORLD_UPDATE_RESULT_CONTINUE;
 
@@ -40,6 +42,7 @@ void w_ecs_world_free(struct w_ecs_world *world)
 	w_scheduler_free(&world->scheduler);
 	w_hook_registry_free(&world->hooks);
 	w_command_buffer_free(&world->command_buffer);
+	w_query_registry_free(&world->queries);
 	free_null(world->scheduler_jobs);
 }
 
@@ -397,6 +400,15 @@ void w_ecs_reset_system_time_steps(struct w_ecs_world *world)
 	w_scheduler_reset_time_steps(&world->scheduler);
 }
 
+
+/*****************
+*  queries API  *
+*****************/
+
+struct w_query *w_ecs_get_query(struct w_ecs_world *world, char *query)
+{
+	return w_query_registry_get_query(&world->queries, query);
+}
 
 /***********
 *  hooks  *
