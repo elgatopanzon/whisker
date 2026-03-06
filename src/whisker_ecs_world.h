@@ -13,6 +13,8 @@
 #include "whisker_component_registry.h"
 #include "whisker_system_registry.h"
 #include "whisker_scheduler.h"
+#include "whisker_hook_registry.h"
+#include "whisker_command_buffer.h"
 
 #ifndef WHISKER_ECS_WORLD_H
 #define WHISKER_ECS_WORLD_H
@@ -22,6 +24,16 @@ enum W_WORLD_UPDATE_RESULT
 	W_WORLD_UPDATE_RESULT_CONTINUE = 0,
 	W_WORLD_UPDATE_RESULT_RESTART = 1,
 	W_WORLD_UPDATE_RESULT_SHUTDOWN = 2,
+};
+
+enum W_WORLD_HOOK
+{
+	W_WORLD_HOOK_UPDATE_BEGIN,
+	W_WORLD_HOOK_UPDATE_END,
+	W_WORLD_HOOK_UPDATE_TIMESTEP_BEGIN,
+	W_WORLD_HOOK_UPDATE_TIMESTEP_END,
+	W_WORLD_HOOK_UPDATE_PHASE_BEGIN,
+	W_WORLD_HOOK_UPDATE_PHASE_END,
 };
 
 struct w_ecs_world 
@@ -39,6 +51,13 @@ struct w_ecs_world
 	struct w_scheduler scheduler;
 	w_array_declare(struct w_scheduler_job, scheduler_jobs);
 	bool scheduler_jobs_dirty;
+
+	// hooks
+	struct w_hook_registry hooks;
+
+	// buffering
+	struct w_command_buffer command_buffer;
+	bool buffering_enabled;
 
 	enum W_WORLD_UPDATE_RESULT update_result;
 };
@@ -171,6 +190,13 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 
 // reset all scheduler time steps
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
+
+
+/***********
+*  hooks  *
+***********/
+static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
+
 
 #endif /* WHISKER_ECS_WORLD_H */
 

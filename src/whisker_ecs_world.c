@@ -8,6 +8,8 @@
 
 #include "whisker_ecs_world.h"
 
+static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
+
 void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_table, struct w_arena *arena)
 {
 	world->arena = arena;
@@ -20,8 +22,16 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 	w_scheduler_init(&world->scheduler);
 	w_array_init_t(world->scheduler_jobs, 16);
 
+	w_hook_registry_init(&world->hooks);
+
+	w_command_buffer_init(&world->command_buffer);
+	world->buffering_enabled = false;
+
 	world->scheduler_jobs_dirty = true;
 	world->update_result = W_WORLD_UPDATE_RESULT_CONTINUE;
+
+	// register command buffer flush hook
+	w_hook_registry_register_hook(&world->hooks, W_WORLD_HOOK_UPDATE_PHASE_END, w_ecs_update_hook_flush_command_buffer_);
 }
 
 void w_ecs_world_free(struct w_ecs_world *world)
@@ -30,6 +40,8 @@ void w_ecs_world_free(struct w_ecs_world *world)
 	w_component_registry_free(&world->components);
 	w_system_registry_free(&world->systems);
 	w_scheduler_free(&world->scheduler);
+	w_hook_registry_free(&world->hooks);
+	w_command_buffer_free(&world->command_buffer);
 	free_null(world->scheduler_jobs);
 }
 
@@ -59,6 +71,12 @@ static inline void w_ecs_rebuild_scheduler_jobs_(struct w_ecs_world *world)
 	}
 }
 
+static inline void w_ecs_update_hook_flush_command_buffer_(void *world_, void *action_)
+{
+	struct w_ecs_world *world = world_;
+	w_command_buffer_flush(&world->command_buffer);
+}
+
 enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 {
 	// check if jobs need rebuilding
@@ -68,6 +86,9 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 		world->scheduler_jobs_dirty = false;
 		world->scheduler.schedule.schedule_dirty = true;
 	}
+
+	// force enable buffering for safety
+	world->buffering_enabled = true;
 
 	// process the scheduler's schedule
 	struct w_scheduler_schedule *schedule = w_scheduler_get_schedule(&world->scheduler, world->scheduler_jobs, world->scheduler_jobs_length);
@@ -82,6 +103,24 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 
 		switch (action->action) {
 			case W_SCHEDULER_ACTIONS_NOOP:
+				break;
+			case W_SCHEDULER_ACTIONS_SCHEDULE_BEGIN:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_BEGIN, world, action);
+				break;
+			case W_SCHEDULER_ACTIONS_SCHEDULE_END:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_END, world, action);
+				break;
+			case W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_TIMESTEP_BEGIN, world, action);
+				break;
+			case W_SCHEDULER_ACTIONS_TIMESTEP_END:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_TIMESTEP_END, world, action);
+				break;
+			case W_SCHEDULER_ACTIONS_PHASE_BEGIN:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_PHASE_BEGIN, world, action);
+				break;
+			case W_SCHEDULER_ACTIONS_PHASE_END:
+				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_PHASE_END, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_DISPATCH:
 				struct w_system *system = &systems[action->job_idx];
