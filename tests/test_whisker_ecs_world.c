@@ -720,6 +720,306 @@ END_TEST
 
 
 /*****************************
+*  buffered entity commands  *
+*****************************/
+
+START_TEST(test_buffered_entity_name_via_update)
+{
+	// buffering disabled by default
+	ck_assert(!g_world.buffering_enabled);
+
+	// enable buffering manually
+	g_world.buffering_enabled = true;
+
+	// request entity with name (queued, not applied yet)
+	w_entity_id entity = w_ecs_request_entity_with_name(&g_world, "test_entity");
+	ck_assert(entity != W_ENTITY_INVALID);
+
+	// name should NOT be set yet (command is buffered)
+	char *name_before = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_null(name_before);
+	w_entity_id lookup_before = w_ecs_get_entity_by_name(&g_world, "test_entity");
+	ck_assert(lookup_before == W_ENTITY_INVALID);
+
+	// setup minimal scheduler for update to run hooks
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	// world update flushes command buffer via phase-end hook
+	w_ecs_update(&g_world);
+
+	// name should now be set
+	char *name_after = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_nonnull(name_after);
+	ck_assert_str_eq(name_after, "test_entity");
+
+	// lookup by name should work
+	w_entity_id lookup_after = w_ecs_get_entity_by_name(&g_world, "test_entity");
+	ck_assert(lookup_after == entity);
+}
+END_TEST
+
+
+/*****************************
+*  return entity buffering   *
+*****************************/
+
+START_TEST(test_unbuffered_return_entity)
+{
+	// buffering disabled by default
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	ck_assert(entity != W_ENTITY_INVALID);
+
+	// verify entity is alive (next_id - recycled_stack_length)
+	size_t alive_before = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	ck_assert_uint_eq(alive_before, 1);
+
+	// return immediately
+	w_ecs_return_entity(&g_world, entity);
+
+	// entity should be recycled immediately
+	size_t alive_after = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	ck_assert_uint_eq(alive_after, 0);
+	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 1);
+}
+END_TEST
+
+START_TEST(test_buffered_return_entity)
+{
+	g_world.buffering_enabled = true;
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	ck_assert(entity != W_ENTITY_INVALID);
+
+	size_t alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	ck_assert_uint_eq(alive, 1);
+
+	// queue return (buffered)
+	w_ecs_return_entity(&g_world, entity);
+
+	// entity should still be alive (command buffered)
+	alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	ck_assert_uint_eq(alive, 1);
+	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 0);
+
+	// setup scheduler and flush via update
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	w_ecs_update(&g_world);
+
+	// entity should now be recycled
+	alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	ck_assert_uint_eq(alive, 0);
+	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 1);
+}
+END_TEST
+
+
+/*****************************
+*  clear entity name buffering *
+*****************************/
+
+START_TEST(test_unbuffered_clear_entity_name)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_set_entity_name(&g_world, entity, "named_entity");
+
+	// verify name is set
+	char *name = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_nonnull(name);
+	ck_assert_str_eq(name, "named_entity");
+
+	// clear name immediately
+	w_ecs_clear_entity_name(&g_world, entity);
+
+	// name should be cleared immediately
+	char *name_after = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_null(name_after);
+	w_entity_id lookup = w_ecs_get_entity_by_name(&g_world, "named_entity");
+	ck_assert(lookup == W_ENTITY_INVALID);
+}
+END_TEST
+
+START_TEST(test_buffered_clear_entity_name)
+{
+	// set name unbuffered first
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_set_entity_name(&g_world, entity, "named_entity");
+
+	char *name = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_nonnull(name);
+	ck_assert_str_eq(name, "named_entity");
+
+	// enable buffering
+	g_world.buffering_enabled = true;
+
+	// queue clear name (buffered)
+	w_ecs_clear_entity_name(&g_world, entity);
+
+	// name should still be set (command buffered)
+	char *name_before = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_nonnull(name_before);
+	ck_assert_str_eq(name_before, "named_entity");
+	w_entity_id lookup_before = w_ecs_get_entity_by_name(&g_world, "named_entity");
+	ck_assert(lookup_before == entity);
+
+	// setup scheduler and flush via update
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	w_ecs_update(&g_world);
+
+	// name should now be cleared
+	char *name_after = w_ecs_get_entity_name(&g_world, entity);
+	ck_assert_ptr_null(name_after);
+	w_entity_id lookup_after = w_ecs_get_entity_by_name(&g_world, "named_entity");
+	ck_assert(lookup_after == W_ENTITY_INVALID);
+}
+END_TEST
+
+
+/*****************************
+*  set component buffering   *
+*****************************/
+
+struct test_component
+{
+	int value;
+	float data;
+};
+
+static w_entity_id g_test_component_type_id = W_ENTITY_INVALID;
+
+START_TEST(test_unbuffered_set_component)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	g_test_component_type_id = w_ecs_get_component_by_name(&g_world, "test_component");
+
+	struct test_component comp = {.value = 42, .data = 3.14f};
+
+	// set component immediately
+	w_ecs_set_component_(&g_world, 0, g_test_component_type_id, entity, &comp, sizeof(comp));
+
+	// component should exist immediately
+	ck_assert(w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+
+	struct test_component *retrieved = w_ecs_get_component_(&g_world, g_test_component_type_id, entity);
+	ck_assert_ptr_nonnull(retrieved);
+	ck_assert_int_eq(retrieved->value, 42);
+	ck_assert_float_eq_tol(retrieved->data, 3.14f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_buffered_set_component)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	g_test_component_type_id = w_ecs_get_component_by_name(&g_world, "test_component_buffered");
+
+	// enable buffering
+	g_world.buffering_enabled = true;
+
+	struct test_component comp = {.value = 99, .data = 2.71f};
+
+	// queue set component (buffered)
+	w_ecs_set_component_(&g_world, 0, g_test_component_type_id, entity, &comp, sizeof(comp));
+
+	// component should NOT exist yet (command buffered)
+	ck_assert(!w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+
+	// setup scheduler and flush via update
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	w_ecs_update(&g_world);
+
+	// component should now exist with correct values
+	ck_assert(w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+
+	struct test_component *retrieved = w_ecs_get_component_(&g_world, g_test_component_type_id, entity);
+	ck_assert_ptr_nonnull(retrieved);
+	ck_assert_int_eq(retrieved->value, 99);
+	ck_assert_float_eq_tol(retrieved->data, 2.71f, 0.001f);
+}
+END_TEST
+
+
+/*****************************
+*  remove component buffering *
+*****************************/
+
+START_TEST(test_unbuffered_remove_component)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	g_test_component_type_id = w_ecs_get_component_by_name(&g_world, "test_component_remove");
+
+	struct test_component comp = {.value = 123, .data = 1.0f};
+	w_ecs_set_component_(&g_world, 0, g_test_component_type_id, entity, &comp, sizeof(comp));
+
+	// verify component exists
+	ck_assert(w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+
+	// remove immediately
+	w_ecs_remove_component_(&g_world, g_test_component_type_id, entity);
+
+	// component should be removed immediately
+	ck_assert(!w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+}
+END_TEST
+
+START_TEST(test_buffered_remove_component)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	g_test_component_type_id = w_ecs_get_component_by_name(&g_world, "test_component_remove_buffered");
+
+	struct test_component comp = {.value = 456, .data = 9.0f};
+	w_ecs_set_component_(&g_world, 0, g_test_component_type_id, entity, &comp, sizeof(comp));
+
+	// verify component exists
+	ck_assert(w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+
+	// enable buffering
+	g_world.buffering_enabled = true;
+
+	// queue remove component (buffered)
+	w_ecs_remove_component_(&g_world, g_test_component_type_id, entity);
+
+	// component should still exist (command buffered)
+	ck_assert(w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+	struct test_component *before = w_ecs_get_component_(&g_world, g_test_component_type_id, entity);
+	ck_assert_int_eq(before->value, 456);
+
+	// setup scheduler and flush via update
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	w_ecs_update(&g_world);
+
+	// component should now be removed
+	ck_assert(!w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+}
+END_TEST
+
+
+/*****************************
 *  schedule rebuild_count    *
 *****************************/
 
@@ -900,6 +1200,20 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_rebuild, test_rebuild_count_register_system_triggers_rebuild);
 	tcase_add_test(tc_rebuild, test_rebuild_count_disable_system_triggers_rebuild);
 	suite_add_tcase(s, tc_rebuild);
+
+	TCase *tc_buffered = tcase_create("buffered_entity_commands");
+	tcase_add_checked_fixture(tc_buffered, world_setup, world_teardown);
+	tcase_set_timeout(tc_buffered, 10);
+	tcase_add_test(tc_buffered, test_buffered_entity_name_via_update);
+	tcase_add_test(tc_buffered, test_unbuffered_return_entity);
+	tcase_add_test(tc_buffered, test_buffered_return_entity);
+	tcase_add_test(tc_buffered, test_unbuffered_clear_entity_name);
+	tcase_add_test(tc_buffered, test_buffered_clear_entity_name);
+	tcase_add_test(tc_buffered, test_unbuffered_set_component);
+	tcase_add_test(tc_buffered, test_buffered_set_component);
+	tcase_add_test(tc_buffered, test_unbuffered_remove_component);
+	tcase_add_test(tc_buffered, test_buffered_remove_component);
+	suite_add_tcase(s, tc_buffered);
 
 	return s;
 }

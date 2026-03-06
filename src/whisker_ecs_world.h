@@ -197,6 +197,22 @@ void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
 ***********/
 static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
 
+// temporarily disable buffering to execute code block directly
+#define w_ecs_world_do_unbuffered(w, block) do { \
+	bool _was_buffered = (w)->buffering_enabled; \
+	(w)->buffering_enabled = false; \
+	block \
+	(w)->buffering_enabled = _was_buffered; \
+} while(0)
+
+/******************************
+*  command buffer functions  *
+******************************/
+void w_ecs_cmd_set_entity_name(void *world, void *entity_name_payload);
+void w_ecs_cmd_return_entity(void *world, void *entity);
+void w_ecs_cmd_clear_entity_name(void *world, void *entity);
+void w_ecs_cmd_set_component(void *world, void *payload);
+void w_ecs_cmd_remove_component(void *world, void *payload);
 
 #endif /* WHISKER_ECS_WORLD_H */
 

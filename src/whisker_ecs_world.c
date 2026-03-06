@@ -8,8 +8,6 @@
 
 #include "whisker_ecs_world.h"
 
-static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
-
 void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_table, struct w_arena *arena)
 {
 	world->arena = arena;
@@ -169,28 +167,54 @@ w_entity_id w_ecs_request_entity(struct w_ecs_world *world)
 
 w_entity_id w_ecs_request_entity_with_name(struct w_ecs_world *world, char *name)
 {
+	// get and return existing named entity
+	// note: needs thread-safe testing
 	w_entity_id existing = w_entity_lookup_by_name(&world->entities, name);
 	if (existing != W_ENTITY_INVALID)
 		return existing;
 
+	// request new entity
 	w_entity_id entity = w_entity_request(&world->entities);
-	w_entity_set_name(&world->entities, entity, name);
+
+	w_ecs_set_entity_name(world, entity, name);
+
 	return entity;
 }
 
 void w_ecs_return_entity(struct w_ecs_world *world, w_entity_id entity)
 {
-	w_entity_return(&world->entities, entity);
+	if (!world->buffering_enabled)
+		w_entity_return(&world->entities, entity);
+	else
+		w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_return_entity, world, &entity, sizeof(entity));
 }
 
 void w_ecs_set_entity_name(struct w_ecs_world *world, w_entity_id entity, char *name)
 {
-	w_entity_set_name(&world->entities, entity, name);
+	// unbuffered
+	if (!world->buffering_enabled)
+		w_entity_set_name(&world->entities, entity, name);
+
+	// buffered
+	else
+	{
+		size_t name_len = strlen(name) + 1;
+		size_t payload_size = name_len + sizeof(entity);
+		uint8_t payload[payload_size];
+
+		memcpy(payload, &entity, sizeof(entity));
+		memcpy(payload + sizeof(entity), name, name_len);
+
+		w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_set_entity_name, world, payload, payload_size);
+	}
 }
 
 void w_ecs_clear_entity_name(struct w_ecs_world *world, w_entity_id entity)
 {
-	w_entity_clear_name(&world->entities, entity);
+	if (!world->buffering_enabled)
+		w_entity_clear_name(&world->entities, entity);
+	else
+		w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_clear_entity_name, world, &entity, sizeof(entity));
 }
 
 char *w_ecs_get_entity_name(struct w_ecs_world *world, w_entity_id entity)
@@ -210,7 +234,26 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name)
 
 void *w_ecs_set_component_(struct w_ecs_world *world, uint type_id, w_entity_id type_entity_id, w_entity_id entity_id, void *data, size_t data_size)
 {
-	return w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
+	if (!world->buffering_enabled)
+		return w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
+
+	// payload: type_id + type_entity_id + entity_id + data_size + data
+	size_t payload_size = sizeof(type_id) + sizeof(type_entity_id) + sizeof(entity_id) + sizeof(data_size) + data_size;
+	uint8_t payload[payload_size];
+	size_t offset = 0;
+
+	memcpy(payload + offset, &type_id, sizeof(type_id));
+	offset += sizeof(type_id);
+	memcpy(payload + offset, &type_entity_id, sizeof(type_entity_id));
+	offset += sizeof(type_entity_id);
+	memcpy(payload + offset, &entity_id, sizeof(entity_id));
+	offset += sizeof(entity_id);
+	memcpy(payload + offset, &data_size, sizeof(data_size));
+	offset += sizeof(data_size);
+	memcpy(payload + offset, data, data_size);
+
+	w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_set_component, world, payload, payload_size);
+	return NULL;
 }
 
 void *w_ecs_get_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
@@ -220,7 +263,20 @@ void *w_ecs_get_component_(struct w_ecs_world *world, w_entity_id type_entity_id
 
 void w_ecs_remove_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
 {
-	w_component_remove_(&world->components, type_entity_id, entity_id);
+	if (!world->buffering_enabled)
+	{
+		w_component_remove_(&world->components, type_entity_id, entity_id);
+		return;
+	}
+
+	// payload: type_entity_id + entity_id
+	size_t payload_size = sizeof(type_entity_id) + sizeof(entity_id);
+	uint8_t payload[payload_size];
+
+	memcpy(payload, &type_entity_id, sizeof(type_entity_id));
+	memcpy(payload + sizeof(type_entity_id), &entity_id, sizeof(entity_id));
+
+	w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_remove_component, world, payload, payload_size);
 }
 
 bool w_ecs_has_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
@@ -339,4 +395,75 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world)
 {
 	w_scheduler_reset_time_steps(&world->scheduler);
+}
+
+
+/***********
+*  hooks  *
+***********/
+
+void w_ecs_cmd_set_entity_name(void *w, void *entity_name_payload)
+{
+	struct w_ecs_world *world = w;
+	uint8_t *payload = entity_name_payload;
+	w_entity_id e = *(w_entity_id *)payload;
+	char *name = (char *)(payload + sizeof(e));
+
+	w_ecs_world_do_unbuffered(world, {
+		w_ecs_set_entity_name(world, e, name);
+	});
+}
+
+void w_ecs_cmd_return_entity(void *w, void *entity_payload)
+{
+	struct w_ecs_world *world = w;
+	w_entity_id e = *(w_entity_id *)entity_payload;
+
+	w_ecs_world_do_unbuffered(world, {
+		w_ecs_return_entity(world, e);
+	});
+}
+
+void w_ecs_cmd_clear_entity_name(void *w, void *entity_payload)
+{
+	struct w_ecs_world *world = w;
+	w_entity_id e = *(w_entity_id *)entity_payload;
+
+	w_ecs_world_do_unbuffered(world, {
+		w_ecs_clear_entity_name(world, e);
+	});
+}
+
+void w_ecs_cmd_set_component(void *w, void *component_payload)
+{
+	struct w_ecs_world *world = w;
+	uint8_t *payload = component_payload;
+	size_t offset = 0;
+
+	uint type_id = *(uint *)(payload + offset);
+	offset += sizeof(type_id);
+	w_entity_id type_entity_id = *(w_entity_id *)(payload + offset);
+	offset += sizeof(type_entity_id);
+	w_entity_id entity_id = *(w_entity_id *)(payload + offset);
+	offset += sizeof(entity_id);
+	size_t data_size = *(size_t *)(payload + offset);
+	offset += sizeof(data_size);
+	void *data = payload + offset;
+
+	w_ecs_world_do_unbuffered(world, {
+		w_ecs_set_component_(world, type_id, type_entity_id, entity_id, data, data_size);
+	});
+}
+
+void w_ecs_cmd_remove_component(void *w, void *component_payload)
+{
+	struct w_ecs_world *world = w;
+	uint8_t *payload = component_payload;
+
+	w_entity_id type_entity_id = *(w_entity_id *)payload;
+	w_entity_id entity_id = *(w_entity_id *)(payload + sizeof(type_entity_id));
+
+	w_ecs_world_do_unbuffered(world, {
+		w_ecs_remove_component_(world, type_entity_id, entity_id);
+	});
 }
