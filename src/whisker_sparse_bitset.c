@@ -153,6 +153,21 @@ bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index)
 // batch allocation block size - check capacity every N elements
 #define INTERSECT_ALLOC_BLOCK 1024
 
+uint64_t w_sparse_bitset_intersect_cache_stale(struct w_sparse_bitset_intersect_cache *intersect_cache)
+{
+	// compute cached generation from bitsets
+	uint64_t bitsets_generation = 0;
+	for (uint64_t i = 0; i < intersect_cache->bitsets_length; i++)
+	{
+		bitsets_generation += intersect_cache->bitsets[i]->generation;
+	}
+
+	// if generation didn't change, cache already exists
+	if (bitsets_generation == intersect_cache->cache_generation) return UINT64_MAX;
+
+	return bitsets_generation;
+}
+
 uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *intersect_cache)
 {
 	// init cache if we need to
@@ -166,14 +181,8 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 	if (!intersect_cache->bitsets || intersect_cache->bitsets_length == 0) return 0;
 
 	// compute cached generation from bitsets
-	uint64_t bitsets_generation = 0;
-	for (uint64_t i = 0; i < intersect_cache->bitsets_length; i++)
-	{
-		bitsets_generation += intersect_cache->bitsets[i]->generation;
-	}
-
-	// if generation didn't change, cache already exists
-	if (bitsets_generation == intersect_cache->cache_generation) return intersect_cache->indexes_length;
+	uint64_t bitsets_generation = w_sparse_bitset_intersect_cache_stale(intersect_cache);
+	if (bitsets_generation == UINT64_MAX) return intersect_cache->indexes_length;
 
 	// pre-allocate initial capacity
 	w_array_ensure_alloc_block_size(intersect_cache->indexes, INTERSECT_ALLOC_BLOCK, INTERSECT_ALLOC_BLOCK);
