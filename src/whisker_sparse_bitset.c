@@ -539,6 +539,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 
 void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache)
 {
+	free_null(intersect_cache->bitsets);
 	free_null(intersect_cache->indexes);
 	intersect_cache->cache_generation = 0;
 }
