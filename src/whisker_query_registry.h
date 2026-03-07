@@ -72,6 +72,7 @@ struct w_query_term
 	w_string_table_id raw_term;
 	w_entity_id component_id;
 	w_string_table_id component_name;
+	struct w_component_entry *component_entry;
 	enum W_QUERY_ACCESS access_type;
 };
 

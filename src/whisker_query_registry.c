@@ -196,6 +196,7 @@ static inline void w_query_registry_parse_query_term_components(struct w_query *
 			if (component_id != W_ENTITY_INVALID)
 			{
 				term->component_id = component_id;
+				term->component_entry = w_component_registry_get_entry(component_registry, component_id);
 				parsed_count++;
 			}
 		}
