@@ -901,6 +901,22 @@ struct test_component
 
 static w_entity_id g_test_component_type_id = W_ENTITY_INVALID;
 
+
+/*****************************
+*  system execution test     *
+*  global state              *
+*****************************/
+
+static int g_sysexec_counter = 0;
+static double g_sysexec_last_dt = 0.0;
+
+static void system_increment_counter_(void *ctx, double dt)
+{
+	(void)ctx;
+	g_sysexec_counter++;
+	g_sysexec_last_dt = dt;
+}
+
 START_TEST(test_unbuffered_set_component)
 {
 	ck_assert(!g_world.buffering_enabled);
@@ -1015,6 +1031,120 @@ START_TEST(test_buffered_remove_component)
 
 	// component should now be removed
 	ck_assert(!w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
+}
+END_TEST
+
+
+/*****************************
+*  system execution verifies *
+*  systems run during update *
+*****************************/
+
+START_TEST(test_system_executes_during_update)
+{
+	g_sysexec_counter = 0;
+	g_sysexec_last_dt = 0.0;
+
+	// setup timestep with fixed delta
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = {.delta_time_fixed = 0.016}
+	};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	// register system that increments counter
+	struct w_system sys = {
+		.phase_id = phase_id,
+		.enabled = true,
+		.update = system_increment_counter_,
+		.update_frequency = 0
+	};
+	w_ecs_register_system(&g_world, &sys);
+
+	// counter should be zero before update
+	ck_assert_int_eq(g_sysexec_counter, 0);
+
+	// run world update
+	w_ecs_update(&g_world);
+
+	// system MUST have executed - counter should be 1
+	ck_assert_msg(g_sysexec_counter == 1,
+		"System did not execute during w_ecs_update(). Counter is %d, expected 1",
+		g_sysexec_counter);
+
+	// verify delta time was passed correctly
+	ck_assert_double_eq_tol(g_sysexec_last_dt, 0.016, 0.0001);
+}
+END_TEST
+
+START_TEST(test_multiple_systems_execute_during_update)
+{
+	g_sysexec_counter = 0;
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = {.delta_time_fixed = 0.016}
+	};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	// register 5 systems in same phase
+	for (int i = 0; i < 5; i++)
+	{
+		struct w_system sys = {
+			.phase_id = phase_id,
+			.enabled = true,
+			.update = system_increment_counter_,
+			.update_frequency = 0
+		};
+		w_ecs_register_system(&g_world, &sys);
+	}
+
+	w_ecs_update(&g_world);
+
+	// all 5 systems should have executed
+	ck_assert_msg(g_sysexec_counter == 5,
+		"Not all systems executed. Counter is %d, expected 5",
+		g_sysexec_counter);
+}
+END_TEST
+
+START_TEST(test_system_executes_multiple_updates)
+{
+	g_sysexec_counter = 0;
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = {.delta_time_fixed = 0.016}
+	};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	struct w_system sys = {
+		.phase_id = phase_id,
+		.enabled = true,
+		.update = system_increment_counter_,
+		.update_frequency = 0
+	};
+	w_ecs_register_system(&g_world, &sys);
+
+	// run 10 updates
+	for (int i = 0; i < 10; i++)
+	{
+		w_ecs_update(&g_world);
+	}
+
+	// system should have executed 10 times
+	ck_assert_msg(g_sysexec_counter == 10,
+		"System did not execute on every update. Counter is %d, expected 10",
+		g_sysexec_counter);
 }
 END_TEST
 
@@ -1214,6 +1344,14 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_buffered, test_unbuffered_remove_component);
 	tcase_add_test(tc_buffered, test_buffered_remove_component);
 	suite_add_tcase(s, tc_buffered);
+
+	TCase *tc_sysexec = tcase_create("system_execution_verification");
+	tcase_add_checked_fixture(tc_sysexec, world_setup, world_teardown);
+	tcase_set_timeout(tc_sysexec, 10);
+	tcase_add_test(tc_sysexec, test_system_executes_during_update);
+	tcase_add_test(tc_sysexec, test_multiple_systems_execute_during_update);
+	tcase_add_test(tc_sysexec, test_system_executes_multiple_updates);
+	suite_add_tcase(s, tc_sysexec);
 
 	return s;
 }

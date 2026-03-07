@@ -98,6 +98,10 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 	struct w_scheduler_action *schedule_items = schedule->items;
 	struct w_system *systems = world->systems.systems;
 
+	// timestep loop tracking
+	size_t timestep_begin_idx = 0;
+	int timestep_iterations_remaining = 0;
+
 	for (size_t i = 0; i < count; ++i)
 	{
 		struct w_scheduler_action *action = &schedule_items[i];
@@ -112,10 +116,37 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_END, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN:
+			{
+				// if update_time_target is 0 (uninitialized), treat as single update
+				int n = (action->time_step->update_time_target == 0) ? 1 : w_time_step_advance(action->time_step);
+				if (n <= 0)
+				{
+					// skip entire timestep - find the matching TIMESTEP_END
+					size_t depth = 1;
+					while (++i < count && depth > 0)
+					{
+						if (schedule_items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN)
+							depth++;
+						else if (schedule_items[i].action == W_SCHEDULER_ACTIONS_TIMESTEP_END)
+							depth--;
+					}
+					// back up so the main loop increment lands on TIMESTEP_END
+					i--;
+					break;
+				}
+				timestep_begin_idx = i;
+				timestep_iterations_remaining = n - 1; // first iteration runs now
 				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_TIMESTEP_BEGIN, world, action);
 				break;
+			}
 			case W_SCHEDULER_ACTIONS_TIMESTEP_END:
 				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_TIMESTEP_END, world, action);
+				// check if more iterations needed
+				if (timestep_iterations_remaining > 0)
+				{
+					timestep_iterations_remaining--;
+					i = timestep_begin_idx; // jump back (loop will increment to BEGIN+1)
+				}
 				break;
 			case W_SCHEDULER_ACTIONS_PHASE_BEGIN:
 				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_PHASE_BEGIN, world, action);
@@ -124,13 +155,14 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				w_hook_registry_run_hooks(&world->hooks, W_WORLD_HOOK_UPDATE_PHASE_END, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_DISPATCH:
+			{
 				struct w_system *system = &systems[action->job_idx];
 
 				// frequency is 0, use timestep delta time directly
-				if (system->update_frequency == 0) 
+				if (system->update_frequency == 0)
 				{
-					system->update(NULL, action->time_step->delta_time_fixed);
-					continue;
+					system->update(world, action->time_step->delta_time_fixed);
+					break;
 				}
 
 				// per-system frequency check
@@ -147,9 +179,10 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				// update last_update_ticks after running
 				system->last_update_ticks = current_tick;
 
-				system->update(NULL, delta_time);
+				system->update(world, delta_time);
 
 				break;
+			}
 			default:
 				break;
 		}
