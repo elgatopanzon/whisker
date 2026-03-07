@@ -1,0 +1,6 @@
+{
+    "module_name": "my_module",
+    "module_prefix": "wm_my_module",
+    "description": "A whisker engine module",
+    "author": "ElGatoPanzon"
+}
