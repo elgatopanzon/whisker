@@ -286,13 +286,33 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	if (!query->bitset_cache.bitsets)
 	{
 		w_array_init_t(query->bitset_cache.bitsets, query->terms_length);
-		query->bitset_cache.bitsets_length = query->terms_length;
 
 		// assign bitset pointers from component registry
+		// count required terms (read/write) for intersection
+		// IMPORTANT: required terms must come before optional/has terms in query string
+		size_t required_count = 0;
 		for (size_t i = 0; i < query->terms_length; ++i)
 		{
-			query->bitset_cache.bitsets[i] = &(w_component_registry_get_entry(registry->component_registry, query->terms[i].component_id)->data_bitset);
+			// optional/has terms may have NULL entry if component has no data
+			struct w_component_entry *entry = query->terms[i].component_entry;
+
+			// required components (read/write) must have valid entry to proceed
+			if ((query->terms[i].access_type == W_QUERY_ACCESS_READ ||
+			     query->terms[i].access_type == W_QUERY_ACCESS_WRITE) && !entry)
+			{
+				return false;
+			}
+
+			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
+			// only read/write terms participate in intersection (not optional/has)
+			if (query->terms[i].access_type == W_QUERY_ACCESS_READ ||
+			    query->terms[i].access_type == W_QUERY_ACCESS_WRITE)
+			{
+				required_count++;
+			}
 		}
+		// intersection only uses first N bitsets where N = required_count
+		query->bitset_cache.bitsets_length = required_count;
 	}
 
 	// check if intersection cache is stale
