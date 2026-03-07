@@ -6,6 +6,9 @@ endfunction()
 
 recurse_files(${CMAKE_CURRENT_SOURCE_DIR} "${PROJECT_NAME}*.c" WHISKER_SOURCES)
 
+# exclude module sources -- modules have their own build targets
+list(FILTER WHISKER_SOURCES EXCLUDE REGEX ".*/modules/.*")
+
 # create library from sources
 add_library(${PROJECT_NAME} OBJECT
 	${WHISKER_SOURCES}

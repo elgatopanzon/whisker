@@ -97,6 +97,9 @@ include(FetchContent)
 # include the src directory to import cmake config
 add_subdirectory(src)
 
+# include optional modules
+add_subdirectory(src/modules)
+
 # enable ctest
 enable_testing()
 
