@@ -520,6 +520,175 @@ END_TEST
 
 
 /*****************************
+*  cache rebuild             *
+*****************************/
+
+// helper: set component on entity to populate bitset
+static void set_component_on_entity(w_entity_id comp_id, w_entity_id entity_id)
+{
+	int dummy = 0;
+	w_component_set(&g_components, int, comp_id, entity_id, &dummy);
+}
+
+START_TEST(test_cache_all_dense)
+{
+	// 20 contiguous IDs >= MIN (16) threshold -> 1 dense slice
+	w_entity_id comp_a = register_component("cache_dense_a");
+	w_entity_id comp_b = register_component("cache_dense_b");
+	w_entity_id comp_c = register_component("cache_dense_c");
+
+	// set components on entities 0-19 (20 contiguous)
+	for (w_entity_id e = 0; e < 20; e++)
+	{
+		set_component_on_entity(comp_a, e);
+		set_component_on_entity(comp_b, e);
+		set_component_on_entity(comp_c, e);
+	}
+
+	struct w_query *q = w_query_registry_get_query(&g_registry,
+		"read cache_dense_a, read cache_dense_b, read cache_dense_c");
+	ck_assert_ptr_nonnull(q);
+	ck_assert_int_eq(q->query_parse_state, W_QUERY_PARSE_STATE_COMPONENTS_PARSED);
+
+	bool rebuilt = w_query_rebuild_cache(&g_registry, q);
+	ck_assert(rebuilt);
+
+	// should have 1 dense slice covering all 20
+	ck_assert_int_eq(q->archetype_slices_dense_length, 1);
+	ck_assert_int_eq(q->archetype_slices_sparse_length, 0);
+	ck_assert_int_eq(q->archetype_slices_dense[0].start_id, 0);
+	ck_assert_int_eq(q->archetype_slices_dense[0].slice_length, 20);
+}
+END_TEST
+
+START_TEST(test_cache_all_sparse)
+{
+	// 4 non-contiguous IDs, each run < MIN threshold -> 4 sparse slices
+	w_entity_id comp_a = register_component("cache_sparse_a");
+	w_entity_id comp_b = register_component("cache_sparse_b");
+	w_entity_id comp_c = register_component("cache_sparse_c");
+
+	// set components on entities 0, 100, 200, 300 (non-contiguous)
+	w_entity_id entities[] = {0, 100, 200, 300};
+	for (int i = 0; i < 4; i++)
+	{
+		set_component_on_entity(comp_a, entities[i]);
+		set_component_on_entity(comp_b, entities[i]);
+		set_component_on_entity(comp_c, entities[i]);
+	}
+
+	struct w_query *q = w_query_registry_get_query(&g_registry,
+		"read cache_sparse_a, read cache_sparse_b, read cache_sparse_c");
+	ck_assert_ptr_nonnull(q);
+
+	bool rebuilt = w_query_rebuild_cache(&g_registry, q);
+	ck_assert(rebuilt);
+
+	// should have 0 dense slices, 4 sparse slices (each length 1)
+	ck_assert_int_eq(q->archetype_slices_dense_length, 0);
+	ck_assert_int_eq(q->archetype_slices_sparse_length, 4);
+
+	for (int i = 0; i < 4; i++)
+	{
+		ck_assert_int_eq(q->archetype_slices_sparse[i].start_id, entities[i]);
+		ck_assert_int_eq(q->archetype_slices_sparse[i].slice_length, 1);
+	}
+}
+END_TEST
+
+START_TEST(test_cache_mixed_dense_sparse)
+{
+	// dense run of 20 + sparse run of 3 -> 1 dense + 1 sparse
+	w_entity_id comp_a = register_component("cache_mixed_a");
+	w_entity_id comp_b = register_component("cache_mixed_b");
+	w_entity_id comp_c = register_component("cache_mixed_c");
+
+	// dense: entities 0-19
+	for (w_entity_id e = 0; e < 20; e++)
+	{
+		set_component_on_entity(comp_a, e);
+		set_component_on_entity(comp_b, e);
+		set_component_on_entity(comp_c, e);
+	}
+
+	// sparse: entities 1000, 1001, 1002 (3 contiguous but < MIN=16)
+	for (w_entity_id e = 1000; e < 1003; e++)
+	{
+		set_component_on_entity(comp_a, e);
+		set_component_on_entity(comp_b, e);
+		set_component_on_entity(comp_c, e);
+	}
+
+	struct w_query *q = w_query_registry_get_query(&g_registry,
+		"read cache_mixed_a, read cache_mixed_b, read cache_mixed_c");
+	ck_assert_ptr_nonnull(q);
+
+	bool rebuilt = w_query_rebuild_cache(&g_registry, q);
+	ck_assert(rebuilt);
+
+	// 1 dense slice (0-19), 1 sparse slice (1000-1002)
+	ck_assert_int_eq(q->archetype_slices_dense_length, 1);
+	ck_assert_int_eq(q->archetype_slices_sparse_length, 1);
+
+	ck_assert_int_eq(q->archetype_slices_dense[0].start_id, 0);
+	ck_assert_int_eq(q->archetype_slices_dense[0].slice_length, 20);
+
+	ck_assert_int_eq(q->archetype_slices_sparse[0].start_id, 1000);
+	ck_assert_int_eq(q->archetype_slices_sparse[0].slice_length, 3);
+}
+END_TEST
+
+START_TEST(test_cache_dense_max_splits)
+{
+	// contiguous run > MAX (1024) should split into multiple dense slices
+	// use 2064 entities: 2 full slices (1024 each) + 1 partial (16, min for dense)
+	w_entity_id comp_a = register_component("cache_max_a");
+	w_entity_id comp_b = register_component("cache_max_b");
+	w_entity_id comp_c = register_component("cache_max_c");
+
+	for (w_entity_id e = 0; e < 2064; e++)
+	{
+		set_component_on_entity(comp_a, e);
+		set_component_on_entity(comp_b, e);
+		set_component_on_entity(comp_c, e);
+	}
+
+	struct w_query *q = w_query_registry_get_query(&g_registry,
+		"read cache_max_a, read cache_max_b, read cache_max_c");
+	ck_assert_ptr_nonnull(q);
+
+	bool rebuilt = w_query_rebuild_cache(&g_registry, q);
+	ck_assert(rebuilt);
+
+	// should have 3 dense slices: [0-1023], [1024-2047], [2048-2063]
+	ck_assert_int_eq(q->archetype_slices_dense_length, 3);
+	ck_assert_int_eq(q->archetype_slices_sparse_length, 0);
+
+	ck_assert_int_eq(q->archetype_slices_dense[0].start_id, 0);
+	ck_assert_int_eq(q->archetype_slices_dense[0].slice_length, 1024);
+
+	ck_assert_int_eq(q->archetype_slices_dense[1].start_id, 1024);
+	ck_assert_int_eq(q->archetype_slices_dense[1].slice_length, 1024);
+
+	ck_assert_int_eq(q->archetype_slices_dense[2].start_id, 2048);
+	ck_assert_int_eq(q->archetype_slices_dense[2].slice_length, 16);
+}
+END_TEST
+
+START_TEST(test_cache_rebuild_returns_false_on_unparsed)
+{
+	// query with unresolved component should fail rebuild
+	struct w_query *q = w_query_registry_get_query(&g_registry, "read nonexistent_comp");
+	ck_assert_ptr_nonnull(q);
+	ck_assert_int_ne(q->query_parse_state, W_QUERY_PARSE_STATE_COMPONENTS_PARSED);
+
+	bool rebuilt = w_query_rebuild_cache(&g_registry, q);
+	ck_assert(!rebuilt);
+}
+END_TEST
+
+
+/*****************************
 *  registry_free             *
 *****************************/
 
@@ -661,6 +830,16 @@ Suite *whisker_query_registry_suite(void)
 	tcase_add_test(tc_edge, test_edge_many_terms);
 	tcase_add_test(tc_edge, test_edge_many_queries);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_cache_rebuild = tcase_create("cache_rebuild");
+	tcase_add_checked_fixture(tc_cache_rebuild, query_registry_setup, query_registry_teardown);
+	tcase_set_timeout(tc_cache_rebuild, 30);
+	tcase_add_test(tc_cache_rebuild, test_cache_all_dense);
+	tcase_add_test(tc_cache_rebuild, test_cache_all_sparse);
+	tcase_add_test(tc_cache_rebuild, test_cache_mixed_dense_sparse);
+	tcase_add_test(tc_cache_rebuild, test_cache_dense_max_splits);
+	tcase_add_test(tc_cache_rebuild, test_cache_rebuild_returns_false_on_unparsed);
+	suite_add_tcase(s, tc_cache_rebuild);
 
 	TCase *tc_free = tcase_create("registry_free");
 	tcase_set_timeout(tc_free, 10);

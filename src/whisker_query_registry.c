@@ -29,6 +29,10 @@ void w_query_registry_free(struct w_query_registry *registry)
 		{
 			free_null(q->terms);
 		}
+
+		free_null(q->archetype_slices_dense);
+		free_null(q->archetype_slices_sparse);
+		w_sparse_bitset_intersect_free_cache(&q->bitset_cache);
 	}
 
 	free_null(registry->queries);
@@ -231,6 +235,10 @@ struct w_query *w_query_registry_get_query(struct w_query_registry *registry, ch
 		query->query_parse_state = W_QUERY_PARSE_STATE_UNPARSED;
 
 		w_array_init_t(query->terms, W_QUERY_REGISTRY_QUERY_TERMS_REALLOC_BLOCK_SIZE);
+		w_array_init_t(query->archetype_slices_dense, W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE);
+		w_array_init_t(query->archetype_slices_sparse, W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE);
+		query->archetype_slices_dense_length = 0;
+		query->archetype_slices_sparse_length = 0;
 		query->bitset_cache_generation = 0;
 
 		// add to hashmap for caching - use interned string as key
@@ -263,4 +271,142 @@ struct w_query *w_query_registry_get_query(struct w_query_registry *registry, ch
 	}
 
 	return query;
+}
+
+bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *query)
+{
+	// instant fail if query isn't fully parsed
+	if (query->query_parse_state != W_QUERY_PARSE_STATE_COMPONENTS_PARSED)
+	{
+		return false;
+	}
+
+	// init bitset cache if needed
+	if (!query->bitset_cache.bitsets)
+	{
+		w_array_init_t(query->bitset_cache.bitsets, query->terms_length);
+		query->bitset_cache.bitsets_length = query->terms_length;
+
+		// assign bitset pointers from component registry
+		for (size_t i = 0; i < query->terms_length; ++i)
+		{
+			query->bitset_cache.bitsets[i] = &(w_component_registry_get_entry(registry->component_registry, query->terms[i].component_id)->data_bitset);
+		}
+	}
+
+	// check if intersection cache is stale
+	if (w_sparse_bitset_intersect_cache_stale(&query->bitset_cache))
+	{
+		// rebuild bitset indexes cache
+		w_sparse_bitset_intersect(&query->bitset_cache);
+
+		// build archetype slices caches
+		w_entity_id start_id = W_ENTITY_INVALID;
+		size_t slice_length = 0;
+		uint64_t *ids = query->bitset_cache.indexes;
+
+		query->archetype_slices_dense_length = 0;
+		query->archetype_slices_sparse_length = 0;
+
+		for (size_t i = 0; i < query->bitset_cache.indexes_length; ++i)
+		{
+			if (start_id == W_ENTITY_INVALID)
+			{
+				start_id = ids[i];
+				slice_length = 1;
+				continue;
+			}
+
+			bool contiguous = (ids[i] == ids[i-1] + 1);
+			bool hit_max = false;
+
+			if (contiguous)
+			{
+				slice_length++;
+
+				// keep building slice until it hits max length
+				if (slice_length < W_QUERY_REGISTRY_ARCHETYPE_SLICES_MAX_SLICE)
+				{
+					continue;
+				}
+				hit_max = true;
+			}
+
+			bool dense = (slice_length >= W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE);
+
+			// assign slice to correct array type
+			struct w_query_archetype_slice *slice;
+			if (dense)
+			{
+				w_array_ensure_alloc_block_size(
+					query->archetype_slices_dense,
+					query->archetype_slices_dense_length + 1,
+					W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE
+				);
+
+				slice = &query->archetype_slices_dense[query->archetype_slices_dense_length++];
+			}
+			else
+			{
+				w_array_ensure_alloc_block_size(
+					query->archetype_slices_sparse,
+					query->archetype_slices_sparse_length + 1,
+					W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE
+				);
+
+				slice = &query->archetype_slices_sparse[query->archetype_slices_sparse_length++];
+			}
+
+			slice->start_id = start_id;
+			slice->slice_length = slice_length;
+
+			// if hit max, current element is in emitted slice - next iteration starts fresh
+			// if not contiguous, start new slice from current element
+			if (hit_max)
+			{
+				start_id = W_ENTITY_INVALID;
+				slice_length = 0;
+			}
+			else
+			{
+				start_id = ids[i];
+				slice_length = 1;
+			}
+		}
+
+		// emit final pending slice if one was being built
+		if (start_id != W_ENTITY_INVALID)
+		{
+			bool dense = (slice_length >= W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE);
+
+			struct w_query_archetype_slice *slice;
+			if (dense)
+			{
+				w_array_ensure_alloc_block_size(
+					query->archetype_slices_dense,
+					query->archetype_slices_dense_length + 1,
+					W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE
+				);
+
+				slice = &query->archetype_slices_dense[query->archetype_slices_dense_length++];
+			}
+			else
+			{
+				w_array_ensure_alloc_block_size(
+					query->archetype_slices_sparse,
+					query->archetype_slices_sparse_length + 1,
+					W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE
+				);
+
+				slice = &query->archetype_slices_sparse[query->archetype_slices_sparse_length++];
+			}
+
+			slice->start_id = start_id;
+			slice->slice_length = slice_length;
+		}
+
+		return true;
+	}
+
+	return false;
 }

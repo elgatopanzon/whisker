@@ -23,6 +23,18 @@
 #define W_QUERY_REGISTRY_QUERY_TERMS_REALLOC_BLOCK_SIZE 1024
 #endif /* ifndef W_QUERY_REGISTRY_QUERY_TERMS_REALLOC_BLOCK_SIZE */
 
+#ifndef W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE
+#define W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE 8196
+#endif /* ifndef W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE */
+
+#ifndef W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE
+#define W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE 16
+#endif /* ifndef W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE */
+
+#ifndef W_QUERY_REGISTRY_ARCHETYPE_SLICES_MAX_SLICE
+#define W_QUERY_REGISTRY_ARCHETYPE_SLICES_MAX_SLICE 1024
+#endif /* ifndef W_QUERY_REGISTRY_ARCHETYPE_SLICES_MIN_SLICE */
+
 // each query term has a specific access
 enum W_QUERY_ACCESS
 {
@@ -39,6 +51,13 @@ enum W_QUERY_PARSE_STATE
 	W_QUERY_PARSE_STATE_QUERY_PARSED,
 	W_QUERY_PARSE_STATE_TERMS_PARSED,
 	W_QUERY_PARSE_STATE_COMPONENTS_PARSED,
+};
+
+// query archetype slice is the start index and number of contigious entity IDs
+struct w_query_archetype_slice 
+{
+	w_entity_id start_id;
+	size_t slice_length;
 };
 
 // full queries are made up of query terms
@@ -77,6 +96,10 @@ struct w_query
 	// cache of entity IDs passing the bitset intersect + array of bitsets
 	struct w_sparse_bitset_intersect_cache bitset_cache;
 	uint64_t bitset_cache_generation;
+
+	// query archetype slice cache
+	w_array_declare(struct w_query_archetype_slice, archetype_slices_dense);
+	w_array_declare(struct w_query_archetype_slice, archetype_slices_sparse);
 };
 
 // declare a hashmap for the string query to ID map
@@ -106,6 +129,9 @@ void w_query_registry_free(struct w_query_registry *registry);
 
 // pass in a query string, get a parsed query struct back
 struct w_query *w_query_registry_get_query(struct w_query_registry *registry, char *query_string);
+
+// rebuild the query cache, returns true if built false if no change
+bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *query);
 
 #endif /* WHISKER_QUERY_REGISTRY_H */
 

@@ -76,5 +76,8 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 // free indexes and reset counts
 void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache);
 
+// check if bitset intersect cache is stale
+uint64_t w_sparse_bitset_intersect_cache_stale(struct w_sparse_bitset_intersect_cache *intersect_cache);
+
 #endif /* WHISKER_SPARSE_BITSET_H */
 
