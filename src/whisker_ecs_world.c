@@ -27,6 +27,8 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 
 	w_query_registry_init(&world->queries, world->string_table, &world->components, world->arena);
 
+	w_singleton_registry_init(&world->singletons, arena);
+
 	world->scheduler_jobs_dirty = true;
 	world->update_result = W_WORLD_UPDATE_RESULT_CONTINUE;
 
@@ -43,6 +45,7 @@ void w_ecs_world_free(struct w_ecs_world *world)
 	w_hook_registry_free(&world->hooks);
 	w_command_buffer_free(&world->command_buffer);
 	w_query_registry_free(&world->queries);
+	w_singleton_registry_free(&world->singletons);
 	free_null(world->scheduler_jobs);
 }
 

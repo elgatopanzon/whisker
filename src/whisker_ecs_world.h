@@ -16,6 +16,7 @@
 #include "whisker_hook_registry.h"
 #include "whisker_command_buffer.h"
 #include "whisker_query_registry.h"
+#include "whisker_singleton_registry.h"
 
 #ifndef WHISKER_ECS_WORLD_H
 #define WHISKER_ECS_WORLD_H
@@ -62,6 +63,9 @@ struct w_ecs_world
 
 	// queries
 	struct w_query_registry queries;
+
+	// singletons
+	struct w_singleton_registry singletons;
 
 	enum W_WORLD_UPDATE_RESULT update_result;
 };
@@ -194,6 +198,23 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 
 // reset all scheduler time steps
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
+
+
+/*******************
+*  singleton API  *
+*******************/
+
+// set a singleton pointer by name
+#define w_singleton_set(w, name, ptr) w_singleton_registry_set(&(w)->singletons, name, ptr)
+
+// get a singleton pointer by name, returns NULL if not found
+#define w_singleton_get(w, name) w_singleton_registry_get(&(w)->singletons, name)
+
+// check if a singleton exists by name
+#define w_singleton_has(w, name) w_singleton_registry_has(&(w)->singletons, name)
+
+// remove a singleton by name, returns true if it existed
+#define w_singleton_remove(w, name) w_singleton_registry_remove(&(w)->singletons, name)
 
 
 /*****************
