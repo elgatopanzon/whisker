@@ -63,6 +63,10 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_char = 11,
 	W_COMPONENT_TYPE_void = 12,
 
+	// specials
+	W_COMPONENT_TYPE_char_ptr = 18,
+	W_COMPONENT_TYPE_void_ptr = 19,
+
 	// engine types
 	W_COMPONENT_TYPE_vec2 = 20,
 	W_COMPONENT_TYPE_vec2i = 21,
@@ -74,9 +78,20 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_vec4i = 27,
 	W_COMPONENT_TYPE_vec4u = 28,
 
-	// specials
-	W_COMPONENT_TYPE_char_ptr = 50,
-	W_COMPONENT_TYPE_void_ptr = 51,
+	W_COMPONENT_TYPE_mat2 = 29,
+	W_COMPONENT_TYPE_mat3 = 30,
+	W_COMPONENT_TYPE_mat4 = 31,
+
+	W_COMPONENT_TYPE_color = 32,
+	W_COMPONENT_TYPE_color8 = 33,
+
+	W_COMPONENT_TYPE_rect = 34,
+	W_COMPONENT_TYPE_recti = 35,
+	W_COMPONENT_TYPE_aabb2 = 36,
+	W_COMPONENT_TYPE_aabb3 = 37,
+	W_COMPONENT_TYPE_ray2 = 38,
+	W_COMPONENT_TYPE_ray3 = 39,
+
 };
 
 // a component storage entry
