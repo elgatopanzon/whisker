@@ -22,10 +22,18 @@
 #define WHISKER_ECS_WORLD_H
 
 enum W_WORLD_UPDATE_RESULT
-{ 
+{
 	W_WORLD_UPDATE_RESULT_CONTINUE = 0,
 	W_WORLD_UPDATE_RESULT_RESTART = 1,
 	W_WORLD_UPDATE_RESULT_SHUTDOWN = 2,
+};
+
+enum W_WORLD_HOOK_TYPE
+{
+	W_WORLD_HOOK_TYPE_UPDATE = 0,
+	W_WORLD_HOOK_TYPE_COMPONENT_SET,
+	W_WORLD_HOOK_TYPE_COMPONENT_REMOVE,
+	W_WORLD_HOOK_TYPE_COUNT,
 };
 
 enum W_WORLD_HOOK
@@ -55,7 +63,7 @@ struct w_ecs_world
 	bool scheduler_jobs_dirty;
 
 	// hooks
-	struct w_hook_registry hooks;
+	struct w_hook_registry hooks[W_WORLD_HOOK_TYPE_COUNT];
 
 	// buffering
 	struct w_command_buffer command_buffer;
