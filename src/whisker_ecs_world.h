@@ -21,6 +21,21 @@
 #ifndef WHISKER_ECS_WORLD_H
 #define WHISKER_ECS_WORLD_H
 
+enum W_COMPONENT_ACTION
+{
+	W_COMPONENT_ACTION_SET = 0,
+	W_COMPONENT_ACTION_REMOVE = 1,
+};
+
+struct w_component_action_payload
+{
+	enum W_COMPONENT_ACTION action;
+	uint type_id;
+	w_entity_id type_entity_id;
+	w_entity_id entity_id;
+	size_t data_size;
+};
+
 enum W_WORLD_UPDATE_RESULT
 {
 	W_WORLD_UPDATE_RESULT_CONTINUE = 0,
@@ -44,6 +59,8 @@ enum W_WORLD_HOOK
 	W_WORLD_HOOK_UPDATE_TIMESTEP_END,
 	W_WORLD_HOOK_UPDATE_PHASE_BEGIN,
 	W_WORLD_HOOK_UPDATE_PHASE_END,
+	W_WORLD_HOOK_COMPONENT_SET,
+	W_WORLD_HOOK_COMPONENT_REMOVE,
 };
 
 struct w_ecs_world 
@@ -237,6 +254,16 @@ struct w_query *w_ecs_get_query(struct w_ecs_world *world, char *query);
 *  hooks  *
 ***********/
 static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
+
+// register a hook to fire when a component is set (returns hook ID)
+size_t w_register_component_set_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a component set hook by ID
+void w_unregister_component_set_hook(struct w_ecs_world *world, size_t hook_id);
+
+// register a hook to fire when a component is removed (returns hook ID)
+size_t w_register_component_remove_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a component remove hook by ID
+void w_unregister_component_remove_hook(struct w_ecs_world *world, size_t hook_id);
 
 // temporarily disable buffering to execute code block directly
 #define w_ecs_world_do_unbuffered(w, block) do { \

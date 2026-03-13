@@ -275,23 +275,24 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name)
 
 void *w_ecs_set_component_(struct w_ecs_world *world, uint type_id, w_entity_id type_entity_id, w_entity_id entity_id, void *data, size_t data_size)
 {
-	if (!world->buffering_enabled)
-		return w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
-
-	// payload: type_id + type_entity_id + entity_id + data_size + data
-	size_t payload_size = sizeof(type_id) + sizeof(type_entity_id) + sizeof(entity_id) + sizeof(data_size) + data_size;
+	struct w_component_action_payload action_payload = {
+		.action = W_COMPONENT_ACTION_SET,
+		.type_id = type_id,
+		.type_entity_id = type_entity_id,
+		.entity_id = entity_id,
+		.data_size = data_size,
+	};
+	size_t payload_size = sizeof(action_payload) + data_size;
 	uint8_t payload[payload_size];
-	size_t offset = 0;
+	memcpy(payload, &action_payload, sizeof(action_payload));
+	memcpy(payload + sizeof(action_payload), data, data_size);
 
-	memcpy(payload + offset, &type_id, sizeof(type_id));
-	offset += sizeof(type_id);
-	memcpy(payload + offset, &type_entity_id, sizeof(type_entity_id));
-	offset += sizeof(type_entity_id);
-	memcpy(payload + offset, &entity_id, sizeof(entity_id));
-	offset += sizeof(entity_id);
-	memcpy(payload + offset, &data_size, sizeof(data_size));
-	offset += sizeof(data_size);
-	memcpy(payload + offset, data, data_size);
+	if (!world->buffering_enabled)
+	{
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], W_WORLD_HOOK_COMPONENT_SET, world, &action_payload);
+		void *result = w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
+		return result;
+	}
 
 	w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_set_component, world, payload, payload_size);
 	return NULL;
@@ -304,20 +305,25 @@ void *w_ecs_get_component_(struct w_ecs_world *world, w_entity_id type_entity_id
 
 void w_ecs_remove_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
 {
+	struct w_component_entry *entry = w_component_registry_get_entry(&world->components, type_entity_id);
+	if (!entry) return;
+
+	struct w_component_action_payload action_payload = {
+		.action = W_COMPONENT_ACTION_REMOVE,
+		.type_id = entry->type_id,
+		.type_entity_id = type_entity_id,
+		.entity_id = entity_id,
+		.data_size = 0,
+	};
+
 	if (!world->buffering_enabled)
 	{
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_REMOVE], W_WORLD_HOOK_COMPONENT_REMOVE, world, &action_payload);
 		w_component_remove_(&world->components, type_entity_id, entity_id);
 		return;
 	}
 
-	// payload: type_entity_id + entity_id
-	size_t payload_size = sizeof(type_entity_id) + sizeof(entity_id);
-	uint8_t payload[payload_size];
-
-	memcpy(payload, &type_entity_id, sizeof(type_entity_id));
-	memcpy(payload + sizeof(type_entity_id), &entity_id, sizeof(entity_id));
-
-	w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_remove_component, world, payload, payload_size);
+	w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_remove_component, world, &action_payload, sizeof(action_payload));
 }
 
 bool w_ecs_has_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
@@ -487,33 +493,42 @@ void w_ecs_cmd_clear_entity_name(void *w, void *entity_payload)
 void w_ecs_cmd_set_component(void *w, void *component_payload)
 {
 	struct w_ecs_world *world = w;
-	uint8_t *payload = component_payload;
-	size_t offset = 0;
-
-	uint type_id = *(uint *)(payload + offset);
-	offset += sizeof(type_id);
-	w_entity_id type_entity_id = *(w_entity_id *)(payload + offset);
-	offset += sizeof(type_entity_id);
-	w_entity_id entity_id = *(w_entity_id *)(payload + offset);
-	offset += sizeof(entity_id);
-	size_t data_size = *(size_t *)(payload + offset);
-	offset += sizeof(data_size);
-	void *data = payload + offset;
+	struct w_component_action_payload *p = component_payload;
+	void *data = (uint8_t *)component_payload + sizeof(*p);
 
 	w_ecs_world_do_unbuffered(world, {
-		w_ecs_set_component_(world, type_id, type_entity_id, entity_id, data, data_size);
+		w_ecs_set_component_(world, p->type_id, p->type_entity_id, p->entity_id, data, p->data_size);
 	});
 }
 
 void w_ecs_cmd_remove_component(void *w, void *component_payload)
 {
 	struct w_ecs_world *world = w;
-	uint8_t *payload = component_payload;
-
-	w_entity_id type_entity_id = *(w_entity_id *)payload;
-	w_entity_id entity_id = *(w_entity_id *)(payload + sizeof(type_entity_id));
+	struct w_component_action_payload *p = component_payload;
 
 	w_ecs_world_do_unbuffered(world, {
-		w_ecs_remove_component_(world, type_entity_id, entity_id);
+		w_ecs_remove_component_(world, p->type_entity_id, p->entity_id);
 	});
+}
+
+size_t w_register_component_set_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], W_WORLD_HOOK_COMPONENT_SET, hook_fn);
+}
+
+void w_unregister_component_set_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], W_WORLD_HOOK_COMPONENT_SET, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_register_component_remove_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_REMOVE], W_WORLD_HOOK_COMPONENT_REMOVE, hook_fn);
+}
+
+void w_unregister_component_remove_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_REMOVE], W_WORLD_HOOK_COMPONENT_REMOVE, hook_id);
+	if (entry) entry->enabled = false;
 }
