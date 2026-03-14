@@ -12,7 +12,7 @@
 *  internal helpers          *
 *****************************/
 
-// add entity_id to the adjacency list for 'entity' in the adjacency map
+// add entity_id to the adjacency bitset for 'entity' in the adjacency map
 static void adjacency_add_(struct w_relationship_registry *reg,
 	w_entity_id entity, w_entity_id related)
 {
@@ -24,22 +24,17 @@ static void adjacency_add_(struct w_relationship_registry *reg,
 		struct w_relationship_adjacency_list empty = {0};
 		w_hashmap_t_set(&reg->adjacency, entity, empty);
 		w_hashmap_t_get(&reg->adjacency, entity, adj);
+		w_sparse_bitset_init(&adj->entities, reg->arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
 	}
 
-	// check for duplicate
-	for (size_t i = 0; i < adj->entities_length; ++i)
-	{
-		if (adj->entities[i] == related) return;
-	}
+	// O(1) duplicate check
+	if (w_sparse_bitset_get(&adj->entities, related)) return;
 
-	w_array_ensure_alloc_block_size(adj->entities,
-		adj->entities_length + 1,
-		W_RELATIONSHIP_ADJACENCY_REALLOC_BLOCK_SIZE);
-
-	adj->entities[adj->entities_length++] = related;
+	w_sparse_bitset_set(&adj->entities, related);
+	adj->count++;
 }
 
-// remove entity_id from the adjacency list for 'entity'
+// remove entity_id from the adjacency bitset for 'entity'
 static void adjacency_remove_(struct w_relationship_registry *reg,
 	w_entity_id entity, w_entity_id related)
 {
@@ -47,16 +42,10 @@ static void adjacency_remove_(struct w_relationship_registry *reg,
 	w_hashmap_t_get(&reg->adjacency, entity, adj);
 	if (!adj) return;
 
-	for (size_t i = 0; i < adj->entities_length; ++i)
+	if (w_sparse_bitset_get(&adj->entities, related))
 	{
-		if (adj->entities[i] == related)
-		{
-			// swap-remove
-			if (i < adj->entities_length - 1)
-				adj->entities[i] = adj->entities[adj->entities_length - 1];
-			adj->entities_length--;
-			return;
-		}
+		w_sparse_bitset_clear(&adj->entities, related);
+		adj->count--;
 	}
 }
 
@@ -67,10 +56,10 @@ static bool pair_has_entries_(struct w_relationship_registry *reg,
 	struct w_relationship_entry_list *list = NULL;
 	uint64_t key = w_relationship_pack_pair(a, b);
 	w_hashmap_t_get(&reg->pair_map, key, list);
-	return list && list->entries_length > 0;
+	return list && w_hashmap_t_total_entries(&list->entries) > 0;
 }
 
-// free all dynamic arrays inside pair_map buckets
+// free all inner hashmaps inside pair_map buckets
 static void free_pair_map_arrays_(struct w_relationship_pair_map *map)
 {
 	for (size_t b = 0; b < map->buckets_length; ++b)
@@ -78,12 +67,12 @@ static void free_pair_map_arrays_(struct w_relationship_pair_map *map)
 		for (size_t e = 0; e < map->buckets[b].entries_length; ++e)
 		{
 			struct w_relationship_entry_list *list = &map->buckets[b].entries[e].value;
-			free_null(list->entries);
+			w_hashmap_t_free(&list->entries);
 		}
 	}
 }
 
-// free all dynamic arrays inside adjacency map buckets
+// free all sparse bitsets inside adjacency map buckets
 static void free_adjacency_map_arrays_(struct w_relationship_adjacency_map *map)
 {
 	for (size_t b = 0; b < map->buckets_length; ++b)
@@ -91,7 +80,7 @@ static void free_adjacency_map_arrays_(struct w_relationship_adjacency_map *map)
 		for (size_t e = 0; e < map->buckets[b].entries_length; ++e)
 		{
 			struct w_relationship_adjacency_list *adj = &map->buckets[b].entries[e].value;
-			free_null(adj->entities);
+			w_sparse_bitset_free(&adj->entities);
 		}
 	}
 }
@@ -132,26 +121,23 @@ void w_relationship_registry_add(struct w_relationship_registry *reg,
 		struct w_relationship_entry_list empty = {0};
 		w_hashmap_t_set(&reg->pair_map, key, empty);
 		w_hashmap_t_get(&reg->pair_map, key, list);
+		w_hashmap_t_init(&list->entries, reg->arena,
+			W_RELATIONSHIP_ENTRY_BUCKET_COUNT, w_xxhash64_hash, NULL);
 	}
 
-	// check for duplicate
-	for (size_t i = 0; i < list->entries_length; ++i)
-	{
-		if (list->entries[i].owner == owner &&
-			list->entries[i].target == target &&
-			list->entries[i].component_id == component_id)
-			return;
-	}
+	// O(1) duplicate check via entry hashmap
+	uint64_t entry_key = w_relationship_entry_key_(owner, component_id);
+	struct w_relationship_entry *existing = NULL;
+	w_hashmap_t_get(&list->entries, entry_key, existing);
+	if (existing) return;
 
-	// append entry
-	w_array_ensure_alloc_block_size(list->entries,
-		list->entries_length + 1,
-		W_RELATIONSHIP_ENTRIES_REALLOC_BLOCK_SIZE);
-
-	list->entries[list->entries_length].owner = owner;
-	list->entries[list->entries_length].target = target;
-	list->entries[list->entries_length].component_id = component_id;
-	list->entries_length++;
+	// O(1) insert
+	struct w_relationship_entry entry = {
+		.owner = owner,
+		.target = target,
+		.component_id = component_id
+	};
+	w_hashmap_t_set(&list->entries, entry_key, entry);
 
 	// update adjacency for both directions
 	adjacency_add_(reg, owner, target);
@@ -167,25 +153,20 @@ bool w_relationship_registry_remove(struct w_relationship_registry *reg,
 	w_hashmap_t_get(&reg->pair_map, key, list);
 	if (!list) return false;
 
-	for (size_t i = 0; i < list->entries_length; ++i)
-	{
-		if (list->entries[i].owner == owner &&
-			list->entries[i].target == target &&
-			list->entries[i].component_id == component_id)
-		{
-			// swap-remove
-			if (i < list->entries_length - 1)
-				list->entries[i] = list->entries[list->entries_length - 1];
-			list->entries_length--;
+	// O(1) lookup and remove via entry hashmap
+	uint64_t entry_key = w_relationship_entry_key_(owner, component_id);
+	bool removed;
+	w_hashmap_t_remove(&list->entries, entry_key, removed);
 
-			// if no more entries for this pair, clean up adjacency
-			if (!pair_has_entries_(reg, owner, target))
-			{
-				adjacency_remove_(reg, owner, target);
-				adjacency_remove_(reg, target, owner);
-			}
-			return true;
+	if (removed)
+	{
+		// if no more entries for this pair, clean up adjacency
+		if (!pair_has_entries_(reg, owner, target))
+		{
+			adjacency_remove_(reg, owner, target);
+			adjacency_remove_(reg, target, owner);
 		}
+		return true;
 	}
 	return false;
 }
@@ -194,12 +175,16 @@ void w_relationship_registry_remove_entity(struct w_relationship_registry *reg, 
 {
 	struct w_relationship_adjacency_list *adj = NULL;
 	w_hashmap_t_get(&reg->adjacency, entity, adj);
-	if (!adj || adj->entities_length == 0) return;
+	if (!adj || adj->count == 0) return;
 
-	// iterate a snapshot of the adjacency list (copy entity IDs to stack)
-	size_t count = adj->entities_length;
+	// snapshot adjacent entities to stack array (bitset can't be iterated while modified)
+	size_t count = adj->count;
 	w_entity_id related[count];
-	memcpy(related, adj->entities, count * sizeof(w_entity_id));
+	size_t idx = 0;
+	w_sparse_bitset_for_each(&adj->entities)
+	{
+		related[idx++] = (w_entity_id)i;
+	}
 
 	for (size_t r = 0; r < count; ++r)
 	{
@@ -210,9 +195,7 @@ void w_relationship_registry_remove_entity(struct w_relationship_registry *reg, 
 		w_hashmap_t_get(&reg->pair_map, key, list);
 		if (list)
 		{
-			free_null(list->entries);
-			list->entries_length = 0;
-			list->entries_size = 0;
+			w_hashmap_t_free(&list->entries);
 
 			bool pair_removed;
 			w_hashmap_t_remove(&reg->pair_map, key, pair_removed);
@@ -228,9 +211,8 @@ void w_relationship_registry_remove_entity(struct w_relationship_registry *reg, 
 	w_hashmap_t_get(&reg->adjacency, entity, adj);
 	if (adj)
 	{
-		free_null(adj->entities);
-		adj->entities_length = 0;
-		adj->entities_size = 0;
+		w_sparse_bitset_free(&adj->entities);
+		adj->count = 0;
 
 		bool adj_removed;
 		w_hashmap_t_remove(&reg->adjacency, entity, adj_removed);
@@ -244,7 +226,7 @@ struct w_relationship_entry_list *w_relationship_registry_get_pair(
 	uint64_t key = w_relationship_pack_pair(a, b);
 	struct w_relationship_entry_list *list = NULL;
 	w_hashmap_t_get(&reg->pair_map, key, list);
-	if (list && list->entries_length == 0) return NULL;
+	if (list && w_hashmap_t_total_entries(&list->entries) == 0) return NULL;
 	return list;
 }
 
@@ -253,7 +235,7 @@ struct w_relationship_adjacency_list *w_relationship_registry_get_adjacent(
 {
 	struct w_relationship_adjacency_list *adj = NULL;
 	w_hashmap_t_get(&reg->adjacency, entity, adj);
-	if (adj && adj->entities_length == 0) return NULL;
+	if (adj && adj->count == 0) return NULL;
 	return adj;
 }
 
@@ -265,8 +247,6 @@ struct w_relationship_adjacency_list *w_relationship_registry_get_adjacent(
 static void component_set_hook_(void *world_, void *data_)
 {
 	struct w_component_action_payload *p = data_;
-	if (p->type_id != W_COMPONENT_TYPE_w_entity_id) return;
-
 	struct w_ecs_world *world = world_;
 	w_entity_id target = *(w_entity_id *)((uint8_t *)data_ + sizeof(*p));
 
@@ -279,8 +259,6 @@ static void component_set_hook_(void *world_, void *data_)
 static void component_remove_hook_(void *world_, void *data_)
 {
 	struct w_component_action_payload *p = data_;
-	if (p->type_id != W_COMPONENT_TYPE_w_entity_id) return;
-
 	struct w_ecs_world *world = world_;
 
 	// read current value before the component is removed
@@ -303,7 +281,7 @@ static void entity_destroy_hook_(void *world_, void *entity_)
 
 	struct w_relationship_adjacency_list *adj =
 		w_relationship_registry_get_adjacent(reg, entity);
-	if (!adj || adj->entities_length == 0) return;
+	if (!adj || adj->count == 0) return;
 
 	// queue buffered command to clean up relationships at next sync point
 	// safe to queue during flush: cmd_return_entity has already copied its
@@ -339,12 +317,12 @@ void wm_relationships_init(struct w_ecs_world *world)
 	struct w_relationship_registry *reg =
 		w_arena_malloc(world->arena, sizeof(*reg));
 	w_relationship_registry_init(reg, world->arena);
-	w_singleton_set(world, "relationships", reg);
+	w_ecs_singleton_set(world, "relationships", reg);
 
 	// register hooks for transparent relationship tracking
-	w_register_component_set_hook(world, component_set_hook_);
-	w_register_component_remove_hook(world, component_remove_hook_);
-	w_register_entity_destroy_hook(world, entity_destroy_hook_);
+	w_ecs_register_component_set_hook(world, W_COMPONENT_TYPE_w_entity_id, component_set_hook_);
+	w_ecs_register_component_remove_hook(world, W_COMPONENT_TYPE_w_entity_id, component_remove_hook_);
+	w_ecs_register_entity_destroy_hook(world, entity_destroy_hook_);
 }
 
 void wm_relationships_free(struct w_ecs_world *world)
@@ -387,5 +365,5 @@ struct w_relationship_adjacency_list *wm_relationships_get_adjacent(
 
 struct w_relationship_registry *wm_relationships_get_registry(struct w_ecs_world *world)
 {
-	return w_singleton_get(world, "relationships");
+	return w_ecs_singleton_get(world, "relationships");
 }

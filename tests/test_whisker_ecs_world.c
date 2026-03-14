@@ -1281,7 +1281,7 @@ START_TEST(test_remove_all_components_hooks_fired)
 	ck_assert(!g_world.buffering_enabled);
 
 	g_remove_all_hook_count = 0;
-	w_register_component_remove_hook(&g_world, hook_count_removes_);
+	w_ecs_register_component_remove_hook(&g_world, 0, hook_count_removes_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_entity_id comp_a = w_ecs_get_component_by_name(&g_world, "rac_hook_a");
@@ -1304,7 +1304,7 @@ START_TEST(test_remove_all_components_no_components_noop)
 	ck_assert(!g_world.buffering_enabled);
 
 	g_remove_all_hook_count = 0;
-	w_register_component_remove_hook(&g_world, hook_count_removes_);
+	w_ecs_register_component_remove_hook(&g_world, 0, hook_count_removes_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 
@@ -1384,7 +1384,7 @@ static void hook_multi_b_(void *ctx, void *data)
 START_TEST(test_entity_destroy_hook_fires)
 {
 	g_destroy_hook_count = 0;
-	w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+	w_ecs_register_entity_destroy_hook(&g_world, hook_count_destroys_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_ecs_return_entity(&g_world, entity);
@@ -1396,7 +1396,7 @@ END_TEST
 START_TEST(test_entity_destroy_hook_before_component_removal)
 {
 	g_destroy_hook_had_components = false;
-	w_register_entity_destroy_hook(&g_world, hook_check_components_before_destroy_);
+	w_ecs_register_entity_destroy_hook(&g_world, hook_check_components_before_destroy_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "edh_comp_check");
@@ -1414,7 +1414,7 @@ START_TEST(test_entity_destroy_hook_receives_correct_entity)
 {
 	g_destroy_hook_count = 0;
 	g_destroy_hook_entity_id = W_ENTITY_INVALID;
-	w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+	w_ecs_register_entity_destroy_hook(&g_world, hook_count_destroys_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_ecs_return_entity(&g_world, entity);
@@ -1428,8 +1428,8 @@ START_TEST(test_entity_destroy_hook_multiple_hooks_fire)
 {
 	g_destroy_hook_multi_a = 0;
 	g_destroy_hook_multi_b = 0;
-	w_register_entity_destroy_hook(&g_world, hook_multi_a_);
-	w_register_entity_destroy_hook(&g_world, hook_multi_b_);
+	w_ecs_register_entity_destroy_hook(&g_world, hook_multi_a_);
+	w_ecs_register_entity_destroy_hook(&g_world, hook_multi_b_);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_ecs_return_entity(&g_world, entity);
@@ -1442,10 +1442,10 @@ END_TEST
 START_TEST(test_entity_destroy_hook_unregistered_not_fired)
 {
 	g_destroy_hook_count = 0;
-	size_t hook_id = w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+	size_t hook_id = w_ecs_register_entity_destroy_hook(&g_world, hook_count_destroys_);
 
 	// unregister before destroy
-	w_unregister_entity_destroy_hook(&g_world, hook_id);
+	w_ecs_unregister_entity_destroy_hook(&g_world, hook_id);
 
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	w_ecs_return_entity(&g_world, entity);

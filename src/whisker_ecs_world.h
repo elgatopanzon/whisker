@@ -60,8 +60,6 @@ enum W_WORLD_HOOK
 	W_WORLD_HOOK_UPDATE_TIMESTEP_END,
 	W_WORLD_HOOK_UPDATE_PHASE_BEGIN,
 	W_WORLD_HOOK_UPDATE_PHASE_END,
-	W_WORLD_HOOK_COMPONENT_SET,
-	W_WORLD_HOOK_COMPONENT_REMOVE,
 	W_WORLD_HOOK_ENTITY_DESTROY,
 };
 
@@ -235,16 +233,16 @@ void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
 *******************/
 
 // set a singleton pointer by name
-#define w_singleton_set(w, name, ptr) w_singleton_registry_set(&(w)->singletons, name, ptr)
+#define w_ecs_singleton_set(w, name, ptr) w_singleton_registry_set(&(w)->singletons, name, ptr)
 
 // get a singleton pointer by name, returns NULL if not found
-#define w_singleton_get(w, name) w_singleton_registry_get(&(w)->singletons, name)
+#define w_ecs_singleton_get(w, name) w_singleton_registry_get(&(w)->singletons, name)
 
 // check if a singleton exists by name
-#define w_singleton_has(w, name) w_singleton_registry_has(&(w)->singletons, name)
+#define w_ecs_singleton_has(w, name) w_singleton_registry_has(&(w)->singletons, name)
 
 // remove a singleton by name, returns true if it existed
-#define w_singleton_remove(w, name) w_singleton_registry_remove(&(w)->singletons, name)
+#define w_ecs_singleton_remove(w, name) w_singleton_registry_remove(&(w)->singletons, name)
 
 
 /*****************
@@ -260,20 +258,20 @@ struct w_query *w_ecs_get_query(struct w_ecs_world *world, char *query);
 ***********/
 static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
 
-// register a hook to fire when a component is set (returns hook ID)
-size_t w_register_component_set_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
-// unregister a component set hook by ID
-void w_unregister_component_set_hook(struct w_ecs_world *world, size_t hook_id);
+// register a hook to fire when a component of the given type is set (returns hook ID)
+size_t w_ecs_register_component_set_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn);
+// unregister a component set hook by type and hook ID
+void w_ecs_unregister_component_set_hook(struct w_ecs_world *world, uint type_id, size_t hook_id);
 
-// register a hook to fire when a component is removed (returns hook ID)
-size_t w_register_component_remove_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
-// unregister a component remove hook by ID
-void w_unregister_component_remove_hook(struct w_ecs_world *world, size_t hook_id);
+// register a hook to fire when a component of the given type is removed (returns hook ID)
+size_t w_ecs_register_component_remove_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn);
+// unregister a component remove hook by type and hook ID
+void w_ecs_unregister_component_remove_hook(struct w_ecs_world *world, uint type_id, size_t hook_id);
 
 // register a hook to fire when an entity is destroyed (returns hook ID)
-size_t w_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+size_t w_ecs_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
 // unregister an entity destroy hook by ID
-void w_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id);
+void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id);
 
 // temporarily disable buffering to execute code block directly
 #define w_ecs_world_do_unbuffered(w, block) do { \
