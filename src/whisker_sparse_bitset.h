@@ -45,6 +45,18 @@ struct w_sparse_bitset_intersect_cache
 	uint64_t cache_generation;
 };
 
+// iterate all set bits in a sparse bitset; provides uint64_t i as the current bit index
+#define w_sparse_bitset_for_each(bs) \
+    for (uint64_t _sb_li = 0; _sb_li < (bs)->lookup_pages_length; _sb_li++) \
+    for (uint64_t _sb_lw = (bs)->lookup_pages[_sb_li]; _sb_lw; _sb_lw &= _sb_lw - 1) \
+    for (uint64_t _sb_pi = _sb_li * 64ULL + (uint64_t)__builtin_ctzll(_sb_lw), \
+             _sb_pg = (_sb_pi < (bs)->pages_length && (bs)->pages[_sb_pi].bits) ? 1ULL : 0ULL; \
+         _sb_pg; _sb_pg = 0) \
+    for (uint32_t _sb_w = (bs)->pages[_sb_pi].first_set; _sb_w <= (bs)->pages[_sb_pi].last_set; _sb_w++) \
+    for (uint64_t _sb_wd = (bs)->pages[_sb_pi].bits[_sb_w]; _sb_wd; _sb_wd &= _sb_wd - 1) \
+    for (uint64_t i = (_sb_pi * (bs)->page_size_ + (uint64_t)_sb_w) * 64ULL + (uint64_t)__builtin_ctzll(_sb_wd), \
+             _sb_d = 0; !_sb_d; _sb_d = 1)
+
 // math macros
 #define w_sparse_bitset_word_index(i) ((i) >> 6)
 #define w_sparse_bitset_page_index(i, s) (i / s)

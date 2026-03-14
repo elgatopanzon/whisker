@@ -711,6 +711,98 @@ END_TEST
 
 
 /*****************************
+*  for_each tcase            *
+*****************************/
+
+START_TEST(test_for_each_empty_iterates_zero)
+{
+	int count = 0;
+	w_sparse_bitset_for_each(&g_bitset)
+	{
+		count++;
+	}
+	ck_assert_int_eq(count, 0);
+}
+END_TEST
+
+START_TEST(test_for_each_single_bit_correct_index)
+{
+	w_sparse_bitset_set(&g_bitset, 5);
+	int count = 0;
+	uint64_t found_idx = UINT64_MAX;
+	w_sparse_bitset_for_each(&g_bitset)
+	{
+		count++;
+		found_idx = i;
+	}
+	ck_assert_int_eq(count, 1);
+	ck_assert_uint_eq(found_idx, 5);
+}
+END_TEST
+
+START_TEST(test_for_each_multiple_bits_count)
+{
+	w_sparse_bitset_set(&g_bitset, 0);
+	w_sparse_bitset_set(&g_bitset, 1);
+	w_sparse_bitset_set(&g_bitset, 2);
+	int count = 0;
+	w_sparse_bitset_for_each(&g_bitset)
+	{
+		count++;
+	}
+	ck_assert_int_eq(count, 3);
+}
+END_TEST
+
+START_TEST(test_for_each_sparse_bits_all_found)
+{
+	w_sparse_bitset_set(&g_bitset, 0);
+	w_sparse_bitset_set(&g_bitset, 100);
+	w_sparse_bitset_set(&g_bitset, 1000);
+	bool found_0 = false, found_100 = false, found_1000 = false;
+	int count = 0;
+	w_sparse_bitset_for_each(&g_bitset)
+	{
+		if (i == 0) found_0 = true;
+		if (i == 100) found_100 = true;
+		if (i == 1000) found_1000 = true;
+		count++;
+	}
+	ck_assert_int_eq(count, 3);
+	ck_assert(found_0);
+	ck_assert(found_100);
+	ck_assert(found_1000);
+}
+END_TEST
+
+START_TEST(test_for_each_yields_only_set_indices)
+{
+	uint64_t expected[] = {7, 63, 64, 200};
+	int n = 4;
+	for (int k = 0; k < n; k++)
+		w_sparse_bitset_set(&g_bitset, expected[k]);
+	int count = 0;
+	bool found[4] = {false, false, false, false};
+	w_sparse_bitset_for_each(&g_bitset)
+	{
+		for (int k = 0; k < n; k++)
+		{
+			if (i == expected[k])
+			{
+				found[k] = true;
+				break;
+			}
+		}
+		count++;
+	}
+	ck_assert_int_eq(count, n);
+	for (int k = 0; k < n; k++)
+		ck_assert(found[k]);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -819,6 +911,16 @@ Suite* whisker_sparse_bitset_suite(void)
 	tcase_add_test(tc_intersect, test_intersect_simd_alignment);
 	tcase_add_test(tc_intersect, test_intersect_free_cache);
 	suite_add_tcase(s, tc_intersect);
+
+	TCase *tc_for_each = tcase_create("for_each");
+	tcase_add_checked_fixture(tc_for_each, sparse_bitset_setup, sparse_bitset_teardown);
+	tcase_set_timeout(tc_for_each, 10);
+	tcase_add_test(tc_for_each, test_for_each_empty_iterates_zero);
+	tcase_add_test(tc_for_each, test_for_each_single_bit_correct_index);
+	tcase_add_test(tc_for_each, test_for_each_multiple_bits_count);
+	tcase_add_test(tc_for_each, test_for_each_sparse_bits_all_found);
+	tcase_add_test(tc_for_each, test_for_each_yields_only_set_indices);
+	suite_add_tcase(s, tc_for_each);
 
 	return s;
 }
