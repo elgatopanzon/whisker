@@ -293,7 +293,7 @@ void *w_ecs_set_component_(struct w_ecs_world *world, uint type_id, w_entity_id 
 
 	if (!world->buffering_enabled)
 	{
-		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], W_WORLD_HOOK_COMPONENT_SET, world, &action_payload);
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], W_WORLD_HOOK_COMPONENT_SET, world, payload);
 		void *result = w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
 		return result;
 	}
