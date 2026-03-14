@@ -11,7 +11,7 @@
 #include "whisker.h"
 
 /*****************************
-*  block realloc sizes       *
+*  bucket counts             *
 *****************************/
 
 #ifndef W_RELATIONSHIP_PAIR_MAP_BUCKET_COUNT
@@ -22,12 +22,8 @@
 #define W_RELATIONSHIP_ADJACENCY_BUCKET_COUNT 256
 #endif
 
-#ifndef W_RELATIONSHIP_ENTRIES_REALLOC_BLOCK_SIZE
-#define W_RELATIONSHIP_ENTRIES_REALLOC_BLOCK_SIZE 16
-#endif
-
-#ifndef W_RELATIONSHIP_ADJACENCY_REALLOC_BLOCK_SIZE
-#define W_RELATIONSHIP_ADJACENCY_REALLOC_BLOCK_SIZE 16
+#ifndef W_RELATIONSHIP_ENTRY_BUCKET_COUNT
+#define W_RELATIONSHIP_ENTRY_BUCKET_COUNT 4
 #endif
 
 
@@ -50,6 +46,12 @@ static inline void w_relationship_unpack_pair(uint64_t packed, w_entity_id *lo, 
 	*hi = (w_entity_id)(packed & 0xFFFFFFFF);
 }
 
+// pack owner + component_id into a unique key for the entry map
+static inline uint64_t w_relationship_entry_key_(w_entity_id owner, w_entity_id component_id)
+{
+	return ((uint64_t)owner << 32) | (uint64_t)component_id;
+}
+
 
 /*****************************
 *  data structures           *
@@ -63,16 +65,20 @@ struct w_relationship_entry
 	w_entity_id component_id;
 };
 
+// typed hashmap: uint64_t (owner<<32|component_id) -> entry
+w_hashmap_t_declare(uint64_t, struct w_relationship_entry, w_relationship_entry_map);
+
 // list of relationship entries (value type for pair_map)
 struct w_relationship_entry_list
 {
-	w_array_declare(struct w_relationship_entry, entries);
+	struct w_relationship_entry_map entries;
 };
 
-// list of adjacent entity IDs (value type for adjacency map)
+// adjacent entities tracked with sparse bitset (value type for adjacency map)
 struct w_relationship_adjacency_list
 {
-	w_array_declare(w_entity_id, entities);
+	struct w_sparse_bitset entities;
+	size_t count;
 };
 
 // typed hashmap: uint64_t (packed pair) -> entry list

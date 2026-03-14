@@ -139,10 +139,15 @@ START_TEST(test_pair_map_add_and_get)
 	struct w_relationship_entry_list *list =
 		w_relationship_registry_get_pair(reg, a, b);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 1);
-	ck_assert_uint_eq(list->entries[0].owner, a);
-	ck_assert_uint_eq(list->entries[0].target, b);
-	ck_assert_uint_eq(list->entries[0].component_id, comp);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
+
+	uint64_t ekey = w_relationship_entry_key_(a, comp);
+	struct w_relationship_entry *entry = NULL;
+	w_hashmap_t_get(&list->entries, ekey, entry);
+	ck_assert_ptr_nonnull(entry);
+	ck_assert_uint_eq(entry->owner, a);
+	ck_assert_uint_eq(entry->target, b);
+	ck_assert_uint_eq(entry->component_id, comp);
 }
 END_TEST
 
@@ -158,7 +163,7 @@ START_TEST(test_pair_map_get_reversed_order)
 	struct w_relationship_entry_list *list =
 		w_relationship_registry_get_pair(reg, b, a);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 1);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
 }
 END_TEST
 
@@ -176,7 +181,7 @@ START_TEST(test_pair_map_multiple_components_same_pair)
 	struct w_relationship_entry_list *list =
 		w_relationship_registry_get_pair(reg, a, b);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 3);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 3);
 }
 END_TEST
 
@@ -193,7 +198,7 @@ START_TEST(test_pair_map_duplicate_add_ignored)
 
 	struct w_relationship_entry_list *list =
 		w_relationship_registry_get_pair(reg, a, b);
-	ck_assert_uint_eq(list->entries_length, 1);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
 }
 END_TEST
 
@@ -221,8 +226,14 @@ START_TEST(test_pair_map_remove_specific)
 
 	struct w_relationship_entry_list *list =
 		w_relationship_registry_get_pair(reg, a, b);
-	ck_assert_uint_eq(list->entries_length, 1);
-	ck_assert_uint_eq(list->entries[0].component_id, 20);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
+
+	// entry with component_id 20 should still exist
+	uint64_t ekey = w_relationship_entry_key_(a, 20);
+	struct w_relationship_entry *entry = NULL;
+	w_hashmap_t_get(&list->entries, ekey, entry);
+	ck_assert_ptr_nonnull(entry);
+	ck_assert_uint_eq(entry->component_id, 20);
 }
 END_TEST
 
@@ -239,7 +250,7 @@ START_TEST(test_pair_map_remove_last_cleans_adjacency)
 	// adjacency should be cleaned up
 	struct w_relationship_adjacency_list *adj =
 		w_relationship_registry_get_adjacent(reg, a);
-	ck_assert(adj == NULL || adj->entities_length == 0);
+	ck_assert(adj == NULL || adj->count == 0);
 }
 END_TEST
 
@@ -269,15 +280,15 @@ START_TEST(test_adjacency_both_directions)
 	struct w_relationship_adjacency_list *adj_a =
 		w_relationship_registry_get_adjacent(reg, a);
 	ck_assert_ptr_nonnull(adj_a);
-	ck_assert_uint_eq(adj_a->entities_length, 1);
-	ck_assert_uint_eq(adj_a->entities[0], b);
+	ck_assert_uint_eq(adj_a->count, 1);
+	ck_assert(w_sparse_bitset_get(&adj_a->entities, b));
 
 	// b should see a as adjacent
 	struct w_relationship_adjacency_list *adj_b =
 		w_relationship_registry_get_adjacent(reg, b);
 	ck_assert_ptr_nonnull(adj_b);
-	ck_assert_uint_eq(adj_b->entities_length, 1);
-	ck_assert_uint_eq(adj_b->entities[0], a);
+	ck_assert_uint_eq(adj_b->count, 1);
+	ck_assert(w_sparse_bitset_get(&adj_b->entities, a));
 }
 END_TEST
 
@@ -297,7 +308,7 @@ START_TEST(test_adjacency_no_duplicate_entities)
 		w_relationship_registry_get_adjacent(reg, a);
 	ck_assert_ptr_nonnull(adj);
 	// adjacency deduplicates: only one entry for b
-	ck_assert_uint_eq(adj->entities_length, 1);
+	ck_assert_uint_eq(adj->count, 1);
 }
 END_TEST
 
@@ -315,7 +326,7 @@ START_TEST(test_adjacency_multiple_neighbors)
 	struct w_relationship_adjacency_list *adj =
 		w_relationship_registry_get_adjacent(reg, a);
 	ck_assert_ptr_nonnull(adj);
-	ck_assert_uint_eq(adj->entities_length, 2);
+	ck_assert_uint_eq(adj->count, 2);
 }
 END_TEST
 
@@ -355,14 +366,14 @@ START_TEST(test_remove_entity_clears_all)
 	struct w_relationship_entry_list *bc =
 		w_relationship_registry_get_pair(reg, b, c);
 	ck_assert_ptr_nonnull(bc);
-	ck_assert_uint_eq(bc->entries_length, 1);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&bc->entries), 1);
 
 	// b's adjacency should only have c (not a)
 	struct w_relationship_adjacency_list *adj_b =
 		w_relationship_registry_get_adjacent(reg, b);
 	ck_assert_ptr_nonnull(adj_b);
-	ck_assert_uint_eq(adj_b->entities_length, 1);
-	ck_assert_uint_eq(adj_b->entities[0], c);
+	ck_assert_uint_eq(adj_b->count, 1);
+	ck_assert(w_sparse_bitset_get(&adj_b->entities, c));
 }
 END_TEST
 
@@ -389,12 +400,12 @@ START_TEST(test_world_api_add_and_query)
 	struct w_relationship_entry_list *list =
 		wm_relationships_get_pair(&g_world, a, b);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 1);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
 
 	struct w_relationship_adjacency_list *adj =
 		wm_relationships_get_adjacent(&g_world, a);
 	ck_assert_ptr_nonnull(adj);
-	ck_assert_uint_eq(adj->entities_length, 1);
+	ck_assert_uint_eq(adj->count, 1);
 }
 END_TEST
 
@@ -409,7 +420,7 @@ START_TEST(test_world_api_remove)
 
 	struct w_relationship_entry_list *list =
 		wm_relationships_get_pair(&g_world, a, b);
-	ck_assert(list == NULL || list->entries_length == 0);
+	ck_assert(list == NULL || w_hashmap_t_total_entries(&list->entries) == 0);
 }
 END_TEST
 
@@ -426,7 +437,7 @@ START_TEST(test_cascade_entity_destroy_unbuffered)
 	struct w_relationship_entry_list *list =
 		wm_relationships_get_pair(&g_world, parent, child);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 1);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
 
 	// destroy parent (buffering off, hook fires synchronously, queues cleanup cmd)
 	g_world.buffering_enabled = false;
@@ -442,7 +453,7 @@ START_TEST(test_cascade_entity_destroy_unbuffered)
 	// child's adjacency should no longer reference parent
 	struct w_relationship_adjacency_list *adj =
 		wm_relationships_get_adjacent(&g_world, child);
-	ck_assert(adj == NULL || adj->entities_length == 0);
+	ck_assert(adj == NULL || adj->count == 0);
 }
 END_TEST
 
@@ -548,15 +559,20 @@ START_TEST(test_hook_set_component_tracks_relationship)
 	struct w_relationship_entry_list *list =
 		wm_relationships_get_pair(&g_world, parent, child);
 	ck_assert_ptr_nonnull(list);
-	ck_assert_uint_eq(list->entries_length, 1);
-	ck_assert_uint_eq(list->entries[0].owner, parent);
-	ck_assert_uint_eq(list->entries[0].target, child);
-	ck_assert_uint_eq(list->entries[0].component_id, comp_type);
+	ck_assert_uint_eq(w_hashmap_t_total_entries(&list->entries), 1);
+
+	uint64_t ekey = w_relationship_entry_key_(parent, comp_type);
+	struct w_relationship_entry *entry = NULL;
+	w_hashmap_t_get(&list->entries, ekey, entry);
+	ck_assert_ptr_nonnull(entry);
+	ck_assert_uint_eq(entry->owner, parent);
+	ck_assert_uint_eq(entry->target, child);
+	ck_assert_uint_eq(entry->component_id, comp_type);
 
 	struct w_relationship_adjacency_list *adj =
 		wm_relationships_get_adjacent(&g_world, parent);
 	ck_assert_ptr_nonnull(adj);
-	ck_assert_uint_eq(adj->entities_length, 1);
+	ck_assert_uint_eq(adj->count, 1);
 }
 END_TEST
 
@@ -575,11 +591,11 @@ START_TEST(test_hook_remove_component_cleans_relationship)
 
 	struct w_relationship_entry_list *list =
 		wm_relationships_get_pair(&g_world, parent, child);
-	ck_assert(list == NULL || list->entries_length == 0);
+	ck_assert(list == NULL || w_hashmap_t_total_entries(&list->entries) == 0);
 
 	struct w_relationship_adjacency_list *adj =
 		wm_relationships_get_adjacent(&g_world, parent);
-	ck_assert(adj == NULL || adj->entities_length == 0);
+	ck_assert(adj == NULL || adj->count == 0);
 }
 END_TEST
 
@@ -605,7 +621,7 @@ START_TEST(test_hook_destroy_entity_cascades)
 
 	struct w_relationship_adjacency_list *adj =
 		wm_relationships_get_adjacent(&g_world, parent);
-	ck_assert(adj == NULL || adj->entities_length == 0);
+	ck_assert(adj == NULL || adj->count == 0);
 }
 END_TEST
 
@@ -628,7 +644,7 @@ START_TEST(test_many_relationships_stress)
 	struct w_relationship_adjacency_list *adj =
 		w_relationship_registry_get_adjacent(reg, center);
 	ck_assert_ptr_nonnull(adj);
-	ck_assert_uint_eq(adj->entities_length, 100);
+	ck_assert_uint_eq(adj->count, 100);
 
 	// remove center, all relationships should be cleaned up
 	w_relationship_registry_remove_entity(reg, center);
@@ -640,7 +656,7 @@ START_TEST(test_many_relationships_stress)
 	{
 		struct w_relationship_adjacency_list *node_adj =
 			w_relationship_registry_get_adjacent(reg, nodes[i]);
-		ck_assert(node_adj == NULL || node_adj->entities_length == 0);
+		ck_assert(node_adj == NULL || node_adj->count == 0);
 	}
 }
 END_TEST
