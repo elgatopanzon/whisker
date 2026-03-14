@@ -226,6 +226,7 @@ void w_ecs_return_entity(struct w_ecs_world *world, w_entity_id entity)
 {
 	if (!world->buffering_enabled)
 	{
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_DESTROY], W_WORLD_HOOK_ENTITY_DESTROY, world, &entity);
 		w_ecs_remove_all_components_(world, entity);
 		w_entity_return(&world->entities, entity);
 	}
@@ -542,5 +543,16 @@ size_t w_register_component_remove_hook(struct w_ecs_world *world, w_hook_fn hoo
 void w_unregister_component_remove_hook(struct w_ecs_world *world, size_t hook_id)
 {
 	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_REMOVE], W_WORLD_HOOK_COMPONENT_REMOVE, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_DESTROY], W_WORLD_HOOK_ENTITY_DESTROY, hook_fn);
+}
+
+void w_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_DESTROY], W_WORLD_HOOK_ENTITY_DESTROY, hook_id);
 	if (entry) entry->enabled = false;
 }

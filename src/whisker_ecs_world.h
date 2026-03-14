@@ -48,6 +48,7 @@ enum W_WORLD_HOOK_TYPE
 	W_WORLD_HOOK_TYPE_UPDATE = 0,
 	W_WORLD_HOOK_TYPE_COMPONENT_SET,
 	W_WORLD_HOOK_TYPE_COMPONENT_REMOVE,
+	W_WORLD_HOOK_TYPE_ENTITY_DESTROY,
 	W_WORLD_HOOK_TYPE_COUNT,
 };
 
@@ -61,6 +62,7 @@ enum W_WORLD_HOOK
 	W_WORLD_HOOK_UPDATE_PHASE_END,
 	W_WORLD_HOOK_COMPONENT_SET,
 	W_WORLD_HOOK_COMPONENT_REMOVE,
+	W_WORLD_HOOK_ENTITY_DESTROY,
 };
 
 struct w_ecs_world 
@@ -267,6 +269,11 @@ void w_unregister_component_set_hook(struct w_ecs_world *world, size_t hook_id);
 size_t w_register_component_remove_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
 // unregister a component remove hook by ID
 void w_unregister_component_remove_hook(struct w_ecs_world *world, size_t hook_id);
+
+// register a hook to fire when an entity is destroyed (returns hook ID)
+size_t w_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister an entity destroy hook by ID
+void w_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id);
 
 // temporarily disable buffering to execute code block directly
 #define w_ecs_world_do_unbuffered(w, block) do { \
