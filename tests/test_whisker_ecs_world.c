@@ -1238,6 +1238,111 @@ END_TEST
 
 
 /*****************************
+*  remove all components     *
+*****************************/
+
+static int g_remove_all_hook_count = 0;
+
+static void hook_count_removes_(void *ctx, void *data)
+{
+	(void)ctx;
+	(void)data;
+	g_remove_all_hook_count++;
+}
+
+START_TEST(test_remove_all_components_removes_all)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp_a = w_ecs_get_component_by_name(&g_world, "rac_comp_a");
+	w_entity_id comp_b = w_ecs_get_component_by_name(&g_world, "rac_comp_b");
+	w_entity_id comp_c = w_ecs_get_component_by_name(&g_world, "rac_comp_c");
+
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp_a, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_b, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_c, entity, &val, sizeof(val));
+
+	ck_assert(w_ecs_has_component_(&g_world, comp_a, entity));
+	ck_assert(w_ecs_has_component_(&g_world, comp_b, entity));
+	ck_assert(w_ecs_has_component_(&g_world, comp_c, entity));
+
+	w_ecs_remove_all_components_(&g_world, entity);
+
+	ck_assert(!w_ecs_has_component_(&g_world, comp_a, entity));
+	ck_assert(!w_ecs_has_component_(&g_world, comp_b, entity));
+	ck_assert(!w_ecs_has_component_(&g_world, comp_c, entity));
+}
+END_TEST
+
+START_TEST(test_remove_all_components_hooks_fired)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	g_remove_all_hook_count = 0;
+	w_register_component_remove_hook(&g_world, hook_count_removes_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp_a = w_ecs_get_component_by_name(&g_world, "rac_hook_a");
+	w_entity_id comp_b = w_ecs_get_component_by_name(&g_world, "rac_hook_b");
+	w_entity_id comp_c = w_ecs_get_component_by_name(&g_world, "rac_hook_c");
+
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp_a, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_b, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_c, entity, &val, sizeof(val));
+
+	w_ecs_remove_all_components_(&g_world, entity);
+
+	ck_assert_int_eq(g_remove_all_hook_count, 3);
+}
+END_TEST
+
+START_TEST(test_remove_all_components_no_components_noop)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	g_remove_all_hook_count = 0;
+	w_register_component_remove_hook(&g_world, hook_count_removes_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	// entity has no components - should be a no-op
+	w_ecs_remove_all_components_(&g_world, entity);
+
+	ck_assert_int_eq(g_remove_all_hook_count, 0);
+}
+END_TEST
+
+START_TEST(test_remove_all_components_leaves_other_entities)
+{
+	ck_assert(!g_world.buffering_enabled);
+
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+	w_entity_id comp_a = w_ecs_get_component_by_name(&g_world, "rac_multi_a");
+	w_entity_id comp_b = w_ecs_get_component_by_name(&g_world, "rac_multi_b");
+
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp_a, e1, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_b, e1, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, 0, comp_a, e2, &val, sizeof(val));
+
+	// remove all from e1 only
+	w_ecs_remove_all_components_(&g_world, e1);
+
+	// e1 components should be gone
+	ck_assert(!w_ecs_has_component_(&g_world, comp_a, e1));
+	ck_assert(!w_ecs_has_component_(&g_world, comp_b, e1));
+
+	// e2's component should remain
+	ck_assert(w_ecs_has_component_(&g_world, comp_a, e2));
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1352,6 +1457,15 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_sysexec, test_multiple_systems_execute_during_update);
 	tcase_add_test(tc_sysexec, test_system_executes_multiple_updates);
 	suite_add_tcase(s, tc_sysexec);
+
+	TCase *tc_remove_all = tcase_create("remove_all_components");
+	tcase_add_checked_fixture(tc_remove_all, world_setup, world_teardown);
+	tcase_set_timeout(tc_remove_all, 10);
+	tcase_add_test(tc_remove_all, test_remove_all_components_removes_all);
+	tcase_add_test(tc_remove_all, test_remove_all_components_hooks_fired);
+	tcase_add_test(tc_remove_all, test_remove_all_components_no_components_noop);
+	tcase_add_test(tc_remove_all, test_remove_all_components_leaves_other_entities);
+	suite_add_tcase(s, tc_remove_all);
 
 	return s;
 }

@@ -161,6 +161,9 @@ void w_ecs_remove_component_(struct w_ecs_world *world, w_entity_id type_entity_
 // check if an entity has a component
 bool w_ecs_has_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id);
 
+// remove all components from an entity, firing remove hooks for each
+void w_ecs_remove_all_components_(struct w_ecs_world *world, w_entity_id entity_id);
+
 // get component ID by name
 // (note: unsafe, it will create the type and name)
 w_entity_id w_ecs_get_component_by_name(struct w_ecs_world *world, char *name);

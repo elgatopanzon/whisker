@@ -225,7 +225,10 @@ w_entity_id w_ecs_request_entity_with_name(struct w_ecs_world *world, char *name
 void w_ecs_return_entity(struct w_ecs_world *world, w_entity_id entity)
 {
 	if (!world->buffering_enabled)
+	{
+		w_ecs_remove_all_components_(world, entity);
 		w_entity_return(&world->entities, entity);
+	}
 	else
 		w_command_buffer_queue(&world->command_buffer, w_ecs_cmd_return_entity, world, &entity, sizeof(entity));
 }
@@ -329,6 +332,15 @@ void w_ecs_remove_component_(struct w_ecs_world *world, w_entity_id type_entity_
 bool w_ecs_has_component_(struct w_ecs_world *world, w_entity_id type_entity_id, w_entity_id entity_id)
 {
 	return w_component_has_(&world->components, type_entity_id, entity_id);
+}
+
+void w_ecs_remove_all_components_(struct w_ecs_world *world, w_entity_id entity_id)
+{
+	w_sparse_bitset_for_each(&world->components.entries_bitset)
+	{
+		if (!w_component_has_(&world->components, i, entity_id)) continue;
+		w_ecs_remove_component_(world, i, entity_id);
+	}
 }
 
 w_entity_id w_ecs_get_component_by_name(struct w_ecs_world *world, char *name)
