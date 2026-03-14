@@ -1343,6 +1343,119 @@ END_TEST
 
 
 /*****************************
+*  entity destroy hooks      *
+*****************************/
+
+static int g_destroy_hook_count = 0;
+static w_entity_id g_destroy_hook_entity_id = W_ENTITY_INVALID;
+static bool g_destroy_hook_had_components = false;
+
+static void hook_count_destroys_(void *ctx, void *data)
+{
+	(void)ctx;
+	w_entity_id entity = *(w_entity_id *)data;
+	g_destroy_hook_count++;
+	g_destroy_hook_entity_id = entity;
+}
+
+static void hook_check_components_before_destroy_(void *ctx, void *data)
+{
+	struct w_ecs_world *world = (struct w_ecs_world *)ctx;
+	w_entity_id entity = *(w_entity_id *)data;
+	w_entity_id comp = w_ecs_get_component_by_name(world, "edh_comp_check");
+	g_destroy_hook_had_components = w_ecs_has_component_(world, comp, entity);
+}
+
+static int g_destroy_hook_multi_a = 0;
+static int g_destroy_hook_multi_b = 0;
+
+static void hook_multi_a_(void *ctx, void *data)
+{
+	(void)ctx; (void)data;
+	g_destroy_hook_multi_a++;
+}
+
+static void hook_multi_b_(void *ctx, void *data)
+{
+	(void)ctx; (void)data;
+	g_destroy_hook_multi_b++;
+}
+
+START_TEST(test_entity_destroy_hook_fires)
+{
+	g_destroy_hook_count = 0;
+	w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_return_entity(&g_world, entity);
+
+	ck_assert_int_eq(g_destroy_hook_count, 1);
+}
+END_TEST
+
+START_TEST(test_entity_destroy_hook_before_component_removal)
+{
+	g_destroy_hook_had_components = false;
+	w_register_entity_destroy_hook(&g_world, hook_check_components_before_destroy_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "edh_comp_check");
+	int val = 42;
+	w_ecs_set_component_(&g_world, 0, comp, entity, &val, sizeof(val));
+
+	w_ecs_return_entity(&g_world, entity);
+
+	// hook should have seen the component still present
+	ck_assert(g_destroy_hook_had_components);
+}
+END_TEST
+
+START_TEST(test_entity_destroy_hook_receives_correct_entity)
+{
+	g_destroy_hook_count = 0;
+	g_destroy_hook_entity_id = W_ENTITY_INVALID;
+	w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_return_entity(&g_world, entity);
+
+	ck_assert_int_eq(g_destroy_hook_count, 1);
+	ck_assert_uint_eq(g_destroy_hook_entity_id, entity);
+}
+END_TEST
+
+START_TEST(test_entity_destroy_hook_multiple_hooks_fire)
+{
+	g_destroy_hook_multi_a = 0;
+	g_destroy_hook_multi_b = 0;
+	w_register_entity_destroy_hook(&g_world, hook_multi_a_);
+	w_register_entity_destroy_hook(&g_world, hook_multi_b_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_return_entity(&g_world, entity);
+
+	ck_assert_int_eq(g_destroy_hook_multi_a, 1);
+	ck_assert_int_eq(g_destroy_hook_multi_b, 1);
+}
+END_TEST
+
+START_TEST(test_entity_destroy_hook_unregistered_not_fired)
+{
+	g_destroy_hook_count = 0;
+	size_t hook_id = w_register_entity_destroy_hook(&g_world, hook_count_destroys_);
+
+	// unregister before destroy
+	w_unregister_entity_destroy_hook(&g_world, hook_id);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_return_entity(&g_world, entity);
+
+	ck_assert_int_eq(g_destroy_hook_count, 0);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1466,6 +1579,16 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_remove_all, test_remove_all_components_no_components_noop);
 	tcase_add_test(tc_remove_all, test_remove_all_components_leaves_other_entities);
 	suite_add_tcase(s, tc_remove_all);
+
+	TCase *tc_destroy_hooks = tcase_create("entity_destroy_hooks");
+	tcase_add_checked_fixture(tc_destroy_hooks, world_setup, world_teardown);
+	tcase_set_timeout(tc_destroy_hooks, 10);
+	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_fires);
+	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_before_component_removal);
+	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_receives_correct_entity);
+	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_multiple_hooks_fire);
+	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_unregistered_not_fired);
+	suite_add_tcase(s, tc_destroy_hooks);
 
 	return s;
 }
