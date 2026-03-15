@@ -95,7 +95,64 @@ enum W_COMPONENT_TYPE {
 	// ECS types
 	W_COMPONENT_TYPE_w_entity_id = 40,
 
+	W_COMPONENT_TYPE_COUNT = 41,
 };
+
+// static array of canonical type names keyed by enum ID
+static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
+	[W_COMPONENT_TYPE_int8_t]      = "int8_t",
+	[W_COMPONENT_TYPE_int16_t]     = "int16_t",
+	[W_COMPONENT_TYPE_int32_t]     = "int32_t",
+	[W_COMPONENT_TYPE_int64_t]     = "int64_t",
+	[W_COMPONENT_TYPE_uint8_t]     = "uint8_t",
+	[W_COMPONENT_TYPE_uint16_t]    = "uint16_t",
+	[W_COMPONENT_TYPE_uint32_t]    = "uint32_t",
+	[W_COMPONENT_TYPE_uint64_t]    = "uint64_t",
+	[W_COMPONENT_TYPE_float]       = "float",
+	[W_COMPONENT_TYPE_double]      = "double",
+	[W_COMPONENT_TYPE_bool]        = "bool",
+	[W_COMPONENT_TYPE_char]        = "char",
+	[W_COMPONENT_TYPE_void]        = "void",
+	[W_COMPONENT_TYPE_char_ptr]    = "char_ptr",
+	[W_COMPONENT_TYPE_void_ptr]    = "void_ptr",
+	[W_COMPONENT_TYPE_vec2]        = "vec2",
+	[W_COMPONENT_TYPE_vec2i]       = "vec2i",
+	[W_COMPONENT_TYPE_vec2u]       = "vec2u",
+	[W_COMPONENT_TYPE_vec3]        = "vec3",
+	[W_COMPONENT_TYPE_vec3i]       = "vec3i",
+	[W_COMPONENT_TYPE_vec3u]       = "vec3u",
+	[W_COMPONENT_TYPE_vec4]        = "vec4",
+	[W_COMPONENT_TYPE_vec4i]       = "vec4i",
+	[W_COMPONENT_TYPE_vec4u]       = "vec4u",
+	[W_COMPONENT_TYPE_mat2]        = "mat2",
+	[W_COMPONENT_TYPE_mat3]        = "mat3",
+	[W_COMPONENT_TYPE_mat4]        = "mat4",
+	[W_COMPONENT_TYPE_color]       = "color",
+	[W_COMPONENT_TYPE_color8]      = "color8",
+	[W_COMPONENT_TYPE_rect]        = "rect",
+	[W_COMPONENT_TYPE_recti]       = "recti",
+	[W_COMPONENT_TYPE_aabb2]       = "aabb2",
+	[W_COMPONENT_TYPE_aabb3]       = "aabb3",
+	[W_COMPONENT_TYPE_ray2]        = "ray2",
+	[W_COMPONENT_TYPE_ray3]        = "ray3",
+	[W_COMPONENT_TYPE_w_entity_id] = "w_entity_id",
+};
+
+// get string name for a component type enum ID, NULL if invalid
+#define W_COMPONENT_TYPE_NAME(type_id) \
+	(((type_id) >= W_COMPONENT_TYPE_COUNT) ? NULL : w_component_type_names[(type_id)])
+
+// find enum ID from string name, UINT32_MAX if not found
+#define W_COMPONENT_TYPE_FROM_NAME(name) ({ \
+	uint32_t _result = UINT32_MAX; \
+	for (uint32_t _i = 0; _i < W_COMPONENT_TYPE_COUNT; _i++) { \
+		if (w_component_type_names[_i] && strcmp(w_component_type_names[_i], (name)) == 0) { \
+			_result = _i; \
+			break; \
+		} \
+	} \
+	_result; \
+})
 
 // a component storage entry
 struct w_component_entry 
