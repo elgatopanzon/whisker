@@ -93,7 +93,7 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_ray3 = 39,
 
 	// ECS types
-	W_COMPONENT_TYPE_w_entity_id = 6,
+	W_COMPONENT_TYPE_w_entity_id = 40,
 
 };
 
