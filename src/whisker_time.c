@@ -217,3 +217,27 @@ void w_time_step_set_rate(w_time_step *time_step, double update_rate_sec)
 	}
 	time_step->delta_average_residual = 0;
 }
+
+char* w_strftime(const char* fmt)
+{
+    // most time formats fit in 64 bytes
+    size_t size = 64;
+    char* buf = w_mem_xmalloc(size);
+
+    time_t now = time(NULL);
+    struct tm* t = localtime(&now);
+
+    size_t len = strftime(buf, size, fmt, t);
+
+    if (len == 0) {
+        // buffer too small, try larger
+        size = 256;
+        buf = w_mem_xrealloc(buf, size);
+        len = strftime(buf, size, fmt, t);
+    }
+
+    // shrink to fit (optional)
+    buf = w_mem_xrealloc(buf, len + 1);
+
+    return buf;  // caller frees
+}

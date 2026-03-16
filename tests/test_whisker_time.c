@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <math.h>
 #include <unistd.h>
 
@@ -514,6 +515,70 @@ END_TEST
 
 
 /*****************************
+*  strftime tcase            *
+*****************************/
+
+START_TEST(test_strftime_returns_nonnull)
+{
+    char *result = w_strftime("%Y-%m-%d");
+    ck_assert_ptr_nonnull(result);
+    free(result);
+}
+END_TEST
+
+START_TEST(test_strftime_date_format)
+{
+    char *result = w_strftime("%Y-%m-%d");
+    // format should produce YYYY-MM-DD (10 chars)
+    ck_assert_int_eq(strlen(result), 10);
+    // verify dashes in correct positions
+    ck_assert_int_eq(result[4], '-');
+    ck_assert_int_eq(result[7], '-');
+    free(result);
+}
+END_TEST
+
+START_TEST(test_strftime_time_format)
+{
+    char *result = w_strftime("%H:%M:%S");
+    // format should produce HH:MM:SS (8 chars)
+    ck_assert_int_eq(strlen(result), 8);
+    // verify colons in correct positions
+    ck_assert_int_eq(result[2], ':');
+    ck_assert_int_eq(result[5], ':');
+    free(result);
+}
+END_TEST
+
+START_TEST(test_strftime_empty_format)
+{
+    char *result = w_strftime("");
+    ck_assert_ptr_nonnull(result);
+    ck_assert_int_eq(strlen(result), 0);
+    free(result);
+}
+END_TEST
+
+START_TEST(test_strftime_literal_only)
+{
+    char *result = w_strftime("hello");
+    ck_assert_ptr_nonnull(result);
+    ck_assert_str_eq(result, "hello");
+    free(result);
+}
+END_TEST
+
+START_TEST(test_strftime_combined_format)
+{
+    char *result = w_strftime("%Y-%m-%d %H:%M:%S");
+    // format should produce YYYY-MM-DD HH:MM:SS (19 chars)
+    ck_assert_int_eq(strlen(result), 19);
+    free(result);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -597,6 +662,16 @@ Suite *whisker_time_suite(void)
     tcase_add_test(tc_realtime, test_realtime_advance_count_after_delay);
     tcase_add_test(tc_realtime, test_realtime_averaging_smooths_to_target);
     suite_add_tcase(s, tc_realtime);
+
+    TCase *tc_strftime = tcase_create("strftime");
+    tcase_set_timeout(tc_strftime, 10);
+    tcase_add_test(tc_strftime, test_strftime_returns_nonnull);
+    tcase_add_test(tc_strftime, test_strftime_date_format);
+    tcase_add_test(tc_strftime, test_strftime_time_format);
+    tcase_add_test(tc_strftime, test_strftime_empty_format);
+    tcase_add_test(tc_strftime, test_strftime_literal_only);
+    tcase_add_test(tc_strftime, test_strftime_combined_format);
+    suite_add_tcase(s, tc_strftime);
 
     return s;
 }

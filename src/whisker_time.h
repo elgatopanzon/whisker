@@ -6,6 +6,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_memory.h"
 
 #include <stdio.h>
 #include <time.h>
@@ -87,6 +88,9 @@ w_time_step w_time_step_create(double update_rate_sec, int update_count_max, boo
 int w_time_step_advance(w_time_step *time_step);
 void w_time_step_do_step_(w_time_step *time_step);
 void w_time_step_set_rate(w_time_step *time_step, double update_rate_sec);
+
+// get current formatted time
+char *w_strftime(const char *fmt);
 
 #endif // WHISKER_TIME_H
 
