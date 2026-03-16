@@ -609,6 +609,66 @@ END_TEST
 
 
 /*****************************
+*  entity_to_name init       *
+*****************************/
+
+START_TEST(test_entity_to_name_init_invalid)
+{
+	// verify initial slots are W_STRING_TABLE_INVALID_ID, not 0
+	// request an entity but don't name it
+	w_entity_id id = w_entity_request(&g_registry);
+	// the slot should be UINT32_MAX (invalid), not 0 (valid string table ID)
+	ck_assert_uint_eq(g_registry.entity_to_name[id], W_STRING_TABLE_INVALID_ID);
+	ck_assert_uint_eq(g_registry.entity_to_name[id], UINT32_MAX);
+}
+END_TEST
+
+START_TEST(test_unnamed_entity_returns_null)
+{
+	// unnamed entities must return NULL from get_name
+	w_entity_id id = w_entity_request(&g_registry);
+	char *name = w_entity_get_name(&g_registry, id);
+	ck_assert_ptr_null(name);
+}
+END_TEST
+
+START_TEST(test_named_entity_after_unnamed)
+{
+	// create unnamed entity first (string table ID 0 will exist after naming second)
+	w_entity_id e1 = w_entity_request(&g_registry);
+	// create and name second entity - this gets string table ID 0
+	w_entity_id e2 = w_entity_request(&g_registry);
+	w_entity_set_name(&g_registry, e2, (char*)"named_entity");
+
+	// e1 should still return NULL (its slot should be UINT32_MAX, not 0)
+	ck_assert_ptr_null(w_entity_get_name(&g_registry, e1));
+	// e2 should return the name
+	ck_assert_str_eq(w_entity_get_name(&g_registry, e2), "named_entity");
+}
+END_TEST
+
+START_TEST(test_entity_to_name_after_realloc)
+{
+	// force realloc by creating entity with high ID
+	// the block size is typically 4096, so ID > 4096 triggers realloc
+	w_entity_id id = 5000;
+	// manually set name to force array growth
+	w_entity_set_name(&g_registry, id, (char*)"high_id_entity");
+
+	// check a slot in the new region that wasn't set
+	// it should be UINT32_MAX, not 0
+	ck_assert_uint_eq(g_registry.entity_to_name[4999], W_STRING_TABLE_INVALID_ID);
+
+	// the named entity should work
+	ck_assert_str_eq(w_entity_get_name(&g_registry, id), "high_id_entity");
+
+	// unnamed entity in new region should return NULL
+	ck_assert_ptr_null(w_entity_get_name(&g_registry, 4999));
+}
+END_TEST
+
+
+/*****************************
 *  thread safety             *
 *****************************/
 
@@ -918,6 +978,15 @@ Suite *whisker_entity_registry_suite(void)
 	tcase_add_test(tc_edge, test_get_name_out_of_range_id);
 	tcase_add_test(tc_edge, test_lookup_empty_registry);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_init_fix = tcase_create("entity_to_name_init");
+	tcase_add_checked_fixture(tc_init_fix, entity_registry_setup, entity_registry_teardown);
+	tcase_set_timeout(tc_init_fix, 10);
+	tcase_add_test(tc_init_fix, test_entity_to_name_init_invalid);
+	tcase_add_test(tc_init_fix, test_unnamed_entity_returns_null);
+	tcase_add_test(tc_init_fix, test_named_entity_after_unnamed);
+	tcase_add_test(tc_init_fix, test_entity_to_name_after_realloc);
+	suite_add_tcase(s, tc_init_fix);
 
 	TCase *tc_thread = tcase_create("thread_safety");
 	tcase_add_checked_fixture(tc_thread, entity_registry_setup, entity_registry_teardown);

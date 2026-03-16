@@ -24,7 +24,7 @@
 #define WHISKER_STRING_TABLE_BUCKETS_SIZE 4096
 #endif /* ifndef WHISKER_STRING_TABLE_BUCKETS_SIZE */
 
-#define W_STRING_TABLE_INVALID_ID ((w_string_table_id)-1)
+#define W_STRING_TABLE_INVALID_ID UINT32_MAX
 
 // interned strings get stored in a string entry struct
 // the struct holds the real string pointer and its length

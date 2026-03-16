@@ -14,6 +14,12 @@ void w_entity_registry_init(struct w_entity_registry *registry, struct w_string_
 	w_array_init_t(registry->name_to_entity, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
 	w_array_init_t(registry->recycled_stack, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
 
+	// initialize entity_to_name to invalid IDs (calloc zeros, but 0 is a valid string table ID)
+	size_t entity_to_name_count = registry->entity_to_name_size / sizeof(*registry->entity_to_name);
+	for (size_t i = 0; i < entity_to_name_count; i++) {
+		registry->entity_to_name[i] = W_STRING_TABLE_INVALID_ID;
+	}
+
 	registry->entity_to_name_length = 0;
 	registry->name_to_entity_length = 0;
 	atomic_store(&registry->recycled_stack_length, 0);
@@ -89,7 +95,18 @@ void w_entity_set_name(struct w_entity_registry *registry, w_entity_id id, char 
 {
 	w_entity_clear_name(registry, id);
 
+	size_t old_size = registry->entity_to_name_size;
 	w_array_ensure_alloc_block_size(registry->entity_to_name, id + 1, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
+
+	// initialize new entries to invalid ID (calloc zeros, but 0 is a valid string table ID)
+	if (registry->entity_to_name_size > old_size) {
+		size_t old_count = old_size / sizeof(*registry->entity_to_name);
+		size_t new_count = registry->entity_to_name_size / sizeof(*registry->entity_to_name);
+		for (size_t i = old_count; i < new_count; i++) {
+			registry->entity_to_name[i] = W_STRING_TABLE_INVALID_ID;
+		}
+	}
+
 	if (id + 1 > registry->entity_to_name_length) {
 		registry->entity_to_name_length = id + 1;
 	}
