@@ -5,6 +5,9 @@
  * @description : 
  */
 
+// types
+#include "whisker_types.h"
+
 // core utils
 #include "whisker_std.h"
 #include "whisker_debug.h"

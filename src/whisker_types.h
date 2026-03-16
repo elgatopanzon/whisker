@@ -74,5 +74,20 @@ DEFINE_VEC2_STRUCT(aabb3, struct vec3, min, max);
 DEFINE_VEC2_STRUCT(ray2, struct vec2, origin, direction_norm);
 DEFINE_VEC2_STRUCT(ray3, struct vec3, origin, direction_norm);
 
+
+/****************
+*  pack unions  *
+****************/
+
+// little-endian: right/low values come first in memory
+typedef union { uint32_t packed; struct { uint16_t right; uint16_t left; }; } w_pack16x2;
+typedef union { uint64_t packed; struct { uint16_t d; uint16_t c; uint16_t b; uint16_t a; }; } w_pack16x4;
+typedef union { uint32_t packed; struct { uint8_t d; uint8_t c; uint8_t b; uint8_t a; }; } w_pack8x4;
+typedef union { uint64_t packed; struct { uint8_t h; uint8_t g; uint8_t f; uint8_t e; uint8_t d; uint8_t c; uint8_t b; uint8_t a; }; } w_pack8x8;
+typedef union { uint64_t packed; struct { uint32_t right; uint32_t left; }; } w_pack32x2;
+
+#define to_w_pack(type, val) ((type){ .packed = (val) })
+#define from_w_pack(pack_var) ((pack_var).packed)
+
 #endif /* WHISKER_TYPES_H */
 

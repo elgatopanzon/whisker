@@ -95,7 +95,14 @@ enum W_COMPONENT_TYPE {
 	// ECS types
 	W_COMPONENT_TYPE_w_entity_id = 40,
 
-	W_COMPONENT_TYPE_COUNT = 41,
+	// pack unions
+	W_COMPONENT_TYPE_w_pack16x2 = 41,
+	W_COMPONENT_TYPE_w_pack16x4 = 42,
+	W_COMPONENT_TYPE_w_pack8x4 = 43,
+	W_COMPONENT_TYPE_w_pack8x8 = 44,
+	W_COMPONENT_TYPE_w_pack32x2 = 45,
+
+	W_COMPONENT_TYPE_COUNT = 46,
 };
 
 // static array of canonical type names keyed by enum ID
@@ -136,6 +143,11 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_ray2]        = "ray2",
 	[W_COMPONENT_TYPE_ray3]        = "ray3",
 	[W_COMPONENT_TYPE_w_entity_id] = "w_entity_id",
+	[W_COMPONENT_TYPE_w_pack16x2]  = "w_pack16x2",
+	[W_COMPONENT_TYPE_w_pack16x4]  = "w_pack16x4",
+	[W_COMPONENT_TYPE_w_pack8x4]   = "w_pack8x4",
+	[W_COMPONENT_TYPE_w_pack8x8]   = "w_pack8x8",
+	[W_COMPONENT_TYPE_w_pack32x2]  = "w_pack32x2",
 };
 
 // get string name for a component type enum ID, NULL if invalid
