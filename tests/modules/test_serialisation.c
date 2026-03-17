@@ -1016,6 +1016,332 @@ END_TEST
 
 
 /*****************************
+*  migration tests           *
+*****************************/
+
+// migration hooks set bool components on known entities to track which ran
+static void migration_hook_set_migrated_v1(void *ctx, void *data)
+{
+	struct w_ecs_world *world = ctx;
+	(void)data;
+
+	w_entity_id ent = w_ecs_get_entity_by_name(world, "migrate_target");
+	if (ent == W_ENTITY_INVALID) return;
+
+	w_entity_id comp = w_ecs_get_component_by_name(world, "migrated_v1");
+	bool val = true;
+	w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, comp, ent, &val, sizeof(val));
+}
+
+static void migration_hook_set_migrated_v2(void *ctx, void *data)
+{
+	struct w_ecs_world *world = ctx;
+	(void)data;
+
+	w_entity_id ent = w_ecs_get_entity_by_name(world, "migrate_target");
+	if (ent == W_ENTITY_INVALID) return;
+
+	w_entity_id comp = w_ecs_get_component_by_name(world, "migrated_v2");
+	bool val = true;
+	w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, comp, ent, &val, sizeof(val));
+}
+
+static void migration_hook_set_migrated_v3(void *ctx, void *data)
+{
+	struct w_ecs_world *world = ctx;
+	(void)data;
+
+	w_entity_id ent = w_ecs_get_entity_by_name(world, "migrate_target");
+	if (ent == W_ENTITY_INVALID) return;
+
+	w_entity_id comp = w_ecs_get_component_by_name(world, "migrated_v3");
+	bool val = true;
+	w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, comp, ent, &val, sizeof(val));
+}
+
+START_TEST(test_migration_hooks_run_on_version_0)
+{
+	// register 2 migration hooks
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v2);
+
+	// version 0 save -- no migrations applied yet
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"migrate_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// both migration hooks should have run
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "migrate_target");
+	w_entity_id c1 = w_ecs_get_component_by_name(&g_world, "migrated_v1");
+	w_entity_id c2 = w_ecs_get_component_by_name(&g_world, "migrated_v2");
+
+	bool *v1 = w_ecs_get_component_(&g_world, c1, ent);
+	bool *v2 = w_ecs_get_component_(&g_world, c2, ent);
+	ck_assert_ptr_nonnull(v1);
+	ck_assert_ptr_nonnull(v2);
+	ck_assert(*v1 == true);
+	ck_assert(*v2 == true);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_migration_hooks_skipped_when_version_current)
+{
+	// register 2 migration hooks
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v2);
+
+	// version 2 save -- both migrations already applied
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 2\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"migrate_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// neither hook should have run -- components should not exist on entity
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "migrate_target");
+	w_entity_id c1 = w_ecs_get_component_by_name(&g_world, "migrated_v1");
+	w_entity_id c2 = w_ecs_get_component_by_name(&g_world, "migrated_v2");
+
+	bool *v1 = w_ecs_get_component_(&g_world, c1, ent);
+	bool *v2 = w_ecs_get_component_(&g_world, c2, ent);
+	ck_assert_ptr_null(v1);
+	ck_assert_ptr_null(v2);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_migration_hooks_partial_skip)
+{
+	// register 3 migration hooks (indices 0, 1, 2)
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v2);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v3);
+
+	// version 1 save -- first migration already applied, run hooks 1 and 2
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 1\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"migrate_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "migrate_target");
+	w_entity_id c1 = w_ecs_get_component_by_name(&g_world, "migrated_v1");
+	w_entity_id c2 = w_ecs_get_component_by_name(&g_world, "migrated_v2");
+	w_entity_id c3 = w_ecs_get_component_by_name(&g_world, "migrated_v3");
+
+	// hook 0 (v1) should be skipped
+	bool *v1 = w_ecs_get_component_(&g_world, c1, ent);
+	ck_assert_ptr_null(v1);
+
+	// hooks 1 (v2) and 2 (v3) should have run
+	bool *v2 = w_ecs_get_component_(&g_world, c2, ent);
+	bool *v3 = w_ecs_get_component_(&g_world, c3, ent);
+	ck_assert_ptr_nonnull(v2);
+	ck_assert_ptr_nonnull(v3);
+	ck_assert(*v2 == true);
+	ck_assert(*v3 == true);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_migration_hooks_version_exceeds_hook_count)
+{
+	// register 1 migration hook
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+
+	// version 99 -- way beyond registered hook count
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 99\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"migrate_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// hook should not have run
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "migrate_target");
+	w_entity_id c1 = w_ecs_get_component_by_name(&g_world, "migrated_v1");
+	bool *v1 = w_ecs_get_component_(&g_world, c1, ent);
+	ck_assert_ptr_null(v1);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+
+/*****************************
+*  post-load tests           *
+*****************************/
+
+// post-load hooks set components to track execution
+static void post_load_hook_set_loaded_a(void *ctx, void *data)
+{
+	struct w_ecs_world *world = ctx;
+	(void)data;
+
+	w_entity_id ent = w_ecs_get_entity_by_name(world, "post_load_target");
+	if (ent == W_ENTITY_INVALID) return;
+
+	w_entity_id comp = w_ecs_get_component_by_name(world, "loaded_a");
+	bool val = true;
+	w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, comp, ent, &val, sizeof(val));
+}
+
+static void post_load_hook_set_loaded_b(void *ctx, void *data)
+{
+	struct w_ecs_world *world = ctx;
+	(void)data;
+
+	w_entity_id ent = w_ecs_get_entity_by_name(world, "post_load_target");
+	if (ent == W_ENTITY_INVALID) return;
+
+	w_entity_id comp = w_ecs_get_component_by_name(world, "loaded_b");
+	bool val = true;
+	w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, comp, ent, &val, sizeof(val));
+}
+
+START_TEST(test_post_load_hooks_all_run_on_version_0)
+{
+	// register 2 post-load hooks
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD, post_load_hook_set_loaded_a);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD, post_load_hook_set_loaded_b);
+
+	// version 0 save
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"post_load_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// both hooks should have run
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "post_load_target");
+	w_entity_id ca = w_ecs_get_component_by_name(&g_world, "loaded_a");
+	w_entity_id cb = w_ecs_get_component_by_name(&g_world, "loaded_b");
+
+	bool *va = w_ecs_get_component_(&g_world, ca, ent);
+	bool *vb = w_ecs_get_component_(&g_world, cb, ent);
+	ck_assert_ptr_nonnull(va);
+	ck_assert_ptr_nonnull(vb);
+	ck_assert(*va == true);
+	ck_assert(*vb == true);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_post_load_hooks_all_run_regardless_of_version)
+{
+	// register 2 post-load hooks
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD, post_load_hook_set_loaded_a);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD, post_load_hook_set_loaded_b);
+
+	// version 99 save -- high version should NOT skip post-load hooks
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 99\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"post_load_target\"\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// both hooks should still run -- post-load hooks ignore version
+	w_entity_id ent = w_ecs_get_entity_by_name(&g_world, "post_load_target");
+	w_entity_id ca = w_ecs_get_component_by_name(&g_world, "loaded_a");
+	w_entity_id cb = w_ecs_get_component_by_name(&g_world, "loaded_b");
+
+	bool *va = w_ecs_get_component_(&g_world, ca, ent);
+	bool *vb = w_ecs_get_component_(&g_world, cb, ent);
+	ck_assert_ptr_nonnull(va);
+	ck_assert_ptr_nonnull(vb);
+	ck_assert(*va == true);
+	ck_assert(*vb == true);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_post_load_hooks_run_after_migration_hooks)
+{
+	// register migration hook that sets migrated_v1
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+	// register post-load hook
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD, post_load_hook_set_loaded_a);
+
+	// version 0 -- migration should run, then post-load
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 1\n"
+		"# components 0\n"
+		"entity \"migrate_target\"\n"
+	);
+
+	// also need post_load_target for the post-load hook
+	w_ecs_request_entity_with_name(&g_world, "post_load_target");
+
+	struct wm_deserialisation_ctx dctx = {0};
+	bool result = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(result);
+
+	// migration hook should have run
+	w_entity_id mig_ent = w_ecs_get_entity_by_name(&g_world, "migrate_target");
+	w_entity_id c_mig = w_ecs_get_component_by_name(&g_world, "migrated_v1");
+	bool *v_mig = w_ecs_get_component_(&g_world, c_mig, mig_ent);
+	ck_assert_ptr_nonnull(v_mig);
+	ck_assert(*v_mig == true);
+
+	// post-load hook should have run
+	w_entity_id pl_ent = w_ecs_get_entity_by_name(&g_world, "post_load_target");
+	w_entity_id c_pl = w_ecs_get_component_by_name(&g_world, "loaded_a");
+	bool *v_pl = w_ecs_get_component_(&g_world, c_pl, pl_ent);
+	ck_assert_ptr_nonnull(v_pl);
+	ck_assert(*v_pl == true);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1102,6 +1428,23 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_e2e, test_e2e_serialize_deserialize_bool);
 	tcase_add_test(tc_e2e, test_e2e_entity_ids_may_differ);
 	suite_add_tcase(s, tc_e2e);
+
+	TCase *tc_migration = tcase_create("migration");
+	tcase_add_checked_fixture(tc_migration, serialisation_setup, serialisation_teardown);
+	tcase_set_timeout(tc_migration, 10);
+	tcase_add_test(tc_migration, test_migration_hooks_run_on_version_0);
+	tcase_add_test(tc_migration, test_migration_hooks_skipped_when_version_current);
+	tcase_add_test(tc_migration, test_migration_hooks_partial_skip);
+	tcase_add_test(tc_migration, test_migration_hooks_version_exceeds_hook_count);
+	suite_add_tcase(s, tc_migration);
+
+	TCase *tc_post_load = tcase_create("post_load");
+	tcase_add_checked_fixture(tc_post_load, serialisation_setup, serialisation_teardown);
+	tcase_set_timeout(tc_post_load, 10);
+	tcase_add_test(tc_post_load, test_post_load_hooks_all_run_on_version_0);
+	tcase_add_test(tc_post_load, test_post_load_hooks_all_run_regardless_of_version);
+	tcase_add_test(tc_post_load, test_post_load_hooks_run_after_migration_hooks);
+	suite_add_tcase(s, tc_post_load);
 
 	return s;
 }
