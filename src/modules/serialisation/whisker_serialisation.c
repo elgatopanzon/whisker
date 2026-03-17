@@ -174,11 +174,11 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 uint32_t w_serialisation_get_version(struct wm_serialisation_registry *registry, struct wm_serialisation_ctx *ctx)
 {
 	// check bounds for WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE
-	if (WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE >= registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE].hook_groups_length)
+	if (WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION >= registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE].hook_groups_length)
 		return 0;
 
 	uint32_t version = registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE]
-		.hook_groups[WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE].hooks_length;
+		.hook_groups[WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION].hooks_length;
 
 	return version;
 }
