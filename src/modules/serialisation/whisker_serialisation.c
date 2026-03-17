@@ -521,7 +521,14 @@ bool w_serialisation_restore_from_buffer(struct w_ecs_world *world, char *buffer
 		ctx->err_line = 0;
 	}
 
-	// step 4: trigger post-load lifecycle hooks
+	// step 4: trigger migration hooks (version-aware, skip first N where N = saved version)
+	w_hook_registry_run_hooks_from_index(
+		&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE],
+		WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION,
+		ctx->version, world, ctx
+	);
+
+	// step 5: trigger post-load lifecycle hooks (always run all, no version skipping)
 	w_hook_registry_run_hooks(
 		&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE],
 		WM_SERIALISATION_LIFECYCLE_HOOK_POST_LOAD,
