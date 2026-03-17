@@ -46,6 +46,8 @@ void w_hook_registry_free(struct w_hook_registry *registry);
 size_t w_hook_registry_register_hook(struct w_hook_registry *registry, uint hook_group, w_hook_fn hook_fn);
 // execute hooks in the given hook group
 void w_hook_registry_run_hooks(struct w_hook_registry *registry, uint hook_group, void *ctx, void *data);
+// execute hooks starting from a given index (for migration skipping)
+void w_hook_registry_run_hooks_from_index(struct w_hook_registry *registry, uint hook_group, size_t start_index, void *ctx, void *data);
 
 // get a hook entry with the given group and ID
 struct w_hook_entry *w_hook_registry_get_hook_entry(struct w_hook_registry *registry, uint hook_group, uint hook_id);

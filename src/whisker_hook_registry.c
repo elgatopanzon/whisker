@@ -77,6 +77,23 @@ void w_hook_registry_run_hooks(struct w_hook_registry *registry, uint hook_group
 	}
 }
 
+void w_hook_registry_run_hooks_from_index(struct w_hook_registry *registry, uint hook_group, size_t start_index, void *ctx, void *data)
+{
+	if (hook_group >= registry->hook_groups_length || registry->hook_groups_length == 0)
+		return;
+
+	struct w_hook_group *group = &registry->hook_groups[hook_group];
+	if (!group->hooks) return;
+
+	for (size_t i = start_index; i < group->hooks_length; ++i)
+	{
+		if (group->hooks[i].enabled)
+		{
+			group->hooks[i].hook_fn(ctx, data);
+		}
+	}
+}
+
 struct w_hook_entry *w_hook_registry_get_hook_entry(struct w_hook_registry *registry, uint hook_group, uint hook_id)
 {
 	if (hook_group >= registry->hook_groups_length || registry->hook_groups_length == 0)
