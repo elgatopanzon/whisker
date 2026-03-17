@@ -66,7 +66,7 @@ UBENCH_F_SETUP(bench_scale_1k)
 	// pre-populate for get/has/remove benchmarks (set will overwrite)
 	for (w_entity_id i = 0; i < BENCH_COUNT_1K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 }
 
@@ -82,7 +82,7 @@ UBENCH_F(bench_scale_1k, set_1k_16b)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_1K; i++)
 	{
-		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -140,7 +140,7 @@ UBENCH_F_SETUP(bench_scale_10k)
 	// pre-populate for get/has/remove benchmarks (set will overwrite)
 	for (w_entity_id i = 0; i < BENCH_COUNT_10K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 }
 
@@ -156,7 +156,7 @@ UBENCH_F(bench_scale_10k, set_10k_16b)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_10K; i++)
 	{
-		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -214,7 +214,7 @@ UBENCH_F_SETUP(bench_scale_100k)
 	// pre-populate for get/has/remove benchmarks (set will overwrite)
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 }
 
@@ -230,7 +230,7 @@ UBENCH_F(bench_scale_100k, set_100k_16b)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -287,7 +287,7 @@ UBENCH_F_SETUP(bench_single_typeid)
 	ubench_fixture->data.a = 123;
 	ubench_fixture->data.b = 456;
 	// pre-set one component so entry exists
-	w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, 0, &ubench_fixture->data, COMPONENT_SIZE_16B);
+	w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, 0, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	// cache entry pointer for macro benchmarks
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -302,7 +302,7 @@ UBENCH_F_TEARDOWN(bench_single_typeid)
 
 UBENCH_F(bench_single_typeid, set_typeid_func)
 {
-	void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
+	void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	UBENCH_DO_NOTHING(p);
 }
 
@@ -320,7 +320,7 @@ UBENCH_F(bench_single_typeid, has_typeid_func)
 
 UBENCH_F(bench_single_typeid, set_typeid_func_unsafe)
 {
-	void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
+	void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	UBENCH_DO_NOTHING(p);
 }
 
@@ -397,7 +397,7 @@ UBENCH_F_SETUP(bench_single_str)
 	ubench_fixture->counter = 0;
 	// pre-register the component name for lookup tests
 	w_entity_id tid = w_component_get_id(&ubench_fixture->registry, "Position");
-	w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, tid, 0, &ubench_fixture->data, COMPONENT_SIZE_16B);
+	w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, tid, 0, &ubench_fixture->data, COMPONENT_SIZE_16B);
 }
 
 UBENCH_F_TEARDOWN(bench_single_str)
@@ -417,7 +417,7 @@ UBENCH_F(bench_single_str, get_id_str)
 UBENCH_F(bench_single_str, set_str)
 {
 	w_entity_id tid = w_component_get_id(&ubench_fixture->registry, "Position");
-	void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, tid, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
+	void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, tid, 1, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	UBENCH_DO_NOTHING(p);
 }
 
@@ -471,7 +471,7 @@ UBENCH_F_SETUP(bench_bulk_100k_set)
 	// pre-populate so entry exists for direct/macro access
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -488,7 +488,7 @@ UBENCH_F(bench_bulk_100k_set, set_100k_typeid)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -508,7 +508,7 @@ UBENCH_F(bench_bulk_100k_set, set_100k_typeid_func_unsafe)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -551,7 +551,7 @@ UBENCH_F_SETUP(bench_bulk_100k_get)
 	// pre-populate for get benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -629,7 +629,7 @@ UBENCH_F_SETUP(bench_bulk_100k_has)
 	// pre-populate for has benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -697,7 +697,7 @@ UBENCH_F_SETUP(bench_bulk_100k_remove)
 	// pre-populate for remove benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_100K; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -754,7 +754,7 @@ UBENCH_F_SETUP(bench_bulk_1m_set)
 	// pre-populate so entry exists for direct/macro access
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -771,7 +771,7 @@ UBENCH_F(bench_bulk_1m_set, set_1m_typeid)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -791,7 +791,7 @@ UBENCH_F(bench_bulk_1m_set, set_1m_typeid_func_unsafe)
 {
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		void *p = w_component_set_unsafe_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 		UBENCH_DO_NOTHING(p);
 	}
 }
@@ -834,7 +834,7 @@ UBENCH_F_SETUP(bench_bulk_1m_get)
 	// pre-populate for get benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -912,7 +912,7 @@ UBENCH_F_SETUP(bench_bulk_1m_has)
 	// pre-populate for has benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }
@@ -980,7 +980,7 @@ UBENCH_F_SETUP(bench_bulk_1m_remove)
 	// pre-populate for remove benchmarks
 	for (w_entity_id i = 0; i < BENCH_COUNT_1M; i++)
 	{
-		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_void, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
+		w_component_set_(&ubench_fixture->registry, W_COMPONENT_TYPE_uint8_t, ubench_fixture->type_id, i, &ubench_fixture->data, COMPONENT_SIZE_16B);
 	}
 	ubench_fixture->cached_entry = &ubench_fixture->registry.entries[ubench_fixture->type_id];
 }

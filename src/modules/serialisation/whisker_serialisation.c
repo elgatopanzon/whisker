@@ -16,8 +16,45 @@ void wm_serialisation_init(struct w_ecs_world *world)
 
 	w_ecs_singleton_set(world, WM_SERIALISATION_REGISTRY_NAME, registry);
 
-	// register serialisation hooks
+	// register serialisation hooks for all built-in types
+	wm_serialise_register_hooks_int8_t_(world);
+	wm_serialise_register_hooks_int16_t_(world);
+	wm_serialise_register_hooks_int32_t_(world);
+	wm_serialise_register_hooks_int64_t_(world);
+	wm_serialise_register_hooks_uint8_t_(world);
+	wm_serialise_register_hooks_uint16_t_(world);
+	wm_serialise_register_hooks_uint32_t_(world);
+	wm_serialise_register_hooks_uint64_t_(world);
+	wm_serialise_register_hooks_float_(world);
+	wm_serialise_register_hooks_double_(world);
 	wm_serialise_register_hooks_bool_(world);
+	wm_serialise_register_hooks_char_(world);
+	wm_serialise_register_hooks_w_vec2_(world);
+	wm_serialise_register_hooks_w_vec2i_(world);
+	wm_serialise_register_hooks_w_vec2u_(world);
+	wm_serialise_register_hooks_w_vec3_(world);
+	wm_serialise_register_hooks_w_vec3i_(world);
+	wm_serialise_register_hooks_w_vec3u_(world);
+	wm_serialise_register_hooks_w_vec4_(world);
+	wm_serialise_register_hooks_w_vec4i_(world);
+	wm_serialise_register_hooks_w_vec4u_(world);
+	wm_serialise_register_hooks_w_mat2_(world);
+	wm_serialise_register_hooks_w_mat3_(world);
+	wm_serialise_register_hooks_w_mat4_(world);
+	wm_serialise_register_hooks_w_color_(world);
+	wm_serialise_register_hooks_w_color8_(world);
+	wm_serialise_register_hooks_w_rect_(world);
+	wm_serialise_register_hooks_w_recti_(world);
+	wm_serialise_register_hooks_w_aabb2_(world);
+	wm_serialise_register_hooks_w_aabb3_(world);
+	wm_serialise_register_hooks_w_ray2_(world);
+	wm_serialise_register_hooks_w_ray3_(world);
+	wm_serialise_register_hooks_w_entity_id_(world);
+	wm_serialise_register_hooks_w_pack16x2_(world);
+	wm_serialise_register_hooks_w_pack16x4_(world);
+	wm_serialise_register_hooks_w_pack8x4_(world);
+	wm_serialise_register_hooks_w_pack8x8_(world);
+	wm_serialise_register_hooks_w_pack32x2_(world);
 }
 
 void wm_serialisation_free(struct w_ecs_world *world)

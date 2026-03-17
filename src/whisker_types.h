@@ -11,68 +11,68 @@
 #define WHISKER_TYPES_H
 
 #define DEFINE_VEC2_STRUCT(name, type, member1, member2) \
-    struct name { type member1; type member2; }
+    typedef struct { type member1; type member2; } name
 
 #define DEFINE_VEC3_STRUCT(name, type, member1, member2, member3) \
-    struct name { type member1; type member2; type member3; }
+    typedef struct { type member1; type member2; type member3; } name
 
 #define DEFINE_VEC4_STRUCT(name, type, member1, member2, member3, member4) \
-    struct name { type member1; type member2; type member3; type member4; }
+    typedef struct { type member1; type member2; type member3; type member4; } name
 
 /*************
 *  vectors  *
 *************/
 
-DEFINE_VEC2_STRUCT(vec2, float, x, y);
-DEFINE_VEC2_STRUCT(vec2i, int, x, y);
-DEFINE_VEC2_STRUCT(vec2u, uint, x, y);
+DEFINE_VEC2_STRUCT(w_vec2, float, x, y);
+DEFINE_VEC2_STRUCT(w_vec2i, int, x, y);
+DEFINE_VEC2_STRUCT(w_vec2u, uint, x, y);
 
-DEFINE_VEC3_STRUCT(vec3, float, x, y, z);
-DEFINE_VEC3_STRUCT(vec3i, int, x, y, z);
-DEFINE_VEC3_STRUCT(vec3u, uint, x, y, z);
+DEFINE_VEC3_STRUCT(w_vec3, float, x, y, z);
+DEFINE_VEC3_STRUCT(w_vec3i, int, x, y, z);
+DEFINE_VEC3_STRUCT(w_vec3u, uint, x, y, z);
 
-DEFINE_VEC4_STRUCT(vec4, float, x, y, z, w);
-DEFINE_VEC4_STRUCT(vec4i, int, x, y, z, w);
-DEFINE_VEC4_STRUCT(vec4u, uint, x, y, z, w);
+DEFINE_VEC4_STRUCT(w_vec4, float, x, y, z, w);
+DEFINE_VEC4_STRUCT(w_vec4i, int, x, y, z, w);
+DEFINE_VEC4_STRUCT(w_vec4u, uint, x, y, z, w);
 
 /**************
 *  matrices  *
 **************/
 
-struct mat2 
+typedef struct
 {
     float m[4];
-};
+} w_mat2;
 
-struct mat3 
+typedef struct
 {
     float m[9];
-};
+} w_mat3;
 
-struct mat4 
+typedef struct
 {
     float m[16];
-};
+} w_mat4;
 
 
 /***********
 *  color  *
 ***********/
 
-DEFINE_VEC4_STRUCT(color, float, r, g, b, a);
-DEFINE_VEC4_STRUCT(color8, uint8_t, r, g, b, a);
+DEFINE_VEC4_STRUCT(w_color, float, r, g, b, a);
+DEFINE_VEC4_STRUCT(w_color8, uint8_t, r, g, b, a);
 
 
 /**************
 *  geometry  *
 **************/
 
-DEFINE_VEC4_STRUCT(rect, float, x, y, width, height);
-DEFINE_VEC4_STRUCT(recti, uint, x, y, width, height);
-DEFINE_VEC2_STRUCT(aabb2, struct vec2, min, max);
-DEFINE_VEC2_STRUCT(aabb3, struct vec3, min, max);
-DEFINE_VEC2_STRUCT(ray2, struct vec2, origin, direction_norm);
-DEFINE_VEC2_STRUCT(ray3, struct vec3, origin, direction_norm);
+DEFINE_VEC4_STRUCT(w_rect, float, x, y, width, height);
+DEFINE_VEC4_STRUCT(w_recti, uint, x, y, width, height);
+DEFINE_VEC2_STRUCT(w_aabb2, w_vec2, min, max);
+DEFINE_VEC2_STRUCT(w_aabb3, w_vec3, min, max);
+DEFINE_VEC2_STRUCT(w_ray2, w_vec2, origin, direction_norm);
+DEFINE_VEC2_STRUCT(w_ray3, w_vec3, origin, direction_norm);
 
 
 /****************

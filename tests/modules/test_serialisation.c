@@ -648,6 +648,581 @@ END_TEST
 
 
 /*****************************
+*  types - int tests         *
+*****************************/
+
+START_TEST(test_int8_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "i8_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "i8_comp");
+	int8_t val = -42;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int8_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "int8_t -42"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_int16_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "i16_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "i16_comp");
+	int16_t val = -1000;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int16_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "int16_t -1000"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_int32_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "i32_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "i32_comp");
+	int32_t val = -100000;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "int32_t -100000"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_int64_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "i64_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "i64_comp");
+	int64_t val = -9000000000LL;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int64_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "int64_t -9000000000"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_uint8_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "u8_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "u8_comp");
+	uint8_t val = 255;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_uint8_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "uint8_t 255"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_uint16_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "u16_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "u16_comp");
+	uint16_t val = 65535;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_uint16_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "uint16_t 65535"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_uint32_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "u32_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "u32_comp");
+	uint32_t val = 4000000000U;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_uint32_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "uint32_t 4000000000"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_uint64_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "u64_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "u64_comp");
+	uint64_t val = 18000000000000000000ULL;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_uint64_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "uint64_t 18000000000000000000"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_float_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "f_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "f_comp");
+	float val = 3.14f;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "float 3.1400001"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_double_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "d_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "d_comp");
+	double val = 2.718281828459045;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_double, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "double 2.718281828459045"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_char_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "ch_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "ch_comp");
+	char val = 65; // 'A'
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_char, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "char 65"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
+*  types - vec tests         *
+*****************************/
+
+START_TEST(test_vec2_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "v2_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v2_comp");
+	w_vec2 val = {1.5f, 2.5f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec2, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_vec2 1.5 2.5"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_vec3_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "v3_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v3_comp");
+	w_vec3 val = {1.0f, 2.0f, 3.0f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec3, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_vec3 1 2 3"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_vec4_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "v4_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v4_comp");
+	w_vec4 val = {1.0f, 2.0f, 3.0f, 4.0f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec4, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_vec4 1 2 3 4"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_vec2i_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "v2i_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v2i_comp");
+	w_vec2i val = {-10, 20};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec2i, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_vec2i -10 20"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_vec3u_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "v3u_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v3u_comp");
+	w_vec3u val = {100, 200, 300};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec3u, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_vec3u 100 200 300"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
+*  types - matrix tests      *
+*****************************/
+
+START_TEST(test_mat2_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "m2_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "m2_comp");
+	w_mat2 val = { .m = {1.0f, 0.0f, 0.0f, 1.0f} };
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_mat2, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_mat2 1 0 0 1"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_mat4_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "m4_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "m4_comp");
+	w_mat4 val = { .m = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1} };
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_mat4, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_mat4 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
+*  types - color tests       *
+*****************************/
+
+START_TEST(test_color_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "col_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "col_comp");
+	w_color val = {1.0f, 0.5f, 0.0f, 1.0f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_color, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_color 1 0.5 0 1"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_color8_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "c8_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "c8_comp");
+	w_color8 val = {255, 128, 0, 255};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_color8, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_color8 255 128 0 255"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
+*  types - geometry tests    *
+*****************************/
+
+START_TEST(test_rect_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rect_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "rect_comp");
+	w_rect val = {10.0f, 20.0f, 100.0f, 50.0f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_rect, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_rect 10 20 100 50"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_aabb2_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "ab2_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "ab2_comp");
+	w_aabb2 val = { .min = {0.0f, 0.0f}, .max = {10.0f, 10.0f} };
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_aabb2, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_aabb2 0 0 10 10"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
+*  types - pack tests        *
+*****************************/
+
+START_TEST(test_pack16x2_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "p16x2_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "p16x2_comp");
+	w_pack16x2 val = to_w_pack(w_pack16x2, 0x00010002);
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_pack16x2, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_pack16x2 65538"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_w_entity_id_serialises)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "eid_ent");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "eid_comp");
+	w_entity_id val = 42;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_entity_id, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "w_entity_id 42"));
+	free(ctx.buffer); free(ctx.entities); free(ctx.components);
+}
+END_TEST
+
+
+/*************************************
+*  e2e round-trip: all types         *
+*************************************/
+
+START_TEST(test_e2e_int32_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_i32");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "i32_val");
+	int32_t val = -99999;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_i32");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "i32_val");
+	int32_t *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_int_eq(*restored, -99999);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_float_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_f");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "f_val");
+	float val = 3.14f;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_f");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "f_val");
+	float *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_float_eq(*restored, 3.14f);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_vec3_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_v3");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "v3_val");
+	w_vec3 val = {1.5f, -2.5f, 3.5f};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_vec3, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_v3");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "v3_val");
+	w_vec3 *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_float_eq(restored->x, 1.5f);
+	ck_assert_float_eq(restored->y, -2.5f);
+	ck_assert_float_eq(restored->z, 3.5f);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_mat4_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_m4");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "m4_val");
+	w_mat4 val = { .m = {1,0,0,0, 0,1,0,0, 0,0,1,0, 5,6,7,1} };
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_mat4, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_m4");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "m4_val");
+	w_mat4 *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_float_eq(restored->m[0], 1.0f);
+	ck_assert_float_eq(restored->m[12], 5.0f);
+	ck_assert_float_eq(restored->m[15], 1.0f);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_color8_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_c8");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "c8_val");
+	w_color8 val = {255, 128, 0, 255};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_color8, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_c8");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "c8_val");
+	w_color8 *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_uint_eq(restored->r, 255);
+	ck_assert_uint_eq(restored->g, 128);
+	ck_assert_uint_eq(restored->b, 0);
+	ck_assert_uint_eq(restored->a, 255);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_aabb3_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_ab3");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "ab3_val");
+	w_aabb3 val = { .min = {-1.0f, -2.0f, -3.0f}, .max = {4.0f, 5.0f, 6.0f} };
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_aabb3, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_ab3");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "ab3_val");
+	w_aabb3 *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_float_eq(restored->min.x, -1.0f);
+	ck_assert_float_eq(restored->max.z, 6.0f);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+START_TEST(test_e2e_pack32x2_round_trip)
+{
+	w_entity_id e = w_ecs_request_entity_with_name(&g_world, "rt_p32");
+	w_entity_id c = w_ecs_get_component_by_name(&g_world, "p32_val");
+	w_pack32x2 val = to_w_pack(w_pack32x2, 0x00000001FFFFFFFEULL);
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_w_pack32x2, c, e, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &sctx);
+
+	struct w_arena a2 = {0}; struct w_string_table st2 = {0}; struct w_ecs_world w2 = {0};
+	w_arena_init(&a2, 4096); w_string_table_init(&st2, &a2, 16, 64, NULL);
+	w_ecs_world_init(&w2, &st2, &a2); wm_serialisation_init(&w2);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	ck_assert(w_serialisation_restore_from_buffer(&w2, sctx.buffer, sctx.buffer_length, &dctx));
+
+	w_entity_id e2 = w_ecs_get_entity_by_name(&w2, "rt_p32");
+	w_entity_id c2 = w_ecs_get_component_by_name(&w2, "p32_val");
+	w_pack32x2 *restored = w_ecs_get_component_(&w2, c2, e2);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert(restored->packed == val.packed);
+
+	free(dctx.unparsed); free(sctx.buffer); free(sctx.entities); free(sctx.components);
+	wm_serialisation_free(&w2); w_ecs_world_free(&w2); w_string_table_free(&st2); w_arena_free(&a2);
+}
+END_TEST
+
+
+/*****************************
 *  deserialisation tests     *
 *****************************/
 
@@ -1519,11 +2094,11 @@ START_TEST(test_version_zero_with_no_migration_hooks)
 }
 END_TEST
 
-START_TEST(test_version_counts_pre_save_hooks)
+START_TEST(test_version_counts_migration_hooks)
 {
-	// version = count of pre-save lifecycle hooks
-	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE, pre_save_hook);
-	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE, pre_save_hook);
+	// version = count of migration lifecycle hooks
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v1);
+	w_serialisation_register_lifecycle_hook(&g_world, WM_SERIALISATION_LIFECYCLE_HOOK_MIGRATION, migration_hook_set_migrated_v2);
 
 	struct wm_serialisation_ctx ctx = {0};
 	w_serialisation_dump_to_buffer(&g_world, &ctx);
@@ -1643,6 +2218,30 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_types, test_bool_true_serialises_as_true);
 	tcase_add_test(tc_types, test_bool_false_serialises_as_false);
 	tcase_add_test(tc_types, test_bool_set_command_format);
+	tcase_add_test(tc_types, test_int8_serialises);
+	tcase_add_test(tc_types, test_int16_serialises);
+	tcase_add_test(tc_types, test_int32_serialises);
+	tcase_add_test(tc_types, test_int64_serialises);
+	tcase_add_test(tc_types, test_uint8_serialises);
+	tcase_add_test(tc_types, test_uint16_serialises);
+	tcase_add_test(tc_types, test_uint32_serialises);
+	tcase_add_test(tc_types, test_uint64_serialises);
+	tcase_add_test(tc_types, test_float_serialises);
+	tcase_add_test(tc_types, test_double_serialises);
+	tcase_add_test(tc_types, test_char_serialises);
+	tcase_add_test(tc_types, test_vec2_serialises);
+	tcase_add_test(tc_types, test_vec3_serialises);
+	tcase_add_test(tc_types, test_vec4_serialises);
+	tcase_add_test(tc_types, test_vec2i_serialises);
+	tcase_add_test(tc_types, test_vec3u_serialises);
+	tcase_add_test(tc_types, test_mat2_serialises);
+	tcase_add_test(tc_types, test_mat4_serialises);
+	tcase_add_test(tc_types, test_color_serialises);
+	tcase_add_test(tc_types, test_color8_serialises);
+	tcase_add_test(tc_types, test_rect_serialises);
+	tcase_add_test(tc_types, test_aabb2_serialises);
+	tcase_add_test(tc_types, test_pack16x2_serialises);
+	tcase_add_test(tc_types, test_w_entity_id_serialises);
 	suite_add_tcase(s, tc_types);
 
 	TCase *tc_restore = tcase_create("restore_from_buffer");
@@ -1666,6 +2265,13 @@ Suite *serialisation_suite(void)
 	tcase_set_timeout(tc_e2e, 10);
 	tcase_add_test(tc_e2e, test_e2e_serialize_deserialize_bool);
 	tcase_add_test(tc_e2e, test_e2e_entity_ids_may_differ);
+	tcase_add_test(tc_e2e, test_e2e_int32_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_float_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_vec3_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_mat4_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_color8_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_aabb3_round_trip);
+	tcase_add_test(tc_e2e, test_e2e_pack32x2_round_trip);
 	suite_add_tcase(s, tc_e2e);
 
 	TCase *tc_migration = tcase_create("migration");
@@ -1706,7 +2312,7 @@ Suite *serialisation_suite(void)
 	tcase_add_checked_fixture(tc_version, serialisation_setup, serialisation_teardown);
 	tcase_set_timeout(tc_version, 10);
 	tcase_add_test(tc_version, test_version_zero_with_no_migration_hooks);
-	tcase_add_test(tc_version, test_version_counts_pre_save_hooks);
+	tcase_add_test(tc_version, test_version_counts_migration_hooks);
 	suite_add_tcase(s, tc_version);
 
 	TCase *tc_edge = tcase_create("edge_cases");

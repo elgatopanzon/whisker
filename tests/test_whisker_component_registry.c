@@ -163,7 +163,7 @@ START_TEST(test_set_get_struct_value)
 	w_entity_id type_id = new_type_id();
 	w_entity_id entity_id = new_entity_id();
 
-	w_component_set_(&g_registry, W_COMPONENT_TYPE_void, type_id, entity_id, &comp, sizeof(comp));
+	w_component_set_(&g_registry, W_COMPONENT_TYPE_uint8_t, type_id, entity_id, &comp, sizeof(comp));
 
 	void *got = w_component_get_(&g_registry, type_id, entity_id);
 	ck_assert_ptr_nonnull(got);
@@ -495,7 +495,7 @@ START_TEST(test_data_size_large_struct)
 	w_entity_id type_id = new_type_id();
 	w_entity_id entity_id = new_entity_id();
 
-	w_component_set_(&g_registry, W_COMPONENT_TYPE_void, type_id, entity_id, large, sizeof(large));
+	w_component_set_(&g_registry, W_COMPONENT_TYPE_uint8_t, type_id, entity_id, large, sizeof(large));
 
 	void *got = w_component_get_(&g_registry, type_id, entity_id);
 	ck_assert_ptr_nonnull(got);
