@@ -11,6 +11,7 @@
 #include "whisker_memory.h"
 #include "whisker_sparse_bitset.h"
 #include "whisker_entity_registry.h"
+#include "whisker_types.h"
 
 #ifndef WHISKER_COMPONENT_REGISTRY_H
 #define WHISKER_COMPONENT_REGISTRY_H
@@ -150,9 +151,56 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_w_pack32x2]  = "w_pack32x2",
 };
 
+static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
+	[W_COMPONENT_TYPE_int8_t]      = sizeof(int8_t),
+	[W_COMPONENT_TYPE_int16_t]     = sizeof(int16_t),
+	[W_COMPONENT_TYPE_int32_t]     = sizeof(int32_t),
+	[W_COMPONENT_TYPE_int64_t]     = sizeof(int64_t),
+	[W_COMPONENT_TYPE_uint8_t]     = sizeof(uint8_t),
+	[W_COMPONENT_TYPE_uint16_t]    = sizeof(uint16_t),
+	[W_COMPONENT_TYPE_uint32_t]    = sizeof(uint32_t),
+	[W_COMPONENT_TYPE_uint64_t]    = sizeof(uint64_t),
+	[W_COMPONENT_TYPE_float]       = sizeof(float),
+	[W_COMPONENT_TYPE_double]      = sizeof(double),
+	[W_COMPONENT_TYPE_bool]        = sizeof(bool),
+	[W_COMPONENT_TYPE_char]        = sizeof(char),
+	[W_COMPONENT_TYPE_void]        = 0,
+	[W_COMPONENT_TYPE_char_ptr]    = sizeof(char *),
+	[W_COMPONENT_TYPE_void_ptr]    = sizeof(void *),
+	[W_COMPONENT_TYPE_vec2]        = sizeof(struct vec2),
+	[W_COMPONENT_TYPE_vec2i]       = sizeof(struct vec2i),
+	[W_COMPONENT_TYPE_vec2u]       = sizeof(struct vec2u),
+	[W_COMPONENT_TYPE_vec3]        = sizeof(struct vec3),
+	[W_COMPONENT_TYPE_vec3i]       = sizeof(struct vec3i),
+	[W_COMPONENT_TYPE_vec3u]       = sizeof(struct vec3u),
+	[W_COMPONENT_TYPE_vec4]        = sizeof(struct vec4),
+	[W_COMPONENT_TYPE_vec4i]       = sizeof(struct vec4i),
+	[W_COMPONENT_TYPE_vec4u]       = sizeof(struct vec4u),
+	[W_COMPONENT_TYPE_mat2]        = sizeof(struct mat2),
+	[W_COMPONENT_TYPE_mat3]        = sizeof(struct mat3),
+	[W_COMPONENT_TYPE_mat4]        = sizeof(struct mat4),
+	[W_COMPONENT_TYPE_color]       = sizeof(struct color),
+	[W_COMPONENT_TYPE_color8]      = sizeof(struct color8),
+	[W_COMPONENT_TYPE_rect]        = sizeof(struct rect),
+	[W_COMPONENT_TYPE_recti]       = sizeof(struct recti),
+	[W_COMPONENT_TYPE_aabb2]       = sizeof(struct aabb2),
+	[W_COMPONENT_TYPE_aabb3]       = sizeof(struct aabb3),
+	[W_COMPONENT_TYPE_ray2]        = sizeof(struct ray2),
+	[W_COMPONENT_TYPE_ray3]        = sizeof(struct ray3),
+	[W_COMPONENT_TYPE_w_entity_id] = sizeof(w_entity_id),
+	[W_COMPONENT_TYPE_w_pack16x2]  = sizeof(w_pack16x2),
+	[W_COMPONENT_TYPE_w_pack16x4]  = sizeof(w_pack16x4),
+	[W_COMPONENT_TYPE_w_pack8x4]   = sizeof(w_pack8x4),
+	[W_COMPONENT_TYPE_w_pack8x8]   = sizeof(w_pack8x8),
+	[W_COMPONENT_TYPE_w_pack32x2]  = sizeof(w_pack32x2),
+};
+
 // get string name for a component type enum ID, NULL if invalid
 #define W_COMPONENT_TYPE_NAME(type_id) \
 	(((type_id) >= W_COMPONENT_TYPE_COUNT) ? NULL : w_component_type_names[(type_id)])
+
+#define W_COMPONENT_TYPE_SIZE(type_id) \
+	(((type_id) >= W_COMPONENT_TYPE_COUNT) ? 0 : w_component_type_sizes[(type_id)])
 
 // find enum ID from string name, UINT32_MAX if not found
 #define W_COMPONENT_TYPE_FROM_NAME(name) ({ \
