@@ -19,6 +19,10 @@
 #define DEFINE_VEC4_STRUCT(name, type, member1, member2, member3, member4) \
     typedef struct { type member1; type member2; type member3; type member4; } name
 
+#ifndef uint
+typedef unsigned int uint;
+#endif
+
 /*************
 *  vectors  *
 *************/
