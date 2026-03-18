@@ -7,6 +7,7 @@
 
 #include "whisker_std.h"
 #include "whisker_array.h"
+#include "whisker_types.h" // for uint
 
 #ifndef WHISKER_HOOK_REGISTRY_H
 #define WHISKER_HOOK_REGISTRY_H
