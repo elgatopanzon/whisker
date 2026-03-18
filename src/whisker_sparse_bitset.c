@@ -8,7 +8,9 @@
 
 #include "whisker_sparse_bitset.h"
 
+#if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 #include <immintrin.h>
+#endif
 
 void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint64_t page_size_)
 {
@@ -147,8 +149,10 @@ bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index)
 	return (page->bits[local_word] & w_sparse_bitset_bit_mask(index)) != 0;
 }
 
+#if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 #pragma GCC push_options
 #pragma GCC target("avx2")
+#endif
 
 // batch allocation block size - check capacity every N elements
 #define INTERSECT_ALLOC_BLOCK 1024
@@ -261,6 +265,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				uint32_t last = pa->last_set < pb->last_set ? pa->last_set : pb->last_set;
 				if (first > last || first == UINT32_MAX) continue;
 
+	#if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 				uint32_t simd_first = (first + 3) & ~3u;
 				uint32_t simd_last = (last + 1) & ~3u;
 
@@ -350,6 +355,10 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				// suffix scalar (start at max of simd_last, simd_first to avoid prefix overlap)
 				uint32_t suffix_start = simd_last >= simd_first ? simd_last : simd_first;
 				for (uint32_t w = suffix_start; w <= last; w++)
+#else
+				// scalar fallback for non-AVX2 platforms
+				for (uint32_t w = first; w <= last; w++)
+#endif
 				{
 					uint64_t word = pa->bits[w] & pb->bits[w];
 					while (word)
@@ -413,6 +422,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 			if (first > last || first == UINT32_MAX) continue;
 
 			uint64_t page_size = intersect_cache->bitsets[0]->page_size_;
+#if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 			uint32_t simd_first = (first + 3) & ~3u;
 			uint32_t simd_last = (last + 1) & ~3u;
 
@@ -509,6 +519,10 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 			// suffix scalar
 			uint32_t suffix_start = simd_last >= simd_first ? simd_last : simd_first;
 			for (uint32_t w = suffix_start; w <= last; w++)
+#else
+			// scalar fallback for non-AVX2 platforms
+			for (uint32_t w = first; w <= last; w++)
+#endif
 			{
 				uint64_t word = intersect_cache->bitsets[0]->pages[page_index].bits[w];
 				for (uint64_t i = 1; i < intersect_cache->bitsets_length; i++)
@@ -535,7 +549,9 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 	return count;
 }
 
+#if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 #pragma GCC pop_options
+#endif
 
 void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache)
 {
