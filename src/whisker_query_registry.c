@@ -315,6 +315,16 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 		query->bitset_cache.bitsets_length = required_count;
 	}
 
+	// refresh bitset pointers (entries array may have been reallocated)
+	for (size_t i = 0; i < query->terms_length; ++i)
+	{
+		struct w_component_entry *entry = w_component_registry_get_entry(
+			registry->component_registry, query->terms[i].component_id);
+		query->terms[i].component_entry = entry;
+		if (i < query->bitset_cache.bitsets_length)
+			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
+	}
+
 	// check if intersection cache is stale
 	if (w_sparse_bitset_intersect_cache_stale(&query->bitset_cache))
 	{
