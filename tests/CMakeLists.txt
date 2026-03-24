@@ -69,10 +69,18 @@ foreach(dir ${module_dirs})
         # derive module library name: test_scheduler_defaults -> whisker_module_scheduler_defaults
         set(mod_lib_name "whisker_module_${bin_name}")
 
+        # utilities module needs scheduler_defaults
+        if(bin_name STREQUAL "utilities")
+            set(extra_libs whisker_module_scheduler_defaults)
+        else()
+            set(extra_libs "")
+        endif()
+
         target_link_libraries(${target_name}
             PRIVATE
                 ${PROJECT_NAME}
                 ${mod_lib_name}
+                ${extra_libs}
                 check
         )
 
