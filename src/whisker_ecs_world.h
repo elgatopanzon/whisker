@@ -148,6 +148,41 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name);
 *  component API  *
 *******************/
 
+// use the macros for set/get/remove/has
+#define w_ecs_set_ex(w, t, tt, te, e, d) w_ecs_set_component_(w, tt##_##t, te, e, (t*)d, sizeof(t));
+#define w_ecs_set_str_ex(w, t, tt, n, e, d) w_ecs_set_component_(w, tt##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
+#define w_ecs_set(w, t, te, e, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, te, e, (t*)d, sizeof(t));
+#define w_ecs_set_str(w, t, n, e, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
+
+#define w_ecs_get(w, t, te, e) (t *)w_ecs_get_component_(w, te, e);
+#define w_ecs_get_str(w, t, n, e) (t *)w_ecs_get_component_(w, w_ecs_get_component_by_name(w, n), e);
+
+#define w_ecs_remove(w, te, e) w_ecs_remove_component_(w, te, e);
+#define w_ecs_remove_str(w, n, e) w_ecs_remove_component_(w, w_ecs_get_component_by_name(w, n), e);
+
+#define w_ecs_has(w, te, e) w_ecs_has_component_(w, te, e)
+#define w_ecs_has_str(w, n, e) w_ecs_has_component_(w, w_ecs_get_component_by_name(w, n), e)
+
+// unsafe variants (skip bounds checks, caller must ensure validity)
+#define w_ecs_set_unsafe_ex(w, t, tt, te, e, d) w_ecs_unsafe_set_component_(w, tt##_##t, te, e, (t *)d, sizeof(t));
+#define w_ecs_set_unsafe(w, t, te, e, d) w_ecs_unsafe_set_component_(w, W_COMPONENT_TYPE##_##t, te, e, (t *)d, sizeof(t));
+
+#define w_ecs_get_unsafe(w, t, te, e) (t *)w_ecs_unsafe_get_component_(w, te, e);
+
+#define w_ecs_has_unsafe(w, te, e) w_ecs_unsafe_has_component_(w, te, e)
+
+// tags wrapped as uint8_t
+#define w_ecs_set_tag(w, te, e) \
+    w_ecs_set(w, uint8_t, te, e, &(uint8_t){0})
+#define w_ecs_has_tag(w, te, e) w_ecs_has(w, te, e)
+#define w_ecs_remove_tag(w, te, e) w_ecs_remove(w, te, e)
+
+#define w_ecs_set_tag_str(w, n, e) \
+    w_ecs_set(w, uint8_t, w_ecs_get_component_by_name(w, n), e, &(uint8_t){0})
+#define w_ecs_has_tag_str(w, n, e) w_ecs_has(w, w_ecs_get_component_by_name(w, n), e)
+#define w_ecs_remove_tag_str(w, n, e) w_ecs_remove(w, w_ecs_get_component_by_name(w, n), e)
+
+
 // set a component on an entity
 // (note: this is not thread-safe, it will create the component type)
 void *w_ecs_set_component_(struct w_ecs_world *world, uint type_id, w_entity_id type_entity_id, w_entity_id entity_id, void *data, size_t data_size);
@@ -182,9 +217,38 @@ bool w_ecs_unsafe_has_component_(struct w_ecs_world *world, w_entity_id type_ent
 // get the component entry for the component ID, if it exists
 struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w_entity_id type_entity_id);
 
+
 /****************
 *  system API  *
 ****************/
+
+#define w_ecs_declare_system_register_fn(name, phase) \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		struct w_system sys = { \
+			.phase_id = phase, \
+			.enabled = true, \
+			.update = name, \
+		}; \
+		w_ecs_register_system(world, &sys); \
+	} \
+
+#define w_ecs_system(name, phase, query, work) \
+	static inline void name(void *ctx, double delta_time) { \
+		struct w_ecs_world *world = ctx; \
+		(void)delta_time; \
+		w_query_for_each(world, query, { \
+			work; \
+		}); \
+	} \
+	w_ecs_declare_system_register_fn(name, phase) \
+
+#define w_ecs_simple_system(name, phase, work) \
+	static inline void name(void *ctx, double delta_time) { \
+		struct w_ecs_world *world = ctx; \
+		(void)delta_time; \
+		work; \
+	} \
+	w_ecs_declare_system_register_fn(name, phase) \
 
 // register a system with the ECS scheduler
 size_t w_ecs_register_system(struct w_ecs_world *world, struct w_system *system);
