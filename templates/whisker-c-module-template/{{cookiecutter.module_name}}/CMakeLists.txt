@@ -1,7 +1,7 @@
 ######################################################################
 # @author      : {{cookiecutter.author}} (contact@elgatopanzon.io)
 # @file        : CMakeLists
-# @created     : Saturday Mar 07, 2026 12:49:55 CST
+# @created     : {{cookiecutter.created}}
 # @description : Build config for {{cookiecutter.module_name}} module
 ######################################################################
 

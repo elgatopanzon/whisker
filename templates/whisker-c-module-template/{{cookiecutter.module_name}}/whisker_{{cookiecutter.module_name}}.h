@@ -1,7 +1,7 @@
 /**
  * @author      : {{cookiecutter.author}}
  * @file        : whisker_{{cookiecutter.module_name}}
- * @created     : Saturday Mar 07, 2026 12:49:55 CST
+ * @created     : {{cookiecutter.created}}
  * @description : {{cookiecutter.description}}
  */
 
