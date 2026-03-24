@@ -26,7 +26,7 @@
 #endif
 
 // check if an entity is valid
-#define w_entity_is_valid(e) ((e) != WHISKER_ENTITY_INVALID)
+#define w_entity_is_valid(e) ((e) != W_ENTITY_INVALID)
 
 // main entity ID is uint32
 typedef uint32_t w_entity_id;
