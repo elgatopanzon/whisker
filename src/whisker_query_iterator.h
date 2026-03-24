@@ -59,6 +59,15 @@
 		(T *)((_ent_)->data + (itor.entity_id * (_ent_)->type_size)); \
 	})
 
+#define w_itor_get_read_ptr(T)  ((const T *)w_itor_get(T))
+#define w_itor_get_read(T)  *w_itor_get_read_ptr(T)
+#define w_itor_get_write(T) w_itor_get(T)
+
+#define w_query(op, name) #op " " name ", "
+#define w_query_read(name) "read " name ", "
+#define w_query_write(name) "write " name ", "
+#define w_query_optional(name) "optional " name ", "
+
 struct w_query_iterator 
 {
 	struct w_query *query;

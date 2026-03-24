@@ -911,6 +911,155 @@ END_TEST
 
 
 /*****************************
+*  trailing commas           *
+*****************************/
+
+START_TEST(test_trailing_comma_single_component)
+{
+	// "read position, " - trailing comma+space as produced by w_query_read macro
+	for (int i = 0; i < 4; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, ");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	float sum_x = 0;
+	w_query_for_each(&g_world, "read position, ", {
+		Position *pos = w_itor_get(Position);
+		sum_x += pos->x;
+		count++;
+	});
+
+	ck_assert_int_eq(count, 4);
+	ck_assert_float_eq(sum_x, 0 + 1 + 2 + 3);
+}
+END_TEST
+
+START_TEST(test_trailing_comma_two_components)
+{
+	// "read position, read velocity, " - two terms with trailing comma
+	for (int i = 0; i < 3; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+		set_velocity(e, (float)(i * 10), 0);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, read velocity, ");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	float sum_vx = 0;
+	w_query_for_each(&g_world, "read position, read velocity, ", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		Velocity *vel = w_itor_get(Velocity);
+		sum_vx += vel->vx;
+		count++;
+	});
+
+	ck_assert_int_eq(count, 3);
+	ck_assert_float_eq(sum_vx, 0 + 10 + 20);
+}
+END_TEST
+
+START_TEST(test_trailing_comma_mixed_access)
+{
+	// "read position, write velocity, " - mixed access with trailing comma
+	w_entity_id entities[3];
+	for (int i = 0; i < 3; i++)
+	{
+		entities[i] = w_ecs_request_entity(&g_world);
+		set_position(entities[i], (float)(i + 1), 0);
+		set_velocity(entities[i], 0, 0);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, write velocity, ");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	w_query_for_each(&g_world, "read position, write velocity, ", {
+		Position *pos = w_itor_get(Position);
+		Velocity *vel = w_itor_get(Velocity);
+		vel->vx = pos->x * 5.0f;
+	});
+
+	for (int i = 0; i < 3; i++)
+	{
+		Velocity *vel = w_ecs_get_component_(&g_world,
+			w_ecs_get_component_by_name(&g_world, "velocity"), entities[i]);
+		ck_assert_float_eq(vel->vx, (float)(i + 1) * 5.0f);
+	}
+}
+END_TEST
+
+START_TEST(test_trailing_comma_optional)
+{
+	// "read position, optional velocity, " - optional with trailing comma
+	for (int i = 0; i < 4; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+		if (i % 2 == 0)
+			set_velocity(e, (float)(i * 100), 0);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, optional velocity, ");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int with_vel = 0;
+	int without_vel = 0;
+	w_query_for_each(&g_world, "read position, optional velocity, ", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		Velocity *vel = w_itor_get_optional(Velocity);
+		if (vel)
+			with_vel++;
+		else
+			without_vel++;
+	});
+
+	ck_assert_int_eq(with_vel, 2);
+	ck_assert_int_eq(without_vel, 2);
+}
+END_TEST
+
+START_TEST(test_trailing_comma_three_components)
+{
+	// "read position, read velocity, read health, " - three terms with trailing comma
+	for (int i = 0; i < 3; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+		set_velocity(e, (float)i, 0);
+		set_health(e, i * 5, 100);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, read velocity, read health, ");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int total_health = 0;
+	int count = 0;
+	w_query_for_each(&g_world, "read position, read velocity, read health, ", {
+		Position *pos = w_itor_get(Position);
+		Velocity *vel = w_itor_get(Velocity);
+		Health *h = w_itor_get(Health);
+		(void)pos;
+		(void)vel;
+		total_health += h->health;
+		count++;
+	});
+
+	ck_assert_int_eq(count, 3);
+	ck_assert_int_eq(total_health, 0 + 5 + 10);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -997,6 +1146,16 @@ Suite *whisker_query_iterator_suite(void)
 	tcase_add_test(tc_edge, test_entity_id_accessible);
 	tcase_add_test(tc_edge, test_large_entity_count);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_trailing = tcase_create("trailing_commas");
+	tcase_add_checked_fixture(tc_trailing, query_iterator_setup, query_iterator_teardown);
+	tcase_set_timeout(tc_trailing, 10);
+	tcase_add_test(tc_trailing, test_trailing_comma_single_component);
+	tcase_add_test(tc_trailing, test_trailing_comma_two_components);
+	tcase_add_test(tc_trailing, test_trailing_comma_mixed_access);
+	tcase_add_test(tc_trailing, test_trailing_comma_optional);
+	tcase_add_test(tc_trailing, test_trailing_comma_three_components);
+	suite_add_tcase(s, tc_trailing);
 
 	return s;
 }
