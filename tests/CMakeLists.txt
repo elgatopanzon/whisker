@@ -69,8 +69,10 @@ foreach(dir ${module_dirs})
         # derive module library name: test_scheduler_defaults -> whisker_module_scheduler_defaults
         set(mod_lib_name "whisker_module_${bin_name}")
 
-        # utilities module needs scheduler_defaults
+        # module dependency overrides
         if(bin_name STREQUAL "utilities")
+            set(extra_libs whisker_module_scheduler_defaults)
+        elseif(bin_name STREQUAL "component_events")
             set(extra_libs whisker_module_scheduler_defaults)
         else()
             set(extra_libs "")
