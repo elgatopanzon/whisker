@@ -294,6 +294,7 @@ void *w_ecs_set_component_(struct w_ecs_world *world, uint type_id, w_entity_id 
 	if (!world->buffering_enabled)
 	{
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_PRE_SET], 0, world, payload);
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_SET], type_entity_id, world, payload);
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], type_id, world, payload);
 		void *result = w_component_set_(&world->components, type_id, type_entity_id, entity_id, data, data_size);
 		return result;
@@ -324,6 +325,7 @@ void w_ecs_remove_component_(struct w_ecs_world *world, w_entity_id type_entity_
 	if (!world->buffering_enabled)
 	{
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_PRE_REMOVE], 0, world, &action_payload);
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_REMOVE], type_entity_id, world, &action_payload);
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_REMOVE], action_payload.type_id, world, &action_payload);
 		w_component_remove_(&world->components, type_entity_id, entity_id);
 		return;
@@ -578,5 +580,27 @@ size_t w_ecs_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn h
 void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id)
 {
 	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_DESTROY], W_WORLD_HOOK_ENTITY_DESTROY, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_component_id_pre_set_hook(struct w_ecs_world *world, w_entity_id comp_id, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_SET], comp_id, hook_fn);
+}
+
+void w_ecs_unregister_component_id_pre_set_hook(struct w_ecs_world *world, w_entity_id comp_id, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_SET], comp_id, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_component_id_pre_remove_hook(struct w_ecs_world *world, w_entity_id comp_id, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_REMOVE], comp_id, hook_fn);
+}
+
+void w_ecs_unregister_component_id_pre_remove_hook(struct w_ecs_world *world, w_entity_id comp_id, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_REMOVE], comp_id, hook_id);
 	if (entry) entry->enabled = false;
 }
