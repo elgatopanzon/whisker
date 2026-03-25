@@ -77,6 +77,7 @@ void *w_component_set_(struct w_component_registry *registry, uint type_id, w_en
 		struct w_component_entry *entry = &registry->entries[type_entity_id];
 		entry->type_id = type_id;
 		entry->type_size = data_size;
+		entry->flags = 0;
 
 		w_sparse_bitset_init(&entry->data_bitset, registry->arena, W_COMPONENT_REGISTRY_DATA_BITSET_PAGE_SIZE);
 

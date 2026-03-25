@@ -204,7 +204,7 @@ static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
 })
 
 // a component storage entry
-struct w_component_entry 
+struct w_component_entry
 {
 	// component data pointer
 	w_array_declare(unsigned char, data);
@@ -217,6 +217,9 @@ struct w_component_entry
 
 	// type data size
 	uint64_t type_size;
+
+	// module flags
+	uint64_t flags;
 };
 
 // main component registry struct
