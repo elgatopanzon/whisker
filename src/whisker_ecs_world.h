@@ -96,6 +96,9 @@ struct w_ecs_world
 	// singletons
 	struct w_singleton_registry singletons;
 
+	// module resources (indexed by module ID for fast access)
+	w_array_declare(void *, module_resources);
+
 	enum W_WORLD_UPDATE_RESULT update_result;
 };
 
@@ -294,6 +297,46 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 
 // reset all scheduler time steps
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
+
+
+/***********************
+*  module resources   *
+***********************/
+
+// initial capacity for module_resources array
+#define W_MODULE_RESOURCES_INITIAL_CAPACITY 8
+
+// set a module resource pointer by ID (auto-grows array if needed)
+static inline void w_ecs_set_module_resource(struct w_ecs_world *world, size_t id, void *ptr)
+{
+	size_t needed = id + 1;
+	size_t current_capacity = world->module_resources_size / sizeof(void *);
+	if (needed > current_capacity)
+	{
+		size_t old_capacity = current_capacity;
+		w_array_ensure_alloc_block_size(world->module_resources, needed, W_MODULE_RESOURCES_INITIAL_CAPACITY);
+		size_t new_capacity = world->module_resources_size / sizeof(void *);
+		for (size_t i = old_capacity; i < new_capacity; i++)
+			world->module_resources[i] = NULL;
+	}
+	world->module_resources[id] = ptr;
+	if (needed > world->module_resources_length)
+		world->module_resources_length = needed;
+}
+
+// get a module resource pointer by ID, returns NULL if out of bounds
+static inline void *w_ecs_get_module_resource(struct w_ecs_world *world, size_t id)
+{
+	if (id >= world->module_resources_length) return NULL;
+	return world->module_resources[id];
+}
+
+// clear a module resource slot (set to NULL)
+static inline void w_ecs_clear_module_resource(struct w_ecs_world *world, size_t id)
+{
+	if (id < world->module_resources_length)
+		world->module_resources[id] = NULL;
+}
 
 
 /*******************

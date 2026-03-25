@@ -1456,6 +1456,80 @@ END_TEST
 
 
 /*****************************
+*  module resources          *
+*****************************/
+
+START_TEST(test_module_resource_set_get)
+{
+	int data = 42;
+	w_ecs_set_module_resource(&g_world, 0, &data);
+
+	void *got = w_ecs_get_module_resource(&g_world, 0);
+	ck_assert_ptr_eq(got, &data);
+	ck_assert_int_eq(*(int *)got, 42);
+}
+END_TEST
+
+START_TEST(test_module_resource_multiple_slots)
+{
+	int a = 1, b = 2, c = 3;
+	w_ecs_set_module_resource(&g_world, 0, &a);
+	w_ecs_set_module_resource(&g_world, 1, &b);
+	w_ecs_set_module_resource(&g_world, 5, &c);
+
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 0), &a);
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 1), &b);
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 5), &c);
+}
+END_TEST
+
+START_TEST(test_module_resource_auto_growth)
+{
+	// set beyond initial capacity (8)
+	int data = 99;
+	w_ecs_set_module_resource(&g_world, 20, &data);
+
+	void *got = w_ecs_get_module_resource(&g_world, 20);
+	ck_assert_ptr_eq(got, &data);
+	ck_assert_int_eq(*(int *)got, 99);
+
+	// intermediate slots should be NULL
+	ck_assert_ptr_null(w_ecs_get_module_resource(&g_world, 10));
+}
+END_TEST
+
+START_TEST(test_module_resource_out_of_bounds_returns_null)
+{
+	// no resources set, index 0 should return NULL
+	ck_assert_ptr_null(w_ecs_get_module_resource(&g_world, 100));
+	ck_assert_ptr_null(w_ecs_get_module_resource(&g_world, 1000));
+}
+END_TEST
+
+START_TEST(test_module_resource_clear)
+{
+	int data = 42;
+	w_ecs_set_module_resource(&g_world, 3, &data);
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 3), &data);
+
+	w_ecs_clear_module_resource(&g_world, 3);
+	ck_assert_ptr_null(w_ecs_get_module_resource(&g_world, 3));
+}
+END_TEST
+
+START_TEST(test_module_resource_overwrite)
+{
+	int a = 1, b = 2;
+	w_ecs_set_module_resource(&g_world, 0, &a);
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 0), &a);
+
+	w_ecs_set_module_resource(&g_world, 0, &b);
+	ck_assert_ptr_eq(w_ecs_get_module_resource(&g_world, 0), &b);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1589,6 +1663,17 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_multiple_hooks_fire);
 	tcase_add_test(tc_destroy_hooks, test_entity_destroy_hook_unregistered_not_fired);
 	suite_add_tcase(s, tc_destroy_hooks);
+
+	TCase *tc_module_res = tcase_create("module_resources");
+	tcase_add_checked_fixture(tc_module_res, world_setup, world_teardown);
+	tcase_set_timeout(tc_module_res, 10);
+	tcase_add_test(tc_module_res, test_module_resource_set_get);
+	tcase_add_test(tc_module_res, test_module_resource_multiple_slots);
+	tcase_add_test(tc_module_res, test_module_resource_auto_growth);
+	tcase_add_test(tc_module_res, test_module_resource_out_of_bounds_returns_null);
+	tcase_add_test(tc_module_res, test_module_resource_clear);
+	tcase_add_test(tc_module_res, test_module_resource_overwrite);
+	suite_add_tcase(s, tc_module_res);
 
 	return s;
 }
