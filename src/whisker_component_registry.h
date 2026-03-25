@@ -262,22 +262,22 @@ struct w_component_registry
 #define w_component_has_entry(ent, eid)                                       \
     ({                                                                        \
         uint64_t word_index = w_sparse_bitset_word_index((eid));              \
-        uint64_t page_index = w_sparse_bitset_page_index(word_index, (ent)->data_bitset.page_size_); \
+        uint64_t page_index = w_sparse_bitset_page_index(word_index, (ent)->data_bitset.page_shift_); \
         struct w_sparse_bitset_page *page = &(ent)->data_bitset.pages[page_index]; \
-        uint32_t local_word = w_sparse_bitset_local_word(word_index, (ent)->data_bitset.page_size_); \
+        uint32_t local_word = w_sparse_bitset_local_word(word_index, (ent)->data_bitset.page_mask_); \
         (page->bits[local_word] & w_sparse_bitset_bit_mask((eid))); \
     })
 #define w_component_remove_entry(ent, eid) do { \
 	uint64_t _word_index = w_sparse_bitset_word_index(eid); \
-	uint64_t _page_index = w_sparse_bitset_page_index(_word_index, (ent)->data_bitset.page_size_); \
+	uint64_t _page_index = w_sparse_bitset_page_index(_word_index, (ent)->data_bitset.page_shift_); \
 	struct w_sparse_bitset_page *_page = &((ent)->data_bitset.pages[_page_index]); \
-	uint32_t _local_word = w_sparse_bitset_local_word(_word_index, (ent)->data_bitset.page_size_); \
+	uint32_t _local_word = w_sparse_bitset_local_word(_word_index, (ent)->data_bitset.page_mask_); \
 	_page->bits[_local_word] &= w_sparse_bitset_bit_clear_mask(eid); \
 	bool _page_empty = true; \
 	for (uint32_t _i = _page->first_set; _i <= _page->last_set; _i++) \
 		if (_page->bits[_i]) { _page_empty = false; break; } \
 	if (_page_empty) { \
-		uint64_t _page_lookup_index = w_sparse_bitset_page_index(_page_index, W_SPARSE_BITSET_WORD_BITS); \
+		uint64_t _page_lookup_index = w_sparse_bitset_page_index(_page_index, 6); \
 		(ent)->data_bitset.lookup_pages[_page_lookup_index] &= w_sparse_bitset_bit_clear_mask(_page_index); \
 		_page->first_set = UINT32_MAX; \
 		_page->last_set = 0; \

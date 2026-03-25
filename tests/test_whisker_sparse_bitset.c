@@ -22,7 +22,7 @@ static struct w_arena g_arena;
 static void sparse_bitset_setup(void)
 {
 	w_arena_init(&g_arena, 4096);
-	w_sparse_bitset_init(&g_bitset, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	w_sparse_bitset_init(&g_bitset, &g_arena, W_SPARSE_BITSET_PAGE_SHIFT);
 }
 
 static void sparse_bitset_teardown(void)
@@ -48,9 +48,9 @@ START_TEST(test_init_lookup_pages_length_zero)
 }
 END_TEST
 
-START_TEST(test_init_page_size_stored)
+START_TEST(test_init_page_shift_stored)
 {
-	ck_assert_int_eq(g_bitset.page_size_, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	ck_assert_int_eq(g_bitset.page_shift_, W_SPARSE_BITSET_PAGE_SHIFT);
 }
 END_TEST
 
@@ -268,7 +268,7 @@ END_TEST
 START_TEST(test_page_boundary_last_bit_of_page)
 {
 	// last bit of first page: page_size * 64 - 1
-	uint64_t last_bit = (W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64) - 1;
+	uint64_t last_bit = ((1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64) - 1;
 	w_sparse_bitset_set(&g_bitset, last_bit);
 	ck_assert(w_sparse_bitset_get(&g_bitset, last_bit));
 	ck_assert_int_eq(g_bitset.pages_length, 1);
@@ -278,7 +278,7 @@ END_TEST
 START_TEST(test_page_boundary_first_bit_of_second_page)
 {
 	// first bit of second page: page_size * 64
-	uint64_t first_bit = W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64;
+	uint64_t first_bit = (1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64;
 	w_sparse_bitset_set(&g_bitset, first_bit);
 	ck_assert(w_sparse_bitset_get(&g_bitset, first_bit));
 	ck_assert_int_eq(g_bitset.pages_length, 2);
@@ -287,8 +287,8 @@ END_TEST
 
 START_TEST(test_page_boundary_adjacent_bits_span_pages)
 {
-	uint64_t last_of_first = (W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64) - 1;
-	uint64_t first_of_second = W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64;
+	uint64_t last_of_first = ((1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64) - 1;
+	uint64_t first_of_second = (1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64;
 	w_sparse_bitset_set(&g_bitset, last_of_first);
 	w_sparse_bitset_set(&g_bitset, first_of_second);
 	ck_assert(w_sparse_bitset_get(&g_bitset, last_of_first));
@@ -301,7 +301,7 @@ START_TEST(test_page_sparse_allocation)
 {
 	// set bit in page 0 and page 10
 	w_sparse_bitset_set(&g_bitset, 0);
-	w_sparse_bitset_set(&g_bitset, 10 * W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64);
+	w_sparse_bitset_set(&g_bitset, 10 * (1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64);
 	ck_assert_int_eq(g_bitset.pages_length, 11);
 	// page 0 should have bits
 	ck_assert_ptr_nonnull(g_bitset.pages[0].bits);
@@ -346,7 +346,7 @@ START_TEST(test_lookup_page_multiple_pages)
 {
 	// set bits in page 0 and page 1
 	w_sparse_bitset_set(&g_bitset, 0);
-	w_sparse_bitset_set(&g_bitset, W_SPARSE_BITSET_PAGE_SIZE_WORDS * 64);
+	w_sparse_bitset_set(&g_bitset, (1 << W_SPARSE_BITSET_PAGE_SHIFT) * 64);
 	// both page bits should be set in lookup
 	ck_assert(g_bitset.lookup_pages[0] & 1);
 	ck_assert(g_bitset.lookup_pages[0] & 2);
@@ -425,9 +425,9 @@ static struct w_sparse_bitset_intersect_cache g_intersect_cache;
 static void sparse_bitset_intersect_setup(void)
 {
 	w_arena_init(&g_arena, 64 * 1024);
-	w_sparse_bitset_init(&g_bitset, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
-	w_sparse_bitset_init(&g_bitset2, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
-	w_sparse_bitset_init(&g_bitset3, &g_arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+	w_sparse_bitset_init(&g_bitset, &g_arena, W_SPARSE_BITSET_PAGE_SHIFT);
+	w_sparse_bitset_init(&g_bitset2, &g_arena, W_SPARSE_BITSET_PAGE_SHIFT);
+	w_sparse_bitset_init(&g_bitset3, &g_arena, W_SPARSE_BITSET_PAGE_SHIFT);
 	memset(&g_intersect_cache, 0, sizeof(g_intersect_cache));
 }
 
@@ -815,7 +815,7 @@ Suite* whisker_sparse_bitset_suite(void)
 	tcase_set_timeout(tc_init, 10);
 	tcase_add_test(tc_init, test_init_pages_length_zero);
 	tcase_add_test(tc_init, test_init_lookup_pages_length_zero);
-	tcase_add_test(tc_init, test_init_page_size_stored);
+	tcase_add_test(tc_init, test_init_page_shift_stored);
 	tcase_add_test(tc_init, test_init_arena_stored);
 	tcase_add_test(tc_init, test_free_clears_pages);
 	tcase_add_test(tc_init, test_free_clears_lookup_pages);

@@ -12,9 +12,10 @@
 #include <immintrin.h>
 #endif
 
-void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint64_t page_size_)
+void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint8_t page_shift)
 {
-	bitset->page_size_ = page_size_;
+	bitset->page_shift_ = page_shift;
+	bitset->page_mask_ = (1ULL << page_shift) - 1;
 	bitset->arena = arena;
 
 	w_array_init_t(bitset->pages, 0);
@@ -37,8 +38,8 @@ static inline void w_sparse_bitset_ensure_capacity_(struct w_sparse_bitset *bits
 {
 	// get indexes
 	uint64_t word_index = w_sparse_bitset_word_index(index);
-	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_size_);
-	uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, W_SPARSE_BITSET_WORD_BITS);
+	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
+	uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, 6);
 	
 	// ensure pages and lookup pages capacity
 	w_array_ensure_alloc_block_size(
@@ -76,19 +77,19 @@ void w_sparse_bitset_set(struct w_sparse_bitset *bitset, uint64_t index)
 {
 	// get indexes
 	uint64_t word_index = w_sparse_bitset_word_index(index);
-	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_size_);
-	uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, W_SPARSE_BITSET_WORD_BITS);
+	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
+	uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, 6);
 
 	w_sparse_bitset_ensure_capacity_(bitset, index);
 
 	// proceed to set bits
-	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_size_);
+	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
 	struct w_sparse_bitset_page *page = &bitset->pages[page_index];
 
 	// allocate page if page is fresh
 	if (!page->bits)
 	{
-		page->bits = w_arena_calloc(bitset->arena, bitset->page_size_ * sizeof(*page->bits));
+		page->bits = w_arena_calloc(bitset->arena, (1ULL << bitset->page_shift_) * sizeof(*page->bits));
 	}
 
 	// set actual bits
@@ -105,7 +106,7 @@ void w_sparse_bitset_set(struct w_sparse_bitset *bitset, uint64_t index)
 void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 {
 	uint64_t word_index = w_sparse_bitset_word_index(index);
-	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_size_);
+	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
 
 	// early out
 	if (page_index >= bitset->pages_length) return;
@@ -114,7 +115,7 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 
 	if (!page->bits) return;
 
-	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_size_);
+	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
 	page->bits[local_word] &= w_sparse_bitset_bit_clear_mask(index);
 
 	// clear lookup bit if page is empty
@@ -125,7 +126,7 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 	}
 	if (page_empty)
 	{
-		uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, W_SPARSE_BITSET_WORD_BITS);
+		uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, 6);
 		bitset->lookup_pages[page_lookup_index] &= w_sparse_bitset_bit_clear_mask(page_index);
 		page->first_set = UINT32_MAX;
 		page->last_set = 0;
@@ -135,7 +136,7 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index)
 {
 	uint64_t word_index = w_sparse_bitset_word_index(index);
-	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_size_);
+	uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
 
 	// early out
 	if (page_index >= bitset->pages_length) return false;
@@ -144,7 +145,7 @@ bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index)
 
 	if (!page->bits) return false;
 
-	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_size_);
+	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
 
 	return (page->bits[local_word] & w_sparse_bitset_bit_mask(index)) != 0;
 }
@@ -248,7 +249,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * bs->page_size_ + w) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << bs->page_shift_) + w) * 64 + (uint64_t)bit;
 					}
 				}
 			}
@@ -271,7 +272,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 	{
 		struct w_sparse_bitset *a = intersect_cache->bitsets[0];
 		struct w_sparse_bitset *b = intersect_cache->bitsets[1];
-		uint64_t page_size = a->page_size_;
+		uint8_t page_shift = a->page_shift_;
 
 		for (uint64_t li = 0; li < max_li; li++)
 		{
@@ -308,7 +309,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + w) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + w) * 64 + (uint64_t)bit;
 					}
 				}
 
@@ -339,7 +340,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 								indexes = intersect_cache->indexes;
 								capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 							}
-							indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+							indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 						}
 					}
 					if (r1) {
@@ -352,7 +353,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 								indexes = intersect_cache->indexes;
 								capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 							}
-							indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+							indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 						}
 					}
 					if (r2) {
@@ -365,7 +366,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 								indexes = intersect_cache->indexes;
 								capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 							}
-							indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+							indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 						}
 					}
 					if (r3) {
@@ -378,7 +379,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 								indexes = intersect_cache->indexes;
 								capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 							}
-							indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+							indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 						}
 					}
 				}
@@ -402,7 +403,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + w) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + w) * 64 + (uint64_t)bit;
 					}
 				}
 			}
@@ -453,7 +454,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 			}
 			if (first > last || first == UINT32_MAX) continue;
 
-			uint64_t page_size = intersect_cache->bitsets[0]->page_size_;
+			uint8_t page_shift = intersect_cache->bitsets[0]->page_shift_;
 #if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
 			uint32_t simd_first = (first + 3) & ~3u;
 			uint32_t simd_last = (last + 1) & ~3u;
@@ -476,7 +477,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 						indexes = intersect_cache->indexes;
 						capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 					}
-					indexes[count++] = (page_index * page_size + w) * 64 + (uint64_t)bit;
+					indexes[count++] = ((page_index << page_shift) + w) * 64 + (uint64_t)bit;
 				}
 			}
 
@@ -510,7 +511,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 					}
 				}
 				if (r1) {
@@ -523,7 +524,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 					}
 				}
 				if (r2) {
@@ -536,7 +537,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 					}
 				}
 				if (r3) {
@@ -549,7 +550,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 							indexes = intersect_cache->indexes;
 							capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 						}
-						indexes[count++] = (page_index * page_size + ww) * 64 + (uint64_t)bit;
+						indexes[count++] = ((page_index << page_shift) + ww) * 64 + (uint64_t)bit;
 					}
 				}
 			}
@@ -577,7 +578,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 						indexes = intersect_cache->indexes;
 						capacity = intersect_cache->indexes_size / sizeof(uint64_t);
 					}
-					indexes[count++] = (page_index * page_size + w) * 64 + (uint64_t)bit;
+					indexes[count++] = ((page_index << page_shift) + w) * 64 + (uint64_t)bit;
 				}
 			}
 		}

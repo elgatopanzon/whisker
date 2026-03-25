@@ -24,7 +24,7 @@ static void adjacency_add_(struct w_relationship_registry *reg,
 		struct w_relationship_adjacency_list empty = {0};
 		w_hashmap_t_set(&reg->adjacency, entity, empty);
 		w_hashmap_t_get(&reg->adjacency, entity, adj);
-		w_sparse_bitset_init(&adj->entities, reg->arena, W_SPARSE_BITSET_PAGE_SIZE_WORDS);
+		w_sparse_bitset_init(&adj->entities, reg->arena, W_SPARSE_BITSET_PAGE_SHIFT);
 	}
 
 	// O(1) duplicate check

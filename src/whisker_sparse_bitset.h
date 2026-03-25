@@ -14,11 +14,11 @@
 #define WHISKER_SPARSE_BITSET_H
 
 #define W_SPARSE_BITSET_WORD_BITS 64
-#define W_SPARSE_BITSET_PAGE_SIZE_WORDS 256
+#define W_SPARSE_BITSET_PAGE_SHIFT 8
 #define W_SPARSE_BITSET_PAGE_REALLOC_BLOCK_SIZE 16
 
-// each page points to an array of X pages
-// page size decided by the bitset's page_size_ value
+// each page points to an array of words
+// page size is (1 << page_shift_) words
 struct w_sparse_bitset_page 
 {
 	// first/last set allow specifying the first/last non-zero WORD
@@ -28,10 +28,11 @@ struct w_sparse_bitset_page
 };
 
 // main bitset
-struct w_sparse_bitset 
+struct w_sparse_bitset
 {
-	uint64_t page_size_;
-	w_array_declare(struct w_sparse_bitset_page, pages); 
+	uint8_t page_shift_;
+	uint64_t page_mask_;
+	w_array_declare(struct w_sparse_bitset_page, pages);
 	w_array_declare(uint64_t, lookup_pages);
 	struct w_arena *arena;
 	uint64_t generation;
@@ -55,19 +56,19 @@ struct w_sparse_bitset_intersect_cache
          _sb_pg; _sb_pg = 0) \
     for (uint32_t _sb_w = (bs)->pages[_sb_pi].first_set; _sb_w <= (bs)->pages[_sb_pi].last_set; _sb_w++) \
     for (uint64_t _sb_wd = (bs)->pages[_sb_pi].bits[_sb_w]; _sb_wd; _sb_wd &= _sb_wd - 1) \
-    for (uint64_t i = (_sb_pi * (bs)->page_size_ + (uint64_t)_sb_w) * 64ULL + (uint64_t)__builtin_ctzll(_sb_wd), \
+    for (uint64_t i = ((_sb_pi << (bs)->page_shift_) + (uint64_t)_sb_w) * 64ULL + (uint64_t)__builtin_ctzll(_sb_wd), \
              _sb_d = 0; !_sb_d; _sb_d = 1)
 
 // math macros
 #define w_sparse_bitset_word_index(i) ((i) >> 6)
-#define w_sparse_bitset_page_index(i, s) (i / s)
-#define w_sparse_bitset_bit_index(i) (i & 63)
-#define w_sparse_bitset_local_word(w, s) ((w) % (s))
+#define w_sparse_bitset_page_index(i, shift) ((i) >> (shift))
+#define w_sparse_bitset_bit_index(i) ((i) & 63)
+#define w_sparse_bitset_local_word(w, mask) ((w) & (mask))
 #define w_sparse_bitset_bit_mask(i) (1ULL << ((i) & 63))
 #define w_sparse_bitset_bit_clear_mask(i) (~(1ULL << ((i) & 63)))
 
-// init sparse bitset with custom page size
-void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint64_t page_size_);
+// init sparse bitset with page shift (log2 of page size)
+void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint8_t page_shift);
 
 // free bitset page lists
 void w_sparse_bitset_free(struct w_sparse_bitset *bitset);
