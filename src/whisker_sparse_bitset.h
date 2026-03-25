@@ -41,6 +41,7 @@ struct w_sparse_bitset
 struct w_sparse_bitset_intersect_cache
 {
 	w_array_declare(struct w_sparse_bitset *, bitsets);
+	w_array_declare(struct w_sparse_bitset *, exclude_bitsets);
 	w_array_declare(uint64_t, indexes);
 	uint64_t cache_generation;
 };

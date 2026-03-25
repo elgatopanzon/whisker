@@ -166,10 +166,34 @@ uint64_t w_sparse_bitset_intersect_cache_stale(struct w_sparse_bitset_intersect_
 		bitsets_generation += intersect_cache->bitsets[i]->generation;
 	}
 
+	// include exclude bitsets in generation tracking
+	for (uint64_t i = 0; i < intersect_cache->exclude_bitsets_length; i++)
+	{
+		if (intersect_cache->exclude_bitsets[i])
+			bitsets_generation += intersect_cache->exclude_bitsets[i]->generation;
+	}
+
 	// if generation didn't change, cache already exists
 	if (bitsets_generation == intersect_cache->cache_generation) return UINT64_MAX;
 
 	return bitsets_generation;
+}
+
+// apply exclude bitsets (AND-NOT) to a word at a given page and word index
+static inline uint64_t w_sparse_bitset_apply_excludes_(
+	struct w_sparse_bitset_intersect_cache *cache,
+	uint64_t word, uint64_t page_index, uint32_t w)
+{
+	for (uint64_t i = 0; i < cache->exclude_bitsets_length && word; i++)
+	{
+		struct w_sparse_bitset *ex = cache->exclude_bitsets[i];
+		if (!ex) continue;
+		if (page_index >= ex->pages_length) continue;
+		struct w_sparse_bitset_page *page = &ex->pages[page_index];
+		if (!page->bits) continue;
+		word &= ~page->bits[w];
+	}
+	return word;
 }
 
 uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *intersect_cache)
@@ -214,6 +238,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				for (uint32_t w = page->first_set; w <= page->last_set; w++)
 				{
 					uint64_t word = page->bits[w];
+					word = w_sparse_bitset_apply_excludes_(intersect_cache, word, page_index, w);
 					while (word)
 					{
 						int bit = __builtin_ctzll(word);
@@ -273,6 +298,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				for (uint32_t w = first; w < simd_first && w <= last; w++)
 				{
 					uint64_t word = pa->bits[w] & pb->bits[w];
+					word = w_sparse_bitset_apply_excludes_(intersect_cache, word, page_index, w);
 					while (word)
 					{
 						int bit = __builtin_ctzll(word);
@@ -297,6 +323,11 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 					uint64_t r1 = _mm256_extract_epi64(vr, 1);
 					uint64_t r2 = _mm256_extract_epi64(vr, 2);
 					uint64_t r3 = _mm256_extract_epi64(vr, 3);
+
+					r0 = w_sparse_bitset_apply_excludes_(intersect_cache, r0, page_index, w);
+					r1 = w_sparse_bitset_apply_excludes_(intersect_cache, r1, page_index, w + 1);
+					r2 = w_sparse_bitset_apply_excludes_(intersect_cache, r2, page_index, w + 2);
+					r3 = w_sparse_bitset_apply_excludes_(intersect_cache, r3, page_index, w + 3);
 
 					if (r0) {
 						uint32_t ww = w;
@@ -361,6 +392,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 #endif
 				{
 					uint64_t word = pa->bits[w] & pb->bits[w];
+					word = w_sparse_bitset_apply_excludes_(intersect_cache, word, page_index, w);
 					while (word)
 					{
 						int bit = __builtin_ctzll(word);
@@ -434,6 +466,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				{
 					word &= intersect_cache->bitsets[i]->pages[page_index].bits[w];
 				}
+				word = w_sparse_bitset_apply_excludes_(intersect_cache, word, page_index, w);
 				while (word)
 				{
 					int bit = __builtin_ctzll(word);
@@ -461,6 +494,11 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				uint64_t r1 = _mm256_extract_epi64(vr, 1);
 				uint64_t r2 = _mm256_extract_epi64(vr, 2);
 				uint64_t r3 = _mm256_extract_epi64(vr, 3);
+
+				r0 = w_sparse_bitset_apply_excludes_(intersect_cache, r0, page_index, w);
+				r1 = w_sparse_bitset_apply_excludes_(intersect_cache, r1, page_index, w + 1);
+				r2 = w_sparse_bitset_apply_excludes_(intersect_cache, r2, page_index, w + 2);
+				r3 = w_sparse_bitset_apply_excludes_(intersect_cache, r3, page_index, w + 3);
 
 				if (r0) {
 					uint32_t ww = w;
@@ -529,6 +567,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 				{
 					word &= intersect_cache->bitsets[i]->pages[page_index].bits[w];
 				}
+				word = w_sparse_bitset_apply_excludes_(intersect_cache, word, page_index, w);
 				while (word)
 				{
 					int bit = __builtin_ctzll(word);
@@ -556,6 +595,7 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache)
 {
 	free_null(intersect_cache->bitsets);
+	free_null(intersect_cache->exclude_bitsets);
 	free_null(intersect_cache->indexes);
 	intersect_cache->cache_generation = 0;
 }

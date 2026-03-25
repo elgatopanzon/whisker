@@ -37,7 +37,9 @@
 
 #define w_itor_get_optional_impl_(T) ( \
     { \
-        while (itor.get_cursor < itor.query->terms_length && itor.query->terms[itor.get_cursor].access_type == W_QUERY_ACCESS_NONE) { \
+        while (itor.get_cursor < itor.query->terms_length && \
+               (itor.query->terms[itor.get_cursor].access_type == W_QUERY_ACCESS_NONE || \
+                itor.query->terms[itor.get_cursor].access_type == W_QUERY_ACCESS_NOT)) { \
             itor.get_cursor++; \
         } \
         struct w_query_term *term = &itor.query->terms[itor.get_cursor]; \
@@ -67,6 +69,7 @@
 #define w_query_read(name) "read " name ", "
 #define w_query_write(name) "write " name ", "
 #define w_query_optional(name) "optional " name ", "
+#define w_query_not(name) "not " name ", "
 
 struct w_query_iterator 
 {

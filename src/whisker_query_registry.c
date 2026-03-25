@@ -158,6 +158,8 @@ static inline void w_query_registry_parse_query_term_strings(struct w_query *que
     			term->access_type = W_QUERY_ACCESS_WRITE;
     		else if (strncmp(raw_term, "optional", type_len) == 0)
     			term->access_type = W_QUERY_ACCESS_OPTIONAL;
+    		else if (strncmp(raw_term, "not", type_len) == 0)
+    			term->access_type = W_QUERY_ACCESS_NOT;
     		else
     			term->access_type = W_QUERY_ACCESS_NONE;
 
@@ -289,11 +291,13 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 
 		// assign bitset pointers from component registry
 		// count required terms (read/write) for intersection
-		// IMPORTANT: required terms must come before optional/has terms in query string
+		// count exclude terms (not) for AND-NOT
+		// IMPORTANT: required terms must come before optional/has/not terms in query string
 		size_t required_count = 0;
+		size_t exclude_count = 0;
 		for (size_t i = 0; i < query->terms_length; ++i)
 		{
-			// optional/has terms may have NULL entry if component has no data
+			// optional/has/not terms may have NULL entry if component has no data
 			struct w_component_entry *entry = query->terms[i].component_entry;
 
 			// required components (read/write) must have valid entry to proceed
@@ -304,15 +308,35 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 			}
 
 			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
-			// only read/write terms participate in intersection (not optional/has)
+			// only read/write terms participate in intersection (not optional/has/not)
 			if (query->terms[i].access_type == W_QUERY_ACCESS_READ ||
 			    query->terms[i].access_type == W_QUERY_ACCESS_WRITE)
 			{
 				required_count++;
 			}
+			else if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
+			{
+				exclude_count++;
+			}
 		}
 		// intersection only uses first N bitsets where N = required_count
 		query->bitset_cache.bitsets_length = required_count;
+
+		// populate exclude bitsets for AND-NOT filtering
+		if (exclude_count > 0)
+		{
+			w_array_init_t(query->bitset_cache.exclude_bitsets, exclude_count);
+			size_t ex_idx = 0;
+			for (size_t i = 0; i < query->terms_length; ++i)
+			{
+				if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
+				{
+					struct w_component_entry *entry = query->terms[i].component_entry;
+					query->bitset_cache.exclude_bitsets[ex_idx++] = entry ? &entry->data_bitset : NULL;
+				}
+			}
+			query->bitset_cache.exclude_bitsets_length = exclude_count;
+		}
 	}
 
 	// refresh bitset pointers (entries array may have been reallocated)
@@ -323,6 +347,18 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 		query->terms[i].component_entry = entry;
 		if (i < query->bitset_cache.bitsets_length)
 			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
+	}
+
+	// refresh exclude bitset pointers
+	size_t ex_idx = 0;
+	for (size_t i = 0; i < query->terms_length; ++i)
+	{
+		if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
+		{
+			struct w_component_entry *entry = query->terms[i].component_entry;
+			if (ex_idx < query->bitset_cache.exclude_bitsets_length)
+				query->bitset_cache.exclude_bitsets[ex_idx++] = entry ? &entry->data_bitset : NULL;
+		}
 	}
 
 	// check if intersection cache is stale
