@@ -8,7 +8,6 @@
 #include "whisker_std.h"
 #include "whisker_arena.h"
 #include "whisker_hashmap.h"
-#include "whisker_hash_xxhash64.h"
 
 #ifndef WHISKER_SINGLETON_REGISTRY_H
 #define WHISKER_SINGLETON_REGISTRY_H
@@ -17,11 +16,14 @@
 #define W_SINGLETON_REGISTRY_BUCKET_COUNT 64
 #endif /* ifndef W_SINGLETON_REGISTRY_BUCKET_COUNT */
 
+// declare a typed hashmap for the singleton registry
+w_hashmap_t_declare(const char*, void*, w_singleton_map);
+
 // stores named void* pointers as global singletons
 struct w_singleton_registry
 {
 	struct w_arena *arena;
-	struct w_hashmap map;
+	struct w_singleton_map map;
 };
 
 // init a singleton registry using the given arena for bucket storage
