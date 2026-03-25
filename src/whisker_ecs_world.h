@@ -48,6 +48,8 @@ enum W_WORLD_HOOK_TYPE
 	W_WORLD_HOOK_TYPE_UPDATE = 0,
 	W_WORLD_HOOK_TYPE_COMPONENT_SET,
 	W_WORLD_HOOK_TYPE_COMPONENT_REMOVE,
+	W_WORLD_HOOK_TYPE_COMPONENT_PRE_SET,
+	W_WORLD_HOOK_TYPE_COMPONENT_PRE_REMOVE,
 	W_WORLD_HOOK_TYPE_ENTITY_DESTROY,
 	W_WORLD_HOOK_TYPE_COUNT,
 };
@@ -331,6 +333,16 @@ void w_ecs_unregister_component_set_hook(struct w_ecs_world *world, uint type_id
 size_t w_ecs_register_component_remove_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn);
 // unregister a component remove hook by type and hook ID
 void w_ecs_unregister_component_remove_hook(struct w_ecs_world *world, uint type_id, size_t hook_id);
+
+// register a global hook to fire before any component is set (returns hook ID)
+size_t w_ecs_register_component_pre_set_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a global pre-set hook by ID
+void w_ecs_unregister_component_pre_set_hook(struct w_ecs_world *world, size_t hook_id);
+
+// register a global hook to fire before any component is removed (returns hook ID)
+size_t w_ecs_register_component_pre_remove_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a global pre-remove hook by ID
+void w_ecs_unregister_component_pre_remove_hook(struct w_ecs_world *world, size_t hook_id);
 
 // register a hook to fire when an entity is destroyed (returns hook ID)
 size_t w_ecs_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
