@@ -7,6 +7,7 @@
 
 #include "whisker_std.h"
 #include "whisker_ecs_world.h"
+#include "whisker_timer.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 #include "modules/utilities/whisker_utilities.h"
 
@@ -31,19 +32,6 @@ static void timer_setup(void)
 	w_string_table_init(&g_string_table, &g_arena, 16, 64, NULL);
 	w_ecs_world_init(&g_world, &g_string_table, &g_arena);
 	wm_scheduler_defaults_init(&g_world, 60.0);
-
-	// create component entries for optional components by setting them on a dummy entity
-	// this ensures the component entry and data_bitset exist for query resolution
-	w_entity_id dummy = w_ecs_request_entity(&g_world);
-	w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_LOOP, dummy);
-	w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_ONESHOT, dummy);
-	w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, dummy);
-	// remove them so the dummy doesn't interfere with tests
-	w_ecs_remove_tag_str(&g_world, W_TIMER_COMPONENT_LOOP, dummy);
-	w_ecs_remove_tag_str(&g_world, W_TIMER_COMPONENT_ONESHOT, dummy);
-	w_ecs_remove_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, dummy);
-	w_ecs_return_entity(&g_world, dummy);
-
 	wm_utils_init(&g_world);
 }
 
@@ -59,12 +47,10 @@ static void timer_teardown(void)
 // timer system query string (must match the w_ecs_system definition exactly)
 #define TIMER_QUERY_STRING \
 	w_query_write(W_TIMER_COMPONENT_ELAPSED) \
+	w_query_write(W_TIMER_COMPONENT_FLAGS) \
 	w_query_read(W_TIMER_COMPONENT_DURATION) \
 	w_query_read(W_TIMER_COMPONENT_OWNER_ENTITY) \
-	w_query_read(W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID) \
-	w_query_optional(W_TIMER_COMPONENT_LOOP) \
-	w_query_optional(W_TIMER_COMPONENT_ONESHOT) \
-	w_query_optional(W_TIMER_COMPONENT_PAUSED)
+	w_query_read(W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID)
 
 // advance world by a specific delta time (simulated, no blocking)
 // reimplements timer logic to avoid static query pointer issue in w_query_for_each
@@ -83,39 +69,60 @@ static void advance_time(double delta_seconds)
 			w_entity_id timer = slice.start_id + s;
 
 			// get component data
-			float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-			float *duration = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_DURATION, timer);
+			double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+			double *duration = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
+			w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
 			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
 			w_entity_id *finished_comp_id = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
 
-			if (!elapsed || !duration || !owner || !finished_comp_id) continue;
+			if (!elapsed || !duration || !flags || !owner || !finished_comp_id) continue;
 
-			bool has_paused = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
-			if (has_paused) continue;
+			if (w_timer_is_paused(*flags)) continue;
 
-			bool has_loop = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_LOOP, timer);
-			bool has_oneshot = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_ONESHOT, timer);
+			// update timer using standalone function
+			bool just_finished = w_timer_update(elapsed, *duration, flags, delta_seconds);
 
-			*elapsed += delta_seconds;
-
-			if (*finished_comp_id != W_ENTITY_INVALID && *owner != W_ENTITY_INVALID && *duration > 0.0f && *elapsed >= *duration)
+			// handle completion
+			if (just_finished && w_entity_is_valid(*finished_comp_id) && w_entity_is_valid(*owner))
 			{
-				// stage 1: set finished tag on owner if not present
 				if (!w_ecs_has_tag(&g_world, *finished_comp_id, *owner))
 				{
 					w_ecs_set_tag(&g_world, *finished_comp_id, *owner);
 				}
-				// stage 2: tag exists, remove it and run reset/destroy logic
 				else
 				{
 					w_ecs_remove_tag(&g_world, *finished_comp_id, *owner);
 
-					if (has_loop)
-						*elapsed = 0;
-					else if (has_oneshot)
+					if (w_timer_is_loop(*flags))
+					{
+						w_timer_wrap(elapsed, *duration);
+						w_timer_clear_finished(flags);
+					}
+					else if (w_timer_is_oneshot(*flags))
 						w_ecs_return_entity(&g_world, timer);
 					else
-						w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+						w_timer_pause(flags);
+				}
+			}
+			else if (w_timer_is_finished(*flags) && w_entity_is_valid(*finished_comp_id) && w_entity_is_valid(*owner))
+			{
+				if (!w_ecs_has_tag(&g_world, *finished_comp_id, *owner))
+				{
+					w_ecs_set_tag(&g_world, *finished_comp_id, *owner);
+				}
+				else
+				{
+					w_ecs_remove_tag(&g_world, *finished_comp_id, *owner);
+
+					if (w_timer_is_loop(*flags))
+					{
+						w_timer_wrap(elapsed, *duration);
+						w_timer_clear_finished(flags);
+					}
+					else if (w_timer_is_oneshot(*flags))
+						w_ecs_return_entity(&g_world, timer);
+					else
+						w_timer_pause(flags);
 				}
 			}
 		}
@@ -129,22 +136,19 @@ static void advance_time(double delta_seconds)
 		{
 			w_entity_id timer = slice.start_id + s;
 
-			float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-			float *duration = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_DURATION, timer);
+			double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+			double *duration = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
+			w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
 			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
 			w_entity_id *finished_comp_id = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
 
-			if (!elapsed || !duration || !owner || !finished_comp_id) continue;
+			if (!elapsed || !duration || !flags || !owner || !finished_comp_id) continue;
 
-			bool has_paused = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
-			if (has_paused) continue;
+			if (w_timer_is_paused(*flags)) continue;
 
-			bool has_loop = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_LOOP, timer);
-			bool has_oneshot = w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_ONESHOT, timer);
+			bool just_finished = w_timer_update(elapsed, *duration, flags, delta_seconds);
 
-			*elapsed += delta_seconds;
-
-			if (*finished_comp_id != W_ENTITY_INVALID && *owner != W_ENTITY_INVALID && *duration > 0.0f && *elapsed >= *duration)
+			if (just_finished && w_entity_is_valid(*finished_comp_id) && w_entity_is_valid(*owner))
 			{
 				if (!w_ecs_has_tag(&g_world, *finished_comp_id, *owner))
 				{
@@ -154,12 +158,36 @@ static void advance_time(double delta_seconds)
 				{
 					w_ecs_remove_tag(&g_world, *finished_comp_id, *owner);
 
-					if (has_loop)
-						*elapsed = 0;
-					else if (has_oneshot)
+					if (w_timer_is_loop(*flags))
+					{
+						w_timer_wrap(elapsed, *duration);
+						w_timer_clear_finished(flags);
+					}
+					else if (w_timer_is_oneshot(*flags))
 						w_ecs_return_entity(&g_world, timer);
 					else
-						w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+						w_timer_pause(flags);
+				}
+			}
+			else if (w_timer_is_finished(*flags) && w_entity_is_valid(*finished_comp_id) && w_entity_is_valid(*owner))
+			{
+				if (!w_ecs_has_tag(&g_world, *finished_comp_id, *owner))
+				{
+					w_ecs_set_tag(&g_world, *finished_comp_id, *owner);
+				}
+				else
+				{
+					w_ecs_remove_tag(&g_world, *finished_comp_id, *owner);
+
+					if (w_timer_is_loop(*flags))
+					{
+						w_timer_wrap(elapsed, *duration);
+						w_timer_clear_finished(flags);
+					}
+					else if (w_timer_is_oneshot(*flags))
+						w_ecs_return_entity(&g_world, timer);
+					else
+						w_timer_pause(flags);
 				}
 			}
 		}
@@ -212,13 +240,13 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "loop_test_finished_tag");
 
 	// verify timer components are set up correctly
-	float *dur = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_DURATION, timer);
+	double *dur = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
 	w_entity_id *own = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
 	w_entity_id *fcid = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
 	ck_assert_ptr_nonnull(dur);
 	ck_assert_ptr_nonnull(own);
 	ck_assert_ptr_nonnull(fcid);
-	ck_assert_float_eq(*dur, 0.5f);
+	ck_assert_double_eq(*dur, 0.5);
 	ck_assert_int_eq(*own, owner);
 	ck_assert_int_eq(*fcid, finished_tag);
 
@@ -226,9 +254,9 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	advance_time(0.6);
 
 	// verify elapsed was updated
-	float *el = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *el = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
 	ck_assert_ptr_nonnull(el);
-	ck_assert_float_ge(*el, 0.5f);
+	ck_assert_double_ge(*el, 0.5);
 
 	// tag should be set on first completion
 	ck_assert(w_ecs_has_tag(&g_world, finished_tag, owner));
@@ -239,9 +267,9 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	// tag should be removed, elapsed reset
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
 
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
 	// elapsed should be small (0.1s from last advance after reset)
-	ck_assert_float_lt(*elapsed, 0.2f);
+	ck_assert_double_lt(*elapsed, 0.2);
 
 	// advance past duration again
 	advance_time(0.5);
@@ -254,7 +282,7 @@ END_TEST
 START_TEST(test_loop_timer_resets_elapsed)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id timer = w_timer_create(&g_world, owner, "loop_reset", 1.0f, true, false);
+	w_entity_id timer = w_timer_create(&g_world, owner, "loop_reset", 1.0, true, false);
 
 	// advance past duration
 	advance_time(1.1);
@@ -262,9 +290,9 @@ START_TEST(test_loop_timer_resets_elapsed)
 	advance_time(0.1);
 	// second frame: tag removed, elapsed reset
 
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
 	// elapsed should include the 0.1s from last frame
-	ck_assert_float_lt(*elapsed, 0.2f);
+	ck_assert_double_lt(*elapsed, 0.2);
 }
 END_TEST
 
@@ -293,7 +321,7 @@ START_TEST(test_oneshot_timer_fires_once)
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
 
 	// timer entity should no longer exist (returned to pool)
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
 	ck_assert_ptr_null(elapsed);
 }
 END_TEST
@@ -378,54 +406,58 @@ END_TEST
 START_TEST(test_pause_stops_timer)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id timer = w_timer_create(&g_world, owner, "pause_test", 1.0f, false, false);
+	w_entity_id timer = w_timer_create(&g_world, owner, "pause_test", 1.0, false, false);
 
 	// advance a bit
 	advance_time(0.3);
 
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-	float before_pause = *elapsed;
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double before_pause = *elapsed;
 
-	// pause the timer
-	w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+	// pause the timer via flags
+	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_pause(flags);
 
-	// verify pause tag was set
-	ck_assert(w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer));
+	// verify pause flag was set
+	ck_assert(w_timer_is_paused(*flags));
 
 	// advance more
 	advance_time(0.5);
 
-	// verify pause tag is still set
-	ck_assert(w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer));
+	// verify pause flag is still set
+	flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	ck_assert(w_timer_is_paused(*flags));
 
 	// elapsed should not have changed
-	elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-	ck_assert_float_eq(*elapsed, before_pause);
+	elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	ck_assert_double_eq(*elapsed, before_pause);
 }
 END_TEST
 
 START_TEST(test_unpause_resumes_timer)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id timer = w_timer_create(&g_world, owner, "unpause_test", 1.0f, true, false);
+	w_entity_id timer = w_timer_create(&g_world, owner, "unpause_test", 1.0, true, false);
 
 	// advance a bit
 	advance_time(0.3);
 
-	// pause
-	w_ecs_set_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+	// pause via flags
+	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_pause(flags);
 	advance_time(0.5);
 
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-	float paused_elapsed = *elapsed;
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double paused_elapsed = *elapsed;
 
-	// unpause
-	w_ecs_remove_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+	// unpause via flags
+	flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_unpause(flags);
 	advance_time(0.2);
 
 	// elapsed should have increased
-	elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
-	ck_assert_float_gt(*elapsed, paused_elapsed);
+	elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	ck_assert_double_gt(*elapsed, paused_elapsed);
 }
 END_TEST
 
@@ -438,7 +470,7 @@ START_TEST(test_inert_timer_auto_pauses)
 {
 	// timer without loop or oneshot should auto-pause on completion
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id timer = w_timer_create(&g_world, owner, "inert_test", 0.5f, false, false);
+	w_entity_id timer = w_timer_create(&g_world, owner, "inert_test", 0.5, false, false);
 
 	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_test_finished_tag");
 
@@ -451,12 +483,13 @@ START_TEST(test_inert_timer_auto_pauses)
 	// advance again
 	advance_time(0.1);
 
-	// tag removed, timer should be paused
+	// tag removed, timer should be paused via flags
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
-	ck_assert(w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer));
+	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	ck_assert(w_timer_is_paused(*flags));
 
 	// timer should still exist (not destroyed like oneshot)
-	float *elapsed = w_ecs_get_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
 	ck_assert_ptr_nonnull(elapsed);
 }
 END_TEST
@@ -464,7 +497,7 @@ END_TEST
 START_TEST(test_inert_timer_can_restart)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id timer = w_timer_create(&g_world, owner, "inert_restart", 0.5f, false, false);
+	w_entity_id timer = w_timer_create(&g_world, owner, "inert_restart", 0.5, false, false);
 
 	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_restart_finished_tag");
 
@@ -472,13 +505,14 @@ START_TEST(test_inert_timer_can_restart)
 	advance_time(0.6);
 	advance_time(0.1);
 
-	// should be paused
-	ck_assert(w_ecs_has_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer));
+	// should be paused via flags
+	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	ck_assert(w_timer_is_paused(*flags));
 
-	// reset elapsed and unpause
-	float zero = 0.0f;
-	w_ecs_set_str(&g_world, float, W_TIMER_COMPONENT_ELAPSED, timer, &zero);
-	w_ecs_remove_tag_str(&g_world, W_TIMER_COMPONENT_PAUSED, timer);
+	// reset timer using standalone function and unpause
+	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	w_timer_reset(elapsed, flags);
+	w_timer_unpause(flags);
 
 	// advance past duration again
 	advance_time(0.6);
@@ -560,7 +594,7 @@ START_TEST(test_timer_stress_many_timers)
 		owners[i] = w_ecs_request_entity(&g_world);
 		char name[32];
 		snprintf(name, sizeof(name), "stress_%d", i);
-		float duration = 0.1f + (i % 10) * 0.1f;  // 0.1 to 1.0 seconds
+		double duration = 0.1 + (i % 10) * 0.1;  // 0.1 to 1.0 seconds
 		timers[i] = w_timer_create(&g_world, owners[i], name, duration, true, false);
 	}
 
@@ -668,7 +702,7 @@ static void advance_oscillators(double delta_seconds)
 			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
 			if (effective_phase < 0.0f) effective_phase += 1.0f;
 
-			float value = w_oscillator_compute_value_((wm_waveform_type)*type, effective_phase, *amplitude, *offset);
+			float value = w_oscillator_compute((w_waveform_type)*type, effective_phase, *amplitude, *offset);
 
 			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
 			if (osc_name && w_entity_is_valid(*owner)) {
@@ -708,7 +742,7 @@ static void advance_oscillators(double delta_seconds)
 			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
 			if (effective_phase < 0.0f) effective_phase += 1.0f;
 
-			float value = w_oscillator_compute_value_((wm_waveform_type)*type, effective_phase, *amplitude, *offset);
+			float value = w_oscillator_compute((w_waveform_type)*type, effective_phase, *amplitude, *offset);
 
 			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
 			if (osc_name && w_entity_is_valid(*owner)) {
@@ -732,7 +766,7 @@ static void advance_oscillators(double delta_seconds)
 START_TEST(test_oscillator_entity_gets_name)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	char *name = w_ecs_get_entity_name(&g_world, osc);
 	ck_assert_ptr_nonnull(name);
@@ -745,8 +779,8 @@ END_TEST
 START_TEST(test_oscillator_entity_names_unique)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc1 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
-	w_entity_id osc2 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc1 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+	w_entity_id osc2 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	char *name1 = w_ecs_get_entity_name(&g_world, osc1);
 	char *name2 = w_ecs_get_entity_name(&g_world, osc2);
@@ -763,7 +797,7 @@ END_TEST
 START_TEST(test_oscillator_components_set)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "comp_test", W_OSCILLATOR_TYPE(TRIANGLE), 2.0f, 0.5f, 1.0f, 0.25f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "comp_test", W_OSCILLATOR_TYPE(TRIANGLE), 2.0f, 0.5f, 1.0f, 0.25f, 0.0f);
 
 	float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
 	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
@@ -786,7 +820,7 @@ START_TEST(test_oscillator_components_set)
 	ck_assert_float_eq(*amplitude, 0.5f);
 	ck_assert_float_eq(*offset, 1.0f);
 	ck_assert_float_eq(*phase_shift, 0.25f);
-	ck_assert_int_eq(*type, (int)WM_WAVEFORM_TRIANGLE);
+	ck_assert_int_eq(*type, (int)W_WAVEFORM_TRIANGLE);
 	ck_assert_int_eq(*owner_ref, owner);
 }
 END_TEST
@@ -794,7 +828,7 @@ END_TEST
 START_TEST(test_oscillator_owner_entity_ref)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "owner_ref", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "owner_ref", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	w_entity_id *owner_osc = w_ecs_get_str(&g_world, w_entity_id, "owner_ref" W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY, owner);
 	ck_assert_ptr_nonnull(owner_osc);
@@ -810,7 +844,7 @@ END_TEST
 START_TEST(test_sine_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sine_zero", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sine_zero", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0, sin(0) = 0
 	float value = w_oscillator_get_value(&g_world, owner, "sine_zero");
@@ -821,7 +855,7 @@ END_TEST
 START_TEST(test_sine_at_phase_quarter)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sine_quarter", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sine_quarter", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// advance to phase 0.25, sin(pi/2) = 1
 	advance_oscillators(0.25);
@@ -834,7 +868,7 @@ END_TEST
 START_TEST(test_sine_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sine_half", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sine_half", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// advance to phase 0.5, sin(pi) = 0
 	advance_oscillators(0.5);
@@ -847,7 +881,7 @@ END_TEST
 START_TEST(test_sine_with_amplitude_offset)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sine_amp", W_OSCILLATOR_TYPE(SINE), 1.0f, 2.0f, 5.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sine_amp", W_OSCILLATOR_TYPE(SINE), 1.0f, 2.0f, 5.0f, 0.0f, 0.0f);
 
 	// at phase 0.25, value = 5 + 2*sin(pi/2) = 5 + 2 = 7
 	advance_oscillators(0.25);
@@ -865,7 +899,7 @@ END_TEST
 START_TEST(test_triangle_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "tri_zero", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "tri_zero", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// trigger update at phase ~0
 	advance_oscillators(0.0001);
@@ -879,7 +913,7 @@ END_TEST
 START_TEST(test_triangle_at_phase_quarter)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "tri_quarter", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "tri_quarter", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0.25: 1 - 4*|0.25 - 0.5| = 1 - 1 = 0
 	advance_oscillators(0.25);
@@ -892,7 +926,7 @@ END_TEST
 START_TEST(test_triangle_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "tri_half", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "tri_half", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0.5: 1 - 4*|0.5 - 0.5| = 1 - 0 = 1
 	advance_oscillators(0.5);
@@ -910,7 +944,7 @@ END_TEST
 START_TEST(test_square_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sq_zero", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sq_zero", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// trigger update at phase ~0
 	advance_oscillators(0.0001);
@@ -924,7 +958,7 @@ END_TEST
 START_TEST(test_square_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "sq_half", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "sq_half", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0.5 >= 0.5: value = -1
 	advance_oscillators(0.5);
@@ -942,7 +976,7 @@ END_TEST
 START_TEST(test_sawtooth_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "saw_zero", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "saw_zero", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// trigger update at phase ~0
 	advance_oscillators(0.0001);
@@ -956,7 +990,7 @@ END_TEST
 START_TEST(test_sawtooth_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "saw_half", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "saw_half", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0.5: 2*0.5 - 1 = 0
 	advance_oscillators(0.5);
@@ -969,7 +1003,7 @@ END_TEST
 START_TEST(test_sawtooth_near_phase_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "saw_one", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "saw_one", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// at phase 0.99: 2*0.99 - 1 = 0.98
 	advance_oscillators(0.99);
@@ -988,7 +1022,7 @@ START_TEST(test_phase_shift_sine)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	// phase_shift 0.25 means sine starts at peak
-	w_oscillator_create(&g_world, owner, "shift_sine", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.25f);
+	w_oscillator_create(&g_world, owner, "shift_sine", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.25f, 0.0f);
 
 	// effective_phase = 0 + 0.25 = 0.25, sin(pi/2) = 1
 	// need to trigger update once
@@ -1007,7 +1041,7 @@ END_TEST
 START_TEST(test_phase_wraps_at_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "wrap_test", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "wrap_test", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// advance 1.5 periods
 	advance_oscillators(1.5);
@@ -1022,7 +1056,7 @@ END_TEST
 START_TEST(test_oscillator_continues_forever)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "forever", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "forever", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// run many cycles
 	for (int i = 0; i < 100; i++)
@@ -1045,7 +1079,7 @@ END_TEST
 START_TEST(test_zero_period_skipped)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "zero_period", W_OSCILLATOR_TYPE(SINE), 0.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "zero_period", W_OSCILLATOR_TYPE(SINE), 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
 	float initial_phase = *phase_before;
@@ -1061,7 +1095,7 @@ END_TEST
 START_TEST(test_negative_period_skipped)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_entity_id osc = w_oscillator_create(&g_world, owner, "neg_period", W_OSCILLATOR_TYPE(SINE), -1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "neg_period", W_OSCILLATOR_TYPE(SINE), -1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
 	float initial_phase = *phase_before;
@@ -1083,8 +1117,8 @@ START_TEST(test_multiple_oscillators_independent)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 
-	w_oscillator_create(&g_world, owner, "multi1", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
-	w_oscillator_create(&g_world, owner, "multi2", W_OSCILLATOR_TYPE(SQUARE), 2.0f, 2.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "multi1", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "multi2", W_OSCILLATOR_TYPE(SQUARE), 2.0f, 2.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.25);
 
@@ -1106,7 +1140,7 @@ END_TEST
 START_TEST(test_inverse_sawtooth_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "inv_saw_zero", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "inv_saw_zero", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.0001);
 
@@ -1119,7 +1153,7 @@ END_TEST
 START_TEST(test_inverse_sawtooth_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "inv_saw_half", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "inv_saw_half", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.5);
 
@@ -1132,7 +1166,7 @@ END_TEST
 START_TEST(test_inverse_sawtooth_near_phase_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "inv_saw_one", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "inv_saw_one", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.99);
 
@@ -1150,7 +1184,7 @@ END_TEST
 START_TEST(test_bounce_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "bounce_zero", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "bounce_zero", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.0001);
 
@@ -1163,7 +1197,7 @@ END_TEST
 START_TEST(test_bounce_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "bounce_half", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "bounce_half", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.5);
 
@@ -1176,7 +1210,7 @@ END_TEST
 START_TEST(test_bounce_at_phase_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "bounce_one", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "bounce_one", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.99);
 
@@ -1194,7 +1228,7 @@ END_TEST
 START_TEST(test_smooth_step_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "smooth_zero", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "smooth_zero", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.0001);
 
@@ -1207,7 +1241,7 @@ END_TEST
 START_TEST(test_smooth_step_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "smooth_half", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "smooth_half", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.5);
 
@@ -1220,7 +1254,7 @@ END_TEST
 START_TEST(test_smooth_step_near_phase_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "smooth_one", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "smooth_one", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.99);
 
@@ -1238,7 +1272,7 @@ END_TEST
 START_TEST(test_rectified_sine_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "rect_zero", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "rect_zero", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.0001);
 
@@ -1251,7 +1285,7 @@ END_TEST
 START_TEST(test_rectified_sine_at_phase_quarter)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "rect_quarter", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "rect_quarter", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.25);
 
@@ -1264,7 +1298,7 @@ END_TEST
 START_TEST(test_rectified_sine_at_phase_half)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "rect_half", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "rect_half", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.5);
 
@@ -1282,7 +1316,7 @@ END_TEST
 START_TEST(test_noise_returns_value_in_range)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "noise_test", W_OSCILLATOR_TYPE(NOISE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "noise_test", W_OSCILLATOR_TYPE(NOISE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	// run multiple times and verify all values are in [-1, 1]
 	for (int i = 0; i < 100; i++) {
@@ -1297,7 +1331,7 @@ END_TEST
 START_TEST(test_noise_with_amplitude_offset)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "noise_amp", W_OSCILLATOR_TYPE(NOISE), 1.0f, 2.0f, 5.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "noise_amp", W_OSCILLATOR_TYPE(NOISE), 1.0f, 2.0f, 5.0f, 0.0f, 0.0f);
 
 	// run multiple times and verify all values are in [5-2, 5+2] = [3, 7]
 	for (int i = 0; i < 100; i++) {
@@ -1317,7 +1351,7 @@ END_TEST
 START_TEST(test_fixed_exponential_at_phase_zero)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "exp_zero", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "exp_zero", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.0001);
 
@@ -1330,7 +1364,7 @@ END_TEST
 START_TEST(test_fixed_exponential_near_phase_one)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "exp_one", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "exp_one", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.99);
 
@@ -1344,7 +1378,7 @@ END_TEST
 START_TEST(test_fixed_exponential_curve_shape)
 {
 	w_entity_id owner = w_ecs_request_entity(&g_world);
-	w_oscillator_create(&g_world, owner, "exp_curve", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "exp_curve", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
 	advance_oscillators(0.5);
 

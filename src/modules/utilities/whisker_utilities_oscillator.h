@@ -2,33 +2,16 @@
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_utilities_oscillator
  * @created     : Wednesday Mar 26, 2026 11:25:00 CST
- * @description : Oscillator utility
+ * @description : ECS oscillator utility wrapping standalone oscillator module
  */
 
 #include "whisker_std.h"
 #include "whisker.h"
+#include "whisker_oscillator.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 
 #ifndef WHISKER_UTILITIES_OSCILLATOR_H
 #define WHISKER_UTILITIES_OSCILLATOR_H
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-// waveform types
-typedef enum wm_waveform_type {
-	WM_WAVEFORM_SINE,
-	WM_WAVEFORM_TRIANGLE,
-	WM_WAVEFORM_SQUARE,
-	WM_WAVEFORM_SAWTOOTH,
-	WM_WAVEFORM_INVERSE_SAWTOOTH,
-	WM_WAVEFORM_BOUNCE,
-	WM_WAVEFORM_SMOOTH_STEP,
-	WM_WAVEFORM_RECTIFIED_SINE,
-	WM_WAVEFORM_NOISE,
-	WM_WAVEFORM_FIXED_EXPONENTIAL
-} wm_waveform_type;
 
 // oscillator components
 // period in seconds for one cycle
@@ -53,14 +36,16 @@ typedef enum wm_waveform_type {
 #define W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY "_oscillator_entity"
 // pre-registered component ID for value component on owner
 #define W_OSCILLATOR_COMPONENT_VALUE_COMP_ID "oscillator_value_comp_id"
+// extra parameter for special waveform types (duty_cycle, step_count, exponent)
+#define W_OSCILLATOR_COMPONENT_EXTRA_PARAM "oscillator_extra_param"
 
 // helper macro to build waveform enum from short name
-#define W_OSCILLATOR_TYPE(type) WM_WAVEFORM_##type
+#define W_OSCILLATOR_TYPE(type) W_WAVEFORM_##type
 
 // create full oscillator component name
 #define W_OSCILLATOR_QUERY(name, component) name component
 
-static inline w_entity_id w_oscillator_create(struct w_ecs_world *world, w_entity_id owner, const char *name, wm_waveform_type type, float period, float amplitude, float offset, float phase_shift) {
+static inline w_entity_id w_oscillator_create(struct w_ecs_world *world, w_entity_id owner, const char *name, w_waveform_type type, float period, float amplitude, float offset, float phase_shift, float extra_param) {
 	// create oscillator entity with name
 	char oscillator_name[128];
 	char hash[17];
@@ -77,6 +62,7 @@ static inline w_entity_id w_oscillator_create(struct w_ecs_world *world, w_entit
 	int type_int = (int)type;
 	w_ecs_set_str(world, int, W_OSCILLATOR_COMPONENT_TYPE, oscillator, &type_int);
 	w_ecs_set_str(world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, oscillator, &owner);
+	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_EXTRA_PARAM, oscillator, &extra_param);
 
 	// owner reference: "{name}_oscillator_entity"
 	char oscillator_entity_name[128];
@@ -95,38 +81,47 @@ static inline w_entity_id w_oscillator_create(struct w_ecs_world *world, w_entit
 	return oscillator;
 }
 
-// compute waveform value from effective phase
-static inline float w_oscillator_compute_value_(wm_waveform_type type, float effective_phase, float amplitude, float offset) {
-	float t;
-	switch (type) {
-		case WM_WAVEFORM_SINE:
-			return offset + amplitude * sinf(effective_phase * 2.0f * (float)M_PI);
-		case WM_WAVEFORM_TRIANGLE:
-			return offset + amplitude * (1.0f - 4.0f * fabsf(effective_phase - 0.5f));
-		case WM_WAVEFORM_SQUARE:
-			return offset + amplitude * (effective_phase < 0.5f ? 1.0f : -1.0f);
-		case WM_WAVEFORM_SAWTOOTH:
-			return offset + amplitude * (2.0f * effective_phase - 1.0f);
-		case WM_WAVEFORM_INVERSE_SAWTOOTH:
-			return offset + amplitude * (1.0f - 2.0f * effective_phase);
-		case WM_WAVEFORM_BOUNCE:
-			return offset + amplitude * fabsf(sinf(effective_phase * (float)M_PI));
-		case WM_WAVEFORM_SMOOTH_STEP:
-			// hermite interpolation mapped to [-1..1]
-			t = effective_phase;
-			return offset + amplitude * (2.0f * (t * t * (3.0f - 2.0f * t)) - 1.0f);
-		case WM_WAVEFORM_RECTIFIED_SINE:
-			return offset + amplitude * (2.0f * fabsf(sinf(effective_phase * 2.0f * (float)M_PI)) - 1.0f);
-		case WM_WAVEFORM_NOISE:
-			return offset + amplitude * (2.0f * w_rand_float() - 1.0f);
-		case WM_WAVEFORM_FIXED_EXPONENTIAL:
-			// exponential curve with fixed curvature (k=3)
-			t = effective_phase;
-			return offset + amplitude * (2.0f * ((expf(3.0f * t) - 1.0f) / (expf(3.0f) - 1.0f)) - 1.0f);
-		default:
-			return offset;
-	}
-}
+// convenience macros for standard waveform types (extra_param unused, pass 0)
+#define w_oscillator_create_sine(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_SINE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_triangle(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_TRIANGLE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_square(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_SQUARE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_sawtooth(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_SAWTOOTH, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_inverse_sawtooth(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_INVERSE_SAWTOOTH, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_bounce(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_BOUNCE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_smooth_step(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_SMOOTH_STEP, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_rectified_sine(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_RECTIFIED_SINE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_noise(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_NOISE, period, amplitude, offset, phase_shift, 0.0f)
+
+#define w_oscillator_create_fixed_exponential(world, owner, name, period, amplitude, offset, phase_shift) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_FIXED_EXPONENTIAL, period, amplitude, offset, phase_shift, 0.0f)
+
+// specialized macros for waveform types with extra parameters
+#define w_oscillator_create_pwm(world, owner, name, period, amplitude, offset, phase_shift, duty_cycle) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_PULSE, period, amplitude, offset, phase_shift, duty_cycle)
+
+#define w_oscillator_create_steps(world, owner, name, period, amplitude, offset, phase_shift, step_count) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_STEPS, period, amplitude, offset, phase_shift, (float)(step_count))
+
+#define w_oscillator_create_variable_exponential(world, owner, name, period, amplitude, offset, phase_shift, exponent) \
+	w_oscillator_create(world, owner, name, W_WAVEFORM_VARIABLE_EXPONENTIAL, period, amplitude, offset, phase_shift, exponent)
+
 
 // get current oscillator value for an owner by name
 static inline float w_oscillator_get_value(struct w_ecs_world *world, w_entity_id owner, const char *name) {
@@ -148,6 +143,7 @@ w_ecs_system(
 		w_query_read(W_OSCILLATOR_COMPONENT_TYPE)
 		w_query_read(W_OSCILLATOR_COMPONENT_OWNER_ENTITY)
 		w_query_read(W_OSCILLATOR_COMPONENT_VALUE_COMP_ID)
+		w_query_read(W_OSCILLATOR_COMPONENT_EXTRA_PARAM)
 	,
 {
 	float *phase = w_itor_get_write(float);
@@ -155,25 +151,22 @@ w_ecs_system(
 	float amplitude = w_itor_get_read(float);
 	float offset = w_itor_get_read(float);
 	float phase_shift = w_itor_get_read(float);
-	wm_waveform_type type = w_itor_get_read(int);
+	w_waveform_type type = w_itor_get_read(int);
 	w_entity_id owner = w_itor_get_read(w_entity_id);
 	w_entity_id value_comp_id = w_itor_get_read(w_entity_id);
+	float extra_param = w_itor_get_read(float);
 
 	// skip if period is invalid
 	if (period <= 0.0f) continue;
 
-	// update phase
-	*phase += delta_time / period;
-	// normalize to [0..1)
-	*phase = fmodf(*phase, 1.0f);
-	if (*phase < 0.0f) *phase += 1.0f;
+	// update phase using standalone function
+	w_oscillator_update_phase(phase, delta_time, period);
 
 	// compute effective phase with phase shift
-	float effective_phase = fmodf(*phase + phase_shift, 1.0f);
-	if (effective_phase < 0.0f) effective_phase += 1.0f;
+	float effective_phase = w_oscillator_effective_phase(*phase, phase_shift);
 
-	// compute value
-	float value = w_oscillator_compute_value_(type, effective_phase, amplitude, offset);
+	// compute value using standalone function with extra param support
+	float value = w_oscillator_compute_ext(type, effective_phase, amplitude, offset, extra_param);
 
 	// update owner value component using pre-registered component ID
 	if (w_entity_is_valid(value_comp_id) && w_entity_is_valid(owner)) {
