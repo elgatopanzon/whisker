@@ -10,6 +10,8 @@
 void wm_utils_init(struct w_ecs_world *world)
 {
 	wm_utils_timer_update_system_register(world);
+	wm_utils_oscillator_update_system_register(world);
+	wm_utils_random_update_system_register(world);
 }
 
 void wm_utils_free(struct w_ecs_world *world)

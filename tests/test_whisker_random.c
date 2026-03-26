@@ -264,6 +264,176 @@ END_TEST
 
 
 /*****************************
+*  w_pcg tcase               *
+*****************************/
+
+START_TEST(test_pcg_init_sets_state_and_inc)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 12345, 1);
+	// increment should be odd: (stream << 1) | 1
+	ck_assert_int_eq(inc, 3);
+	// state should be non-zero after init
+	ck_assert_int_ne(state, 0);
+}
+END_TEST
+
+START_TEST(test_pcg_step_advances_state)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 42, 0);
+	uint64_t initial_state = state;
+	w_pcg_step(&state, inc);
+	ck_assert_int_ne(state, initial_state);
+}
+END_TEST
+
+START_TEST(test_pcg_step_deterministic)
+{
+	// same seed should produce same sequence
+	uint64_t state1, inc1, state2, inc2;
+	w_pcg_init(&state1, &inc1, 12345, 67890);
+	w_pcg_init(&state2, &inc2, 12345, 67890);
+
+	for (int i = 0; i < 100; i++) {
+		uint32_t r1 = w_pcg_step(&state1, inc1);
+		uint32_t r2 = w_pcg_step(&state2, inc2);
+		ck_assert_uint_eq(r1, r2);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_different_seeds_different_output)
+{
+	uint64_t state1, inc1, state2, inc2;
+	w_pcg_init(&state1, &inc1, 111, 0);
+	w_pcg_init(&state2, &inc2, 222, 0);
+
+	uint32_t r1 = w_pcg_step(&state1, inc1);
+	uint32_t r2 = w_pcg_step(&state2, inc2);
+	ck_assert_uint_ne(r1, r2);
+}
+END_TEST
+
+START_TEST(test_pcg_different_streams_different_output)
+{
+	uint64_t state1, inc1, state2, inc2;
+	w_pcg_init(&state1, &inc1, 12345, 1);
+	w_pcg_init(&state2, &inc2, 12345, 2);
+
+	uint32_t r1 = w_pcg_step(&state1, inc1);
+	uint32_t r2 = w_pcg_step(&state2, inc2);
+	ck_assert_uint_ne(r1, r2);
+}
+END_TEST
+
+START_TEST(test_pcg_next_double_range)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 999, 0);
+
+	for (int i = 0; i < 1000; i++) {
+		double d = w_pcg_next_double(&state, inc);
+		ck_assert(d >= 0.0);
+		ck_assert(d < 1.0);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_double_distribution)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 54321, 0);
+
+	// check that values are spread across the range
+	int buckets[10] = {0};
+	for (int i = 0; i < 10000; i++) {
+		double d = w_pcg_next_double(&state, inc);
+		int bucket = (int)(d * 10);
+		if (bucket >= 10) bucket = 9;
+		buckets[bucket]++;
+	}
+
+	// each bucket should have some values (loose check)
+	for (int i = 0; i < 10; i++) {
+		ck_assert_int_gt(buckets[i], 500);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_int64_range)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 777, 0);
+
+	for (int i = 0; i < 1000; i++) {
+		int64_t val = w_pcg_next_int64(&state, inc, 10, 20);
+		ck_assert_int_ge(val, 10);
+		ck_assert_int_le(val, 20);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_int64_negative_range)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 888, 0);
+
+	for (int i = 0; i < 1000; i++) {
+		int64_t val = w_pcg_next_int64(&state, inc, -100, -50);
+		ck_assert_int_ge(val, -100);
+		ck_assert_int_le(val, -50);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_int64_swapped_range)
+{
+	// min > max should still work
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 111, 0);
+
+	for (int i = 0; i < 100; i++) {
+		int64_t val = w_pcg_next_int64(&state, inc, 100, 0);
+		ck_assert_int_ge(val, 0);
+		ck_assert_int_le(val, 100);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_int64_single_value)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 222, 0);
+
+	for (int i = 0; i < 100; i++) {
+		int64_t val = w_pcg_next_int64(&state, inc, 42, 42);
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+START_TEST(test_pcg_next_int64_distribution)
+{
+	uint64_t state, inc;
+	w_pcg_init(&state, &inc, 333, 0);
+
+	// check distribution across range 0-9
+	int counts[10] = {0};
+	for (int i = 0; i < 10000; i++) {
+		int64_t val = w_pcg_next_int64(&state, inc, 0, 9);
+		counts[val]++;
+	}
+
+	// each value should appear roughly 1000 times (loose check)
+	for (int i = 0; i < 10; i++) {
+		ck_assert_int_gt(counts[i], 500);
+	}
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -305,6 +475,22 @@ Suite *whisker_random_suite(void)
 	tcase_add_test(tc_chars, test_rand_chars_different_calls);
 	tcase_add_test(tc_chars, test_rand_chars_various_sizes);
 	suite_add_tcase(s, tc_chars);
+
+	TCase *tc_pcg = tcase_create("pcg");
+	tcase_set_timeout(tc_pcg, 10);
+	tcase_add_test(tc_pcg, test_pcg_init_sets_state_and_inc);
+	tcase_add_test(tc_pcg, test_pcg_step_advances_state);
+	tcase_add_test(tc_pcg, test_pcg_step_deterministic);
+	tcase_add_test(tc_pcg, test_pcg_different_seeds_different_output);
+	tcase_add_test(tc_pcg, test_pcg_different_streams_different_output);
+	tcase_add_test(tc_pcg, test_pcg_next_double_range);
+	tcase_add_test(tc_pcg, test_pcg_next_double_distribution);
+	tcase_add_test(tc_pcg, test_pcg_next_int64_range);
+	tcase_add_test(tc_pcg, test_pcg_next_int64_negative_range);
+	tcase_add_test(tc_pcg, test_pcg_next_int64_swapped_range);
+	tcase_add_test(tc_pcg, test_pcg_next_int64_single_value);
+	tcase_add_test(tc_pcg, test_pcg_next_int64_distribution);
+	suite_add_tcase(s, tc_pcg);
 
 	return s;
 }
