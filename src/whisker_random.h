@@ -47,5 +47,12 @@
 	(buf)[hex_count] = '\0'; \
 } while(0)
 
+// generate random float in [0.0, 1.0)
+static inline float w_rand_float(void) {
+	uint32_t r;
+	w_rand_bytes((uint8_t *)&r, sizeof(r));
+	return (float)(r >> 8) / 16777216.0f;
+}
+
 #endif /* WHISKER_RANDOM_H */
 

@@ -2,7 +2,7 @@
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : test_utilities
  * @created     : Monday Mar 24, 2026 16:15:00 CST
- * @description : tests for whisker_utilities module (timer system)
+ * @description : tests for whisker_utilities module (timer and oscillator systems)
  */
 
 #include "whisker_std.h"
@@ -606,12 +606,765 @@ END_TEST
 
 
 /*****************************
+*  oscillator fixture        *
+*****************************/
+
+static void oscillator_setup(void)
+{
+	w_arena_init(&g_arena, 64 * 1024);
+	w_string_table_init(&g_string_table, &g_arena, 16, 64, NULL);
+	w_ecs_world_init(&g_world, &g_string_table, &g_arena);
+	wm_scheduler_defaults_init(&g_world, 60.0);
+	wm_utils_init(&g_world);
+}
+
+static void oscillator_teardown(void)
+{
+	wm_utils_free(&g_world);
+	wm_scheduler_defaults_free(&g_world);
+	w_ecs_world_free(&g_world);
+	w_string_table_free(&g_string_table);
+	w_arena_free(&g_arena);
+}
+
+// oscillator system query string
+#define OSCILLATOR_QUERY_STRING \
+	w_query_write(W_OSCILLATOR_COMPONENT_PHASE) \
+	w_query_read(W_OSCILLATOR_COMPONENT_PERIOD) \
+	w_query_read(W_OSCILLATOR_COMPONENT_AMPLITUDE) \
+	w_query_read(W_OSCILLATOR_COMPONENT_OFFSET) \
+	w_query_read(W_OSCILLATOR_COMPONENT_PHASE_SHIFT) \
+	w_query_read(W_OSCILLATOR_COMPONENT_TYPE) \
+	w_query_read(W_OSCILLATOR_COMPONENT_OWNER_ENTITY)
+
+// advance oscillators by delta time
+static void advance_oscillators(double delta_seconds)
+{
+	struct w_query *q = w_ecs_get_query(&g_world, OSCILLATOR_QUERY_STRING);
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	for (size_t i = 0; i < q->archetype_slices_dense_length; ++i)
+	{
+		struct w_query_archetype_slice slice = q->archetype_slices_dense[i];
+		for (size_t s = 0; s < slice.slice_length; ++s)
+		{
+			w_entity_id osc = slice.start_id + s;
+
+			float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+			float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
+			float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
+			float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
+			float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
+			int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
+			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
+
+			if (!phase || !period || !amplitude || !offset || !phase_shift || !type || !owner) continue;
+			if (*period <= 0.0f) continue;
+
+			*phase += delta_seconds / *period;
+			*phase = fmodf(*phase, 1.0f);
+			if (*phase < 0.0f) *phase += 1.0f;
+
+			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
+			if (effective_phase < 0.0f) effective_phase += 1.0f;
+
+			float value = w_oscillator_compute_value_((wm_waveform_type)*type, effective_phase, *amplitude, *offset);
+
+			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
+			if (osc_name && w_entity_is_valid(*owner)) {
+				char *last_underscore = strrchr(osc_name, '_');
+				if (last_underscore) {
+					size_t prefix_len = last_underscore - osc_name;
+					char value_name[128];
+					snprintf(value_name, sizeof(value_name), "%.*s" W_OSCILLATOR_COMPONENT_VALUE, (int)prefix_len, osc_name);
+					w_ecs_set_str(&g_world, float, value_name, *owner, &value);
+				}
+			}
+		}
+	}
+
+	for (size_t i = 0; i < q->archetype_slices_sparse_length; ++i)
+	{
+		struct w_query_archetype_slice slice = q->archetype_slices_sparse[i];
+		for (size_t s = 0; s < slice.slice_length; ++s)
+		{
+			w_entity_id osc = slice.start_id + s;
+
+			float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+			float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
+			float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
+			float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
+			float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
+			int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
+			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
+
+			if (!phase || !period || !amplitude || !offset || !phase_shift || !type || !owner) continue;
+			if (*period <= 0.0f) continue;
+
+			*phase += delta_seconds / *period;
+			*phase = fmodf(*phase, 1.0f);
+			if (*phase < 0.0f) *phase += 1.0f;
+
+			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
+			if (effective_phase < 0.0f) effective_phase += 1.0f;
+
+			float value = w_oscillator_compute_value_((wm_waveform_type)*type, effective_phase, *amplitude, *offset);
+
+			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
+			if (osc_name && w_entity_is_valid(*owner)) {
+				char *last_underscore = strrchr(osc_name, '_');
+				if (last_underscore) {
+					size_t prefix_len = last_underscore - osc_name;
+					char value_name[128];
+					snprintf(value_name, sizeof(value_name), "%.*s" W_OSCILLATOR_COMPONENT_VALUE, (int)prefix_len, osc_name);
+					w_ecs_set_str(&g_world, float, value_name, *owner, &value);
+				}
+			}
+		}
+	}
+}
+
+
+/*****************************
+*  oscillator entity name    *
+*****************************/
+
+START_TEST(test_oscillator_entity_gets_name)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	char *name = w_ecs_get_entity_name(&g_world, osc);
+	ck_assert_ptr_nonnull(name);
+	ck_assert_msg(strncmp(name, "test_osc_", 9) == 0,
+		"oscillator name should start with 'test_osc_', got: %s", name);
+	ck_assert_int_eq(strlen(name), 9 + 16);
+}
+END_TEST
+
+START_TEST(test_oscillator_entity_names_unique)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc1 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_entity_id osc2 = w_oscillator_create(&g_world, owner, "osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	char *name1 = w_ecs_get_entity_name(&g_world, osc1);
+	char *name2 = w_ecs_get_entity_name(&g_world, osc2);
+
+	ck_assert_str_ne(name1, name2);
+}
+END_TEST
+
+
+/*****************************
+*  oscillator components     *
+*****************************/
+
+START_TEST(test_oscillator_components_set)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "comp_test", W_OSCILLATOR_TYPE(TRIANGLE), 2.0f, 0.5f, 1.0f, 0.25f);
+
+	float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
+	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
+	float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
+	float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
+	int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
+	w_entity_id *owner_ref = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
+
+	ck_assert_ptr_nonnull(period);
+	ck_assert_ptr_nonnull(phase);
+	ck_assert_ptr_nonnull(amplitude);
+	ck_assert_ptr_nonnull(offset);
+	ck_assert_ptr_nonnull(phase_shift);
+	ck_assert_ptr_nonnull(type);
+	ck_assert_ptr_nonnull(owner_ref);
+
+	ck_assert_float_eq(*period, 2.0f);
+	ck_assert_float_eq(*phase, 0.0f);
+	ck_assert_float_eq(*amplitude, 0.5f);
+	ck_assert_float_eq(*offset, 1.0f);
+	ck_assert_float_eq(*phase_shift, 0.25f);
+	ck_assert_int_eq(*type, (int)WM_WAVEFORM_TRIANGLE);
+	ck_assert_int_eq(*owner_ref, owner);
+}
+END_TEST
+
+START_TEST(test_oscillator_owner_entity_ref)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "owner_ref", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	w_entity_id *owner_osc = w_ecs_get_str(&g_world, w_entity_id, "owner_ref" W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY, owner);
+	ck_assert_ptr_nonnull(owner_osc);
+	ck_assert_int_eq(*owner_osc, osc);
+}
+END_TEST
+
+
+/*****************************
+*  sine waveform             *
+*****************************/
+
+START_TEST(test_sine_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sine_zero", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0, sin(0) = 0
+	float value = w_oscillator_get_value(&g_world, owner, "sine_zero");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_sine_at_phase_quarter)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sine_quarter", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// advance to phase 0.25, sin(pi/2) = 1
+	advance_oscillators(0.25);
+
+	float value = w_oscillator_get_value(&g_world, owner, "sine_quarter");
+	ck_assert_float_eq_tol(value, 1.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_sine_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sine_half", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// advance to phase 0.5, sin(pi) = 0
+	advance_oscillators(0.5);
+
+	float value = w_oscillator_get_value(&g_world, owner, "sine_half");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_sine_with_amplitude_offset)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sine_amp", W_OSCILLATOR_TYPE(SINE), 1.0f, 2.0f, 5.0f, 0.0f);
+
+	// at phase 0.25, value = 5 + 2*sin(pi/2) = 5 + 2 = 7
+	advance_oscillators(0.25);
+
+	float value = w_oscillator_get_value(&g_world, owner, "sine_amp");
+	ck_assert_float_eq_tol(value, 7.0f, 0.001f);
+}
+END_TEST
+
+
+/*****************************
+*  triangle waveform         *
+*****************************/
+
+START_TEST(test_triangle_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "tri_zero", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// trigger update at phase ~0
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 1 - 4*|0 - 0.5| = 1 - 2 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "tri_zero");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_triangle_at_phase_quarter)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "tri_quarter", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0.25: 1 - 4*|0.25 - 0.5| = 1 - 1 = 0
+	advance_oscillators(0.25);
+
+	float value = w_oscillator_get_value(&g_world, owner, "tri_quarter");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_triangle_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "tri_half", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0.5: 1 - 4*|0.5 - 0.5| = 1 - 0 = 1
+	advance_oscillators(0.5);
+
+	float value = w_oscillator_get_value(&g_world, owner, "tri_half");
+	ck_assert_float_eq_tol(value, 1.0f, 0.001f);
+}
+END_TEST
+
+
+/*****************************
+*  square waveform           *
+*****************************/
+
+START_TEST(test_square_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sq_zero", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// trigger update at phase ~0
+	advance_oscillators(0.0001);
+
+	// at phase ~0 < 0.5: value = 1
+	float value = w_oscillator_get_value(&g_world, owner, "sq_zero");
+	ck_assert_float_eq_tol(value, 1.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_square_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "sq_half", W_OSCILLATOR_TYPE(SQUARE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0.5 >= 0.5: value = -1
+	advance_oscillators(0.5);
+
+	float value = w_oscillator_get_value(&g_world, owner, "sq_half");
+	ck_assert_float_eq_tol(value, -1.0f, 0.001f);
+}
+END_TEST
+
+
+/*****************************
+*  sawtooth waveform         *
+*****************************/
+
+START_TEST(test_sawtooth_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "saw_zero", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// trigger update at phase ~0
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 2*0 - 1 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "saw_zero");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_sawtooth_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "saw_half", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0.5: 2*0.5 - 1 = 0
+	advance_oscillators(0.5);
+
+	float value = w_oscillator_get_value(&g_world, owner, "saw_half");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_sawtooth_near_phase_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "saw_one", W_OSCILLATOR_TYPE(SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// at phase 0.99: 2*0.99 - 1 = 0.98
+	advance_oscillators(0.99);
+
+	float value = w_oscillator_get_value(&g_world, owner, "saw_one");
+	ck_assert_float_eq_tol(value, 0.98f, 0.02f);
+}
+END_TEST
+
+
+/*****************************
+*  phase shift               *
+*****************************/
+
+START_TEST(test_phase_shift_sine)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	// phase_shift 0.25 means sine starts at peak
+	w_oscillator_create(&g_world, owner, "shift_sine", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.25f);
+
+	// effective_phase = 0 + 0.25 = 0.25, sin(pi/2) = 1
+	// need to trigger update once
+	advance_oscillators(0.0001);
+
+	float value = w_oscillator_get_value(&g_world, owner, "shift_sine");
+	ck_assert_float_eq_tol(value, 1.0f, 0.01f);
+}
+END_TEST
+
+
+/*****************************
+*  phase cycling             *
+*****************************/
+
+START_TEST(test_phase_wraps_at_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "wrap_test", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// advance 1.5 periods
+	advance_oscillators(1.5);
+
+	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	ck_assert_ptr_nonnull(phase);
+	// phase should wrap to 0.5
+	ck_assert_float_eq_tol(*phase, 0.5f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_oscillator_continues_forever)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "forever", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// run many cycles
+	for (int i = 0; i < 100; i++)
+	{
+		advance_oscillators(0.1);
+	}
+
+	// oscillator should still exist and function
+	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	ck_assert_ptr_nonnull(phase);
+	ck_assert(*phase >= 0.0f && *phase < 1.0f);
+}
+END_TEST
+
+
+/*****************************
+*  invalid period            *
+*****************************/
+
+START_TEST(test_zero_period_skipped)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "zero_period", W_OSCILLATOR_TYPE(SINE), 0.0f, 1.0f, 0.0f, 0.0f);
+
+	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	float initial_phase = *phase_before;
+
+	advance_oscillators(1.0);
+
+	float *phase_after = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	// phase should not change with zero period
+	ck_assert_float_eq(*phase_after, initial_phase);
+}
+END_TEST
+
+START_TEST(test_negative_period_skipped)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = w_oscillator_create(&g_world, owner, "neg_period", W_OSCILLATOR_TYPE(SINE), -1.0f, 1.0f, 0.0f, 0.0f);
+
+	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	float initial_phase = *phase_before;
+
+	advance_oscillators(1.0);
+
+	float *phase_after = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	// phase should not change with negative period
+	ck_assert_float_eq(*phase_after, initial_phase);
+}
+END_TEST
+
+
+/*****************************
+*  multiple oscillators      *
+*****************************/
+
+START_TEST(test_multiple_oscillators_independent)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+
+	w_oscillator_create(&g_world, owner, "multi1", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+	w_oscillator_create(&g_world, owner, "multi2", W_OSCILLATOR_TYPE(SQUARE), 2.0f, 2.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.25);
+
+	float val1 = w_oscillator_get_value(&g_world, owner, "multi1");
+	float val2 = w_oscillator_get_value(&g_world, owner, "multi2");
+
+	// sine at 0.25: sin(pi/2) = 1
+	ck_assert_float_eq_tol(val1, 1.0f, 0.001f);
+	// square at phase 0.125 (0.25/2): < 0.5, so value = 2
+	ck_assert_float_eq_tol(val2, 2.0f, 0.001f);
+}
+END_TEST
+
+
+/*****************************
+*  inverse sawtooth waveform *
+*****************************/
+
+START_TEST(test_inverse_sawtooth_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "inv_saw_zero", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 1 - 2*0 = 1
+	float value = w_oscillator_get_value(&g_world, owner, "inv_saw_zero");
+	ck_assert_float_eq_tol(value, 1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_inverse_sawtooth_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "inv_saw_half", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.5);
+
+	// at phase 0.5: 1 - 2*0.5 = 0
+	float value = w_oscillator_get_value(&g_world, owner, "inv_saw_half");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_inverse_sawtooth_near_phase_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "inv_saw_one", W_OSCILLATOR_TYPE(INVERSE_SAWTOOTH), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.99);
+
+	// at phase ~1: 1 - 2*0.99 = -0.98
+	float value = w_oscillator_get_value(&g_world, owner, "inv_saw_one");
+	ck_assert_float_eq_tol(value, -0.98f, 0.02f);
+}
+END_TEST
+
+
+/*****************************
+*  bounce waveform           *
+*****************************/
+
+START_TEST(test_bounce_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "bounce_zero", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.0001);
+
+	// at phase ~0: |sin(0)| = 0
+	float value = w_oscillator_get_value(&g_world, owner, "bounce_zero");
+	ck_assert_float_eq_tol(value, 0.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_bounce_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "bounce_half", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.5);
+
+	// at phase 0.5: |sin(pi/2)| = 1
+	float value = w_oscillator_get_value(&g_world, owner, "bounce_half");
+	ck_assert_float_eq_tol(value, 1.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_bounce_at_phase_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "bounce_one", W_OSCILLATOR_TYPE(BOUNCE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.99);
+
+	// at phase ~1: |sin(pi)| ~= 0
+	float value = w_oscillator_get_value(&g_world, owner, "bounce_one");
+	ck_assert_float_eq_tol(value, 0.0f, 0.05f);
+}
+END_TEST
+
+
+/*****************************
+*  smooth step waveform      *
+*****************************/
+
+START_TEST(test_smooth_step_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "smooth_zero", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 2*(0) - 1 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "smooth_zero");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_smooth_step_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "smooth_half", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.5);
+
+	// at phase 0.5: hermite(0.5) = 0.5, so 2*0.5 - 1 = 0
+	float value = w_oscillator_get_value(&g_world, owner, "smooth_half");
+	ck_assert_float_eq_tol(value, 0.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_smooth_step_near_phase_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "smooth_one", W_OSCILLATOR_TYPE(SMOOTH_STEP), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.99);
+
+	// at phase ~1: hermite(1) = 1, so 2*1 - 1 = 1
+	float value = w_oscillator_get_value(&g_world, owner, "smooth_one");
+	ck_assert_float_eq_tol(value, 1.0f, 0.01f);
+}
+END_TEST
+
+
+/*****************************
+*  rectified sine waveform   *
+*****************************/
+
+START_TEST(test_rectified_sine_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "rect_zero", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 2*|sin(0)| - 1 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "rect_zero");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_rectified_sine_at_phase_quarter)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "rect_quarter", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.25);
+
+	// at phase 0.25: 2*|sin(pi/2)| - 1 = 2*1 - 1 = 1
+	float value = w_oscillator_get_value(&g_world, owner, "rect_quarter");
+	ck_assert_float_eq_tol(value, 1.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_rectified_sine_at_phase_half)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "rect_half", W_OSCILLATOR_TYPE(RECTIFIED_SINE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.5);
+
+	// at phase 0.5: 2*|sin(pi)| - 1 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "rect_half");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+
+/*****************************
+*  noise waveform            *
+*****************************/
+
+START_TEST(test_noise_returns_value_in_range)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "noise_test", W_OSCILLATOR_TYPE(NOISE), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	// run multiple times and verify all values are in [-1, 1]
+	for (int i = 0; i < 100; i++) {
+		advance_oscillators(0.01);
+		float value = w_oscillator_get_value(&g_world, owner, "noise_test");
+		ck_assert_float_ge(value, -1.0f);
+		ck_assert_float_le(value, 1.0f);
+	}
+}
+END_TEST
+
+START_TEST(test_noise_with_amplitude_offset)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "noise_amp", W_OSCILLATOR_TYPE(NOISE), 1.0f, 2.0f, 5.0f, 0.0f);
+
+	// run multiple times and verify all values are in [5-2, 5+2] = [3, 7]
+	for (int i = 0; i < 100; i++) {
+		advance_oscillators(0.01);
+		float value = w_oscillator_get_value(&g_world, owner, "noise_amp");
+		ck_assert_float_ge(value, 3.0f);
+		ck_assert_float_le(value, 7.0f);
+	}
+}
+END_TEST
+
+
+/*****************************
+*  fixed exponential waveform*
+*****************************/
+
+START_TEST(test_fixed_exponential_at_phase_zero)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "exp_zero", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.0001);
+
+	// at phase ~0: 2*(0) - 1 = -1
+	float value = w_oscillator_get_value(&g_world, owner, "exp_zero");
+	ck_assert_float_eq_tol(value, -1.0f, 0.01f);
+}
+END_TEST
+
+START_TEST(test_fixed_exponential_near_phase_one)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "exp_one", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.99);
+
+	// at phase 0.99: approaches 1 but doesn't quite reach due to curve shape
+	float value = w_oscillator_get_value(&g_world, owner, "exp_one");
+	ck_assert_float_gt(value, 0.9f);
+	ck_assert_float_le(value, 1.0f);
+}
+END_TEST
+
+START_TEST(test_fixed_exponential_curve_shape)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_oscillator_create(&g_world, owner, "exp_curve", W_OSCILLATOR_TYPE(FIXED_EXPONENTIAL), 1.0f, 1.0f, 0.0f, 0.0f);
+
+	advance_oscillators(0.5);
+
+	// at phase 0.5: exponential should be below linear (which would be 0)
+	// (exp(1.5) - 1) / (exp(3) - 1) ~= 0.2
+	// 2*0.2 - 1 = -0.6
+	float value = w_oscillator_get_value(&g_world, owner, "exp_curve");
+	ck_assert_float_lt(value, 0.0f);
+	ck_assert_float_gt(value, -1.0f);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
 Suite *utilities_suite(void)
 {
-	Suite *s = suite_create("utilities_timer");
+	Suite *s = suite_create("utilities");
 
 	TCase *tc_name = tcase_create("timer_name");
 	tcase_add_checked_fixture(tc_name, timer_setup, timer_teardown);
@@ -668,6 +1421,126 @@ Suite *utilities_suite(void)
 	tcase_add_test(tc_stress, test_timer_stress_many_timers);
 	tcase_add_test(tc_stress, test_timer_stress_rapid_create_destroy);
 	suite_add_tcase(s, tc_stress);
+
+	// oscillator tests
+	TCase *tc_osc_name = tcase_create("oscillator_name");
+	tcase_add_checked_fixture(tc_osc_name, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_osc_name, 10);
+	tcase_add_test(tc_osc_name, test_oscillator_entity_gets_name);
+	tcase_add_test(tc_osc_name, test_oscillator_entity_names_unique);
+	suite_add_tcase(s, tc_osc_name);
+
+	TCase *tc_osc_comp = tcase_create("oscillator_components");
+	tcase_add_checked_fixture(tc_osc_comp, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_osc_comp, 10);
+	tcase_add_test(tc_osc_comp, test_oscillator_components_set);
+	tcase_add_test(tc_osc_comp, test_oscillator_owner_entity_ref);
+	suite_add_tcase(s, tc_osc_comp);
+
+	TCase *tc_sine = tcase_create("sine_waveform");
+	tcase_add_checked_fixture(tc_sine, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_sine, 10);
+	tcase_add_test(tc_sine, test_sine_at_phase_zero);
+	tcase_add_test(tc_sine, test_sine_at_phase_quarter);
+	tcase_add_test(tc_sine, test_sine_at_phase_half);
+	tcase_add_test(tc_sine, test_sine_with_amplitude_offset);
+	suite_add_tcase(s, tc_sine);
+
+	TCase *tc_triangle = tcase_create("triangle_waveform");
+	tcase_add_checked_fixture(tc_triangle, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_triangle, 10);
+	tcase_add_test(tc_triangle, test_triangle_at_phase_zero);
+	tcase_add_test(tc_triangle, test_triangle_at_phase_quarter);
+	tcase_add_test(tc_triangle, test_triangle_at_phase_half);
+	suite_add_tcase(s, tc_triangle);
+
+	TCase *tc_square = tcase_create("square_waveform");
+	tcase_add_checked_fixture(tc_square, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_square, 10);
+	tcase_add_test(tc_square, test_square_at_phase_zero);
+	tcase_add_test(tc_square, test_square_at_phase_half);
+	suite_add_tcase(s, tc_square);
+
+	TCase *tc_sawtooth = tcase_create("sawtooth_waveform");
+	tcase_add_checked_fixture(tc_sawtooth, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_sawtooth, 10);
+	tcase_add_test(tc_sawtooth, test_sawtooth_at_phase_zero);
+	tcase_add_test(tc_sawtooth, test_sawtooth_at_phase_half);
+	tcase_add_test(tc_sawtooth, test_sawtooth_near_phase_one);
+	suite_add_tcase(s, tc_sawtooth);
+
+	TCase *tc_phase_shift = tcase_create("phase_shift");
+	tcase_add_checked_fixture(tc_phase_shift, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_phase_shift, 10);
+	tcase_add_test(tc_phase_shift, test_phase_shift_sine);
+	suite_add_tcase(s, tc_phase_shift);
+
+	TCase *tc_phase_cycle = tcase_create("phase_cycling");
+	tcase_add_checked_fixture(tc_phase_cycle, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_phase_cycle, 10);
+	tcase_add_test(tc_phase_cycle, test_phase_wraps_at_one);
+	tcase_add_test(tc_phase_cycle, test_oscillator_continues_forever);
+	suite_add_tcase(s, tc_phase_cycle);
+
+	TCase *tc_invalid = tcase_create("invalid_period");
+	tcase_add_checked_fixture(tc_invalid, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_invalid, 10);
+	tcase_add_test(tc_invalid, test_zero_period_skipped);
+	tcase_add_test(tc_invalid, test_negative_period_skipped);
+	suite_add_tcase(s, tc_invalid);
+
+	TCase *tc_osc_multi = tcase_create("multiple_oscillators");
+	tcase_add_checked_fixture(tc_osc_multi, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_osc_multi, 10);
+	tcase_add_test(tc_osc_multi, test_multiple_oscillators_independent);
+	suite_add_tcase(s, tc_osc_multi);
+
+	TCase *tc_inv_saw = tcase_create("inverse_sawtooth_waveform");
+	tcase_add_checked_fixture(tc_inv_saw, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_inv_saw, 10);
+	tcase_add_test(tc_inv_saw, test_inverse_sawtooth_at_phase_zero);
+	tcase_add_test(tc_inv_saw, test_inverse_sawtooth_at_phase_half);
+	tcase_add_test(tc_inv_saw, test_inverse_sawtooth_near_phase_one);
+	suite_add_tcase(s, tc_inv_saw);
+
+	TCase *tc_bounce = tcase_create("bounce_waveform");
+	tcase_add_checked_fixture(tc_bounce, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_bounce, 10);
+	tcase_add_test(tc_bounce, test_bounce_at_phase_zero);
+	tcase_add_test(tc_bounce, test_bounce_at_phase_half);
+	tcase_add_test(tc_bounce, test_bounce_at_phase_one);
+	suite_add_tcase(s, tc_bounce);
+
+	TCase *tc_smooth = tcase_create("smooth_step_waveform");
+	tcase_add_checked_fixture(tc_smooth, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_smooth, 10);
+	tcase_add_test(tc_smooth, test_smooth_step_at_phase_zero);
+	tcase_add_test(tc_smooth, test_smooth_step_at_phase_half);
+	tcase_add_test(tc_smooth, test_smooth_step_near_phase_one);
+	suite_add_tcase(s, tc_smooth);
+
+	TCase *tc_rect = tcase_create("rectified_sine_waveform");
+	tcase_add_checked_fixture(tc_rect, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_rect, 10);
+	tcase_add_test(tc_rect, test_rectified_sine_at_phase_zero);
+	tcase_add_test(tc_rect, test_rectified_sine_at_phase_quarter);
+	tcase_add_test(tc_rect, test_rectified_sine_at_phase_half);
+	suite_add_tcase(s, tc_rect);
+
+	TCase *tc_noise = tcase_create("noise_waveform");
+	tcase_add_checked_fixture(tc_noise, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_noise, 10);
+	tcase_add_test(tc_noise, test_noise_returns_value_in_range);
+	tcase_add_test(tc_noise, test_noise_with_amplitude_offset);
+	suite_add_tcase(s, tc_noise);
+
+	TCase *tc_exp = tcase_create("fixed_exponential_waveform");
+	tcase_add_checked_fixture(tc_exp, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_exp, 10);
+	tcase_add_test(tc_exp, test_fixed_exponential_at_phase_zero);
+	tcase_add_test(tc_exp, test_fixed_exponential_near_phase_one);
+	tcase_add_test(tc_exp, test_fixed_exponential_curve_shape);
+	suite_add_tcase(s, tc_exp);
 
 	return s;
 }
