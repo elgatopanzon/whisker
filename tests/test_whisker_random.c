@@ -193,6 +193,78 @@ END_TEST
 
 
 /*****************************
+*  w_rand_chars tcase        *
+*****************************/
+
+START_TEST(test_rand_chars_correct_length)
+{
+	// 8 bytes -> 16 hex chars + null
+	char buf[17];
+	memset(buf, 'X', sizeof(buf));
+	w_rand_chars(buf, 8);
+	ck_assert_int_eq(strlen(buf), 16);
+	ck_assert_int_eq(buf[16], '\0');
+}
+END_TEST
+
+START_TEST(test_rand_chars_only_hex)
+{
+	char buf[33];
+	w_rand_chars(buf, 16);
+	for (int i = 0; i < 32; i++) {
+		char c = buf[i];
+		int is_hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+		ck_assert_msg(is_hex, "char at %d is '%c' (0x%02x), not hex", i, c, c);
+	}
+}
+END_TEST
+
+START_TEST(test_rand_chars_null_terminated)
+{
+	char buf[9];
+	memset(buf, 'Z', sizeof(buf));
+	w_rand_chars(buf, 4);
+	ck_assert_int_eq(buf[8], '\0');
+	ck_assert_int_eq(strlen(buf), 8);
+}
+END_TEST
+
+START_TEST(test_rand_chars_different_calls)
+{
+	char buf1[17];
+	char buf2[17];
+	w_rand_chars(buf1, 8);
+	w_rand_chars(buf2, 8);
+	ck_assert_str_ne(buf1, buf2);
+}
+END_TEST
+
+START_TEST(test_rand_chars_various_sizes)
+{
+	// test sizes 1, 2, 4, 8, 16
+	size_t sizes[] = {1, 2, 4, 8, 16};
+	for (int s = 0; s < 5; s++) {
+		size_t byte_count = sizes[s];
+		size_t char_count = byte_count * 2;
+		char *buf = malloc(char_count + 1);
+		ck_assert_ptr_nonnull(buf);
+		memset(buf, 'X', char_count + 1);
+		w_rand_chars(buf, byte_count);
+		ck_assert_int_eq(strlen(buf), char_count);
+		ck_assert_int_eq(buf[char_count], '\0');
+		// verify all hex
+		for (size_t i = 0; i < char_count; i++) {
+			char c = buf[i];
+			int is_hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+			ck_assert(is_hex);
+		}
+		free(buf);
+	}
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -225,6 +297,15 @@ Suite *whisker_random_suite(void)
 	tcase_set_timeout(tc_dist, 10);
 	tcase_add_test(tc_dist, test_rand_bytes_byte_distribution);
 	suite_add_tcase(s, tc_dist);
+
+	TCase *tc_chars = tcase_create("rand_chars");
+	tcase_set_timeout(tc_chars, 10);
+	tcase_add_test(tc_chars, test_rand_chars_correct_length);
+	tcase_add_test(tc_chars, test_rand_chars_only_hex);
+	tcase_add_test(tc_chars, test_rand_chars_null_terminated);
+	tcase_add_test(tc_chars, test_rand_chars_different_calls);
+	tcase_add_test(tc_chars, test_rand_chars_various_sizes);
+	suite_add_tcase(s, tc_chars);
 
 	return s;
 }
