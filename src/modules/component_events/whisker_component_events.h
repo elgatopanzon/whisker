@@ -15,20 +15,23 @@
 *  config                    *
 *****************************/
 
-#ifndef WM_COMPONENT_EVENTS_ALLOW_MAP_BUCKET_COUNT
-#define WM_COMPONENT_EVENTS_ALLOW_MAP_BUCKET_COUNT 64
-#endif
+// module resource ID for fast world lookup
+#define WM_COMPONENT_EVENTS_MODULE_RESOURCE_ID 1
 
 #ifndef WM_COMPONENT_EVENTS_TAG_ARRAY_BLOCK_SIZE
 #define WM_COMPONENT_EVENTS_TAG_ARRAY_BLOCK_SIZE 64
 #endif
 
+#ifndef WM_COMPONENT_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE
+#define WM_COMPONENT_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE 128
+#endif
+
+// flag bit in w_component_entry.flags to indicate event tracking is enabled
+#define WM_COMPONENT_EVENTS_TRACKING_FLAG (1ULL << 0)
+
 /*****************************
 *  component names           *
 *****************************/
-
-// cleanup component: holds w_pack32x2{owner_entity, event_tag_id}
-#define WM_COMPONENT_EVENTS_CLEANUP "wm_component_events_cleanup"
 
 // event tag suffixes appended to component name
 #define WM_COMPONENT_EVENTS_ADDED_SUFFIX "_added"
@@ -40,23 +43,41 @@
 *  data structures           *
 *****************************/
 
-// typed hashmap: w_entity_id -> bool (allow list for tracked components)
-w_hashmap_t_declare(w_entity_id, bool, wm_component_events_allow_map);
+// cached event tag IDs for a single component
+struct wm_component_event_tags
+{
+	w_entity_id added;
+	w_entity_id changed;
+	w_entity_id removed;
+	bool initialized;
+};
 
 // singleton registry for component events
 struct wm_component_events_registry
 {
 	struct w_arena *arena;
+	struct w_ecs_world *world;
 
-	// allow list: which component IDs are being tracked
-	struct wm_component_events_allow_map allow_list;
+	// event tag IDs indexed by type_entity_id (comp_id)
+	// check initialized flag before accessing tag IDs
+	w_array_declare(struct wm_component_event_tags, event_tags);
 
-	// cached event tag IDs indexed by type_entity_id (comp_id)
-	// W_ENTITY_INVALID means not yet registered
-	w_array_declare(w_entity_id, added_tag_ids);
-	w_array_declare(w_entity_id, changed_tag_ids);
-	w_array_declare(w_entity_id, removed_tag_ids);
+	// deferred removal buffer: pairs of {owner_entity, tag_component_id}
+	w_array_declare(w_pack32x2, removal_buffer);
 };
+
+
+/*****************************
+*  inline helpers            *
+*****************************/
+
+// add an event tag to an entity and queue for deferred removal
+#define wm_component_events_add_tag_(world, entity, tag_id, reg) do { \
+	uint8_t tag_val_ = 0; \
+	w_component_set_(&(world)->components, W_COMPONENT_TYPE_uint8_t, (tag_id), (entity), &tag_val_, sizeof(tag_val_)); \
+	w_array_ensure_alloc_block_size(reg->removal_buffer, reg->removal_buffer_length + 1, WM_COMPONENT_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE); \
+	reg->removal_buffer[reg->removal_buffer_length++] = (w_pack32x2){ .left = (entity), .right = (tag_id) }; \
+} while(0)
 
 
 /*****************************
@@ -92,26 +113,5 @@ struct wm_component_events_registry *wm_component_events_get_registry(struct w_e
 	w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, _te, e, (t*)d, sizeof(t)); \
 } while(0)
 
-
-/*****************************
-*  cleanup system            *
-*****************************/
-
-w_ecs_system(
-	wm_component_events_cleanup_system,
-	WM_PHASE_PRE,
-		w_query_read(WM_COMPONENT_EVENTS_CLEANUP)
-	,
-{
-	w_pack32x2 pair = w_itor_get_read(w_pack32x2);
-	w_entity_id owner = pair.left;
-	w_entity_id event_tag = pair.right;
-
-	// remove the event tag from the owner entity
-	w_ecs_remove_tag(world, event_tag, owner);
-
-	// destroy the cleanup entity
-	w_ecs_return_entity(world, itor.entity_id);
-});
 
 #endif /* WHISKER_COMPONENT_EVENTS_H */

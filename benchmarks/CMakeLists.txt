@@ -34,6 +34,22 @@ foreach(src ${BENCHMARK_SOURCES})
             ${ubench_SOURCE_DIR}
     )
 
+    # link module object libraries for module benchmarks (benchmark_whisker_module_*.c)
+    if(bin_name MATCHES "^whisker_module_")
+        # extract module name: whisker_module_component_events -> component_events
+        string(REGEX REPLACE "^whisker_module_" "" mod_name "${bin_name}")
+        set(mod_lib_name "whisker_module_${mod_name}")
+
+        # module dependency overrides (same as tests/CMakeLists.txt)
+        if(mod_name STREQUAL "component_events")
+            set(extra_mod_libs whisker_module_scheduler_defaults)
+        else()
+            set(extra_mod_libs "")
+        endif()
+
+        target_link_libraries(${target_name} PRIVATE ${mod_lib_name} ${extra_mod_libs})
+    endif()
+
     # gnu11 required: ubench uses GNU asm extensions for its do-nothing optimizer barrier
     target_compile_options(${target_name} PRIVATE --std=gnu11)
 endforeach()

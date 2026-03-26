@@ -39,13 +39,6 @@ static void events_setup(void)
 	w_ecs_world_init(&g_world, &g_string_table, &g_arena);
 	wm_scheduler_defaults_init(&g_world, 60.0);
 
-	// pre-create cleanup component entry so queries can resolve it
-	w_entity_id dummy = w_ecs_request_entity(&g_world);
-	w_pack32x2 dummy_pair = {0};
-	w_ecs_set_str(&g_world, w_pack32x2, WM_COMPONENT_EVENTS_CLEANUP, dummy, &dummy_pair);
-	w_ecs_remove_str(&g_world, WM_COMPONENT_EVENTS_CLEANUP, dummy);
-	w_ecs_return_entity(&g_world, dummy);
-
 	wm_component_events_init(&g_world);
 
 	// resolve test component IDs
@@ -206,51 +199,25 @@ END_TEST
 
 
 /*****************************
-*  cleanup system            *
+*  cleanup helper            *
 *****************************/
 
-// helper: run cleanup system manually via query iteration
+// helper: drain the removal buffer directly
 static void run_cleanup(void)
 {
-	struct w_query *q = w_ecs_get_query(&g_world,
-		w_query_read(WM_COMPONENT_EVENTS_CLEANUP));
-	w_query_rebuild_cache(&g_world.queries, q);
+	struct wm_component_events_registry *reg = wm_component_events_get_registry(&g_world);
+	if (!reg) return;
 
-	for (size_t i = 0; i < q->archetype_slices_dense_length; ++i)
+	// index-based loop: length can grow during iteration
+	for (size_t i = 0; i < reg->removal_buffer_length; i++)
 	{
-		struct w_query_archetype_slice slice = q->archetype_slices_dense[i];
-		for (size_t s = 0; s < slice.slice_length; ++s)
-		{
-			w_entity_id cleanup_entity = slice.start_id + s;
-
-			w_pack32x2 *pair = w_ecs_get_str(&g_world, w_pack32x2, WM_COMPONENT_EVENTS_CLEANUP, cleanup_entity);
-			if (!pair) continue;
-
-			w_entity_id owner = pair->left;
-			w_entity_id event_tag = pair->right;
-
-			w_ecs_remove_tag(&g_world, event_tag, owner);
-			w_ecs_return_entity(&g_world, cleanup_entity);
-		}
+		w_pack32x2 pair = reg->removal_buffer[i];
+		w_entity_id owner = pair.left;
+		w_entity_id tag_id = pair.right;
+		w_component_remove(&g_world.components, tag_id, owner);
 	}
 
-	for (size_t i = 0; i < q->archetype_slices_sparse_length; ++i)
-	{
-		struct w_query_archetype_slice slice = q->archetype_slices_sparse[i];
-		for (size_t s = 0; s < slice.slice_length; ++s)
-		{
-			w_entity_id cleanup_entity = slice.start_id + s;
-
-			w_pack32x2 *pair = w_ecs_get_str(&g_world, w_pack32x2, WM_COMPONENT_EVENTS_CLEANUP, cleanup_entity);
-			if (!pair) continue;
-
-			w_entity_id owner = pair->left;
-			w_entity_id event_tag = pair->right;
-
-			w_ecs_remove_tag(&g_world, event_tag, owner);
-			w_ecs_return_entity(&g_world, cleanup_entity);
-		}
-	}
+	reg->removal_buffer_length = 0;
 }
 
 START_TEST(test_cleanup_removes_event_tags)
@@ -296,25 +263,23 @@ START_TEST(test_cleanup_removes_all_event_types)
 }
 END_TEST
 
-START_TEST(test_cleanup_destroys_cleanup_entities)
+START_TEST(test_cleanup_drains_removal_buffer)
 {
 	w_entity_id e = w_ecs_request_entity(&g_world);
 
-	// count entities by checking next_id minus recycled
-	size_t before_count = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	struct wm_component_events_registry *reg = wm_component_events_get_registry(&g_world);
+	ck_assert_uint_eq(reg->removal_buffer_length, 0);
 
 	float health = 100.0f;
 	w_ecs_set_str(&g_world, float, COMP_HEALTH, e, &health);
 
-	// cleanup entities were created, entity count should have gone up
-	size_t during_count = g_world.entities.next_id - g_world.entities.recycled_stack_length;
-	ck_assert_uint_gt(during_count, before_count);
+	// removal buffer should have an entry queued
+	ck_assert_uint_gt(reg->removal_buffer_length, 0);
 
 	run_cleanup();
 
-	// after cleanup, entity count should be back to before + 1 (just the entity we created)
-	size_t after_count = g_world.entities.next_id - g_world.entities.recycled_stack_length;
-	ck_assert_uint_eq(after_count, before_count + 1);
+	// removal buffer should be drained
+	ck_assert_uint_eq(reg->removal_buffer_length, 0);
 }
 END_TEST
 
@@ -489,7 +454,7 @@ Suite *component_events_suite(void)
 	tcase_set_timeout(tc_cleanup, 10);
 	tcase_add_test(tc_cleanup, test_cleanup_removes_event_tags);
 	tcase_add_test(tc_cleanup, test_cleanup_removes_all_event_types);
-	tcase_add_test(tc_cleanup, test_cleanup_destroys_cleanup_entities);
+	tcase_add_test(tc_cleanup, test_cleanup_drains_removal_buffer);
 	suite_add_tcase(s, tc_cleanup);
 
 	TCase *tc_tracked = tcase_create("set_tracked_macro");
