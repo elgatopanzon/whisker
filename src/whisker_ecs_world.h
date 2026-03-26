@@ -369,6 +369,11 @@ struct w_query *w_ecs_get_query(struct w_ecs_world *world, char *query);
 ***********/
 static inline void w_ecs_update_hook_flush_command_buffer_(void *world, void *action);
 
+// register a hook to fire during world update lifecycle (returns hook ID)
+size_t w_ecs_register_update_hook(struct w_ecs_world *world, uint update_type, w_hook_fn hook_fn);
+// unregister a world update lifecycle hook by type and hook ID
+void w_ecs_unregister_update_hook(struct w_ecs_world *world, uint update_type, size_t hook_id);
+
 // register a hook to fire when a component of the given type is set (returns hook ID)
 size_t w_ecs_register_component_set_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn);
 // unregister a component set hook by type and hook ID

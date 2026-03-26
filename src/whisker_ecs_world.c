@@ -533,6 +533,17 @@ void w_ecs_cmd_remove_component(void *w, void *component_payload)
 	});
 }
 
+size_t w_ecs_register_update_hook(struct w_ecs_world *world, uint update_type, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], update_type, hook_fn);
+}
+
+void w_ecs_unregister_update_hook(struct w_ecs_world *world, uint update_type, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], update_type, hook_id);
+	if (entry) entry->enabled = false;
+}
+
 size_t w_ecs_register_component_set_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn)
 {
 	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_SET], type_id, hook_fn);
