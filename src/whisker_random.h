@@ -34,16 +34,17 @@
 	} while(0)
 #endif
 
-// generate random hex string: byte_count random bytes -> byte_count*2 hex chars + null
-// buf must be at least (byte_count * 2 + 1) chars
-#define w_rand_chars(buf, byte_count) do { \
-	uint8_t _w_rand_tmp[(byte_count)]; \
-	w_rand_bytes(_w_rand_tmp, (byte_count)); \
-	for (size_t _w_rand_i = 0; _w_rand_i < (size_t)(byte_count); _w_rand_i++) { \
-		(buf)[_w_rand_i * 2] = "0123456789abcdef"[(_w_rand_tmp[_w_rand_i] >> 4) & 0x0F]; \
-		(buf)[_w_rand_i * 2 + 1] = "0123456789abcdef"[_w_rand_tmp[_w_rand_i] & 0x0F]; \
+// generate random hex string of exactly hex_count hex chars + null
+// buf must be at least (hex_count + 1) chars
+#define w_rand_chars(buf, hex_count) do { \
+	size_t _byte_count = ((hex_count) + 1) / 2; \
+	uint8_t _w_rand_tmp[_byte_count]; \
+	w_rand_bytes(_w_rand_tmp, _byte_count); \
+	for (size_t _w_rand_i = 0; _w_rand_i < (hex_count); _w_rand_i++) { \
+		uint8_t _b = _w_rand_tmp[_w_rand_i / 2]; \
+		(buf)[_w_rand_i] = "0123456789abcdef"[(_b >> (4 - 4 * (_w_rand_i & 1))) & 0x0F]; \
 	} \
-	(buf)[(byte_count) * 2] = '\0'; \
+	(buf)[hex_count] = '\0'; \
 } while(0)
 
 #endif /* WHISKER_RANDOM_H */
