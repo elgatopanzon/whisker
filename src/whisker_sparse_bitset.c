@@ -593,6 +593,158 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 #pragma GCC pop_options
 #endif
 
+void w_sparse_bitset_set_contiguous_range(struct w_sparse_bitset *bitset, uint64_t start, uint64_t count)
+{
+	if (count == 0) return;
+
+	uint64_t end = start + count;
+
+	// ensure capacity for the last bit
+	w_sparse_bitset_ensure_capacity_(bitset, end - 1);
+
+	for (uint64_t pos = start; pos < end; )
+	{
+		uint64_t word_index = w_sparse_bitset_word_index(pos);
+		uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
+		uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, 6);
+		uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
+		struct w_sparse_bitset_page *page = &bitset->pages[page_index];
+
+		// allocate page if fresh
+		if (!page->bits)
+			page->bits = w_arena_calloc(bitset->arena, (1ULL << bitset->page_shift_) * sizeof(*page->bits));
+
+		// compute mask for bits within this word
+		uint32_t bit_start = w_sparse_bitset_bit_index(pos);
+		uint64_t remaining_in_word = 64 - bit_start;
+		uint64_t bits_to_set = end - pos;
+		if (bits_to_set > remaining_in_word) bits_to_set = remaining_in_word;
+
+		uint64_t mask;
+		if (bits_to_set == 64) {
+			mask = ~0ULL;
+		} else {
+			mask = ((1ULL << bits_to_set) - 1) << bit_start;
+		}
+
+		page->bits[local_word] |= mask;
+
+		// update page metadata
+		if (local_word < page->first_set) page->first_set = local_word;
+		if (local_word > page->last_set) page->last_set = local_word;
+
+		// set lookup bit
+		bitset->lookup_pages[page_lookup_index] |= w_sparse_bitset_bit_mask(page_index);
+
+		pos += bits_to_set;
+	}
+
+	bitset->generation++;
+}
+
+void w_sparse_bitset_clear_contiguous_range(struct w_sparse_bitset *bitset, uint64_t start, uint64_t count)
+{
+	if (count == 0) return;
+
+	uint64_t end = start + count;
+
+	for (uint64_t pos = start; pos < end; )
+	{
+		uint64_t word_index = w_sparse_bitset_word_index(pos);
+		uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
+
+		if (page_index >= bitset->pages_length) break;
+
+		struct w_sparse_bitset_page *page = &bitset->pages[page_index];
+		if (!page->bits) {
+			// skip to next word boundary
+			uint32_t bit_start = w_sparse_bitset_bit_index(pos);
+			pos += 64 - bit_start;
+			continue;
+		}
+
+		uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
+		uint32_t bit_start = w_sparse_bitset_bit_index(pos);
+		uint64_t remaining_in_word = 64 - bit_start;
+		uint64_t bits_to_clear = end - pos;
+		if (bits_to_clear > remaining_in_word) bits_to_clear = remaining_in_word;
+
+		uint64_t mask;
+		if (bits_to_clear == 64) {
+			mask = ~0ULL;
+		} else {
+			mask = ((1ULL << bits_to_clear) - 1) << bit_start;
+		}
+
+		page->bits[local_word] &= ~mask;
+
+		pos += bits_to_clear;
+	}
+
+	// recompute page metadata for affected pages
+	for (uint64_t pos = start; pos < end; )
+	{
+		uint64_t word_index = w_sparse_bitset_word_index(pos);
+		uint64_t page_index = w_sparse_bitset_page_index(word_index, bitset->page_shift_);
+
+		if (page_index >= bitset->pages_length) break;
+
+		struct w_sparse_bitset_page *page = &bitset->pages[page_index];
+		if (!page->bits) {
+			pos += 64;
+			continue;
+		}
+
+		// check if page is empty
+		bool page_empty = true;
+		for (uint32_t i = page->first_set; i <= page->last_set && page->first_set != UINT32_MAX; i++)
+		{
+			if (page->bits[i]) { page_empty = false; break; }
+		}
+
+		if (page_empty)
+		{
+			uint64_t page_lookup_index = w_sparse_bitset_page_index(page_index, 6);
+			bitset->lookup_pages[page_lookup_index] &= w_sparse_bitset_bit_clear_mask(page_index);
+			page->first_set = UINT32_MAX;
+			page->last_set = 0;
+		}
+
+		// advance to next page
+		uint64_t page_start_word = page_index << bitset->page_shift_;
+		uint64_t next_page_start_bit = (page_start_word + (1ULL << bitset->page_shift_)) * 64;
+		if (next_page_start_bit <= pos) next_page_start_bit = pos + 64;
+		pos = next_page_start_bit;
+	}
+
+	bitset->generation++;
+}
+
+uint64_t w_sparse_bitset_find_contiguous_clear(struct w_sparse_bitset *bitset, uint64_t count, uint64_t max_index)
+{
+	if (count == 0) return 0;
+
+	uint64_t run_start = 0;
+	uint64_t run_length = 0;
+
+	for (uint64_t i = 0; i < max_index; i++)
+	{
+		if (w_sparse_bitset_get(bitset, i))
+		{
+			run_start = i + 1;
+			run_length = 0;
+		}
+		else
+		{
+			run_length++;
+			if (run_length >= count)
+				return run_start;
+		}
+	}
+
+	return UINT64_MAX;
+}
+
 void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache *intersect_cache)
 {
 	free_null(intersect_cache->bitsets);

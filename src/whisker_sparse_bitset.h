@@ -93,5 +93,16 @@ void w_sparse_bitset_intersect_free_cache(struct w_sparse_bitset_intersect_cache
 // check if bitset intersect cache is stale
 uint64_t w_sparse_bitset_intersect_cache_stale(struct w_sparse_bitset_intersect_cache *intersect_cache);
 
+// set a contiguous range of bits [start, start+count)
+void w_sparse_bitset_set_contiguous_range(struct w_sparse_bitset *bitset, uint64_t start, uint64_t count);
+
+// clear a contiguous range of bits [start, start+count)
+void w_sparse_bitset_clear_contiguous_range(struct w_sparse_bitset *bitset, uint64_t start, uint64_t count);
+
+// find first contiguous run of cleared bits with length >= count
+// returns start index of the run, or UINT64_MAX if not found
+// searches from 0 up to max_index (exclusive)
+uint64_t w_sparse_bitset_find_contiguous_clear(struct w_sparse_bitset *bitset, uint64_t count, uint64_t max_index);
+
 #endif /* WHISKER_SPARSE_BITSET_H */
 
