@@ -52,6 +52,7 @@ enum W_WORLD_HOOK_TYPE
 	W_WORLD_HOOK_TYPE_COMPONENT_PRE_REMOVE,
 	W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_SET,
 	W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_REMOVE,
+	W_WORLD_HOOK_TYPE_ENTITY_CREATE,
 	W_WORLD_HOOK_TYPE_ENTITY_DESTROY,
 	W_WORLD_HOOK_TYPE_COUNT,
 };
@@ -64,6 +65,7 @@ enum W_WORLD_HOOK
 	W_WORLD_HOOK_UPDATE_TIMESTEP_END,
 	W_WORLD_HOOK_UPDATE_PHASE_BEGIN,
 	W_WORLD_HOOK_UPDATE_PHASE_END,
+	W_WORLD_HOOK_ENTITY_CREATE,
 	W_WORLD_HOOK_ENTITY_DESTROY,
 };
 
@@ -403,6 +405,11 @@ void w_ecs_unregister_component_id_pre_set_hook(struct w_ecs_world *world, w_ent
 size_t w_ecs_register_component_id_pre_remove_hook(struct w_ecs_world *world, w_entity_id comp_id, w_hook_fn hook_fn);
 // unregister a component-specific pre-remove hook by ID
 void w_ecs_unregister_component_id_pre_remove_hook(struct w_ecs_world *world, w_entity_id comp_id, size_t hook_id);
+
+// register a hook to fire when an entity is created (returns hook ID)
+size_t w_ecs_register_entity_create_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister an entity create hook by ID
+void w_ecs_unregister_entity_create_hook(struct w_ecs_world *world, size_t hook_id);
 
 // register a hook to fire when an entity is destroyed (returns hook ID)
 size_t w_ecs_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn hook_fn);

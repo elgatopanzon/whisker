@@ -208,7 +208,9 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 
 w_entity_id w_ecs_request_entity(struct w_ecs_world *world)
 {
-	return w_entity_request(&world->entities);
+	w_entity_id entity = w_entity_request(&world->entities);
+	w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_CREATE], W_WORLD_HOOK_ENTITY_CREATE, world, &entity);
+	return entity;
 }
 
 w_entity_id w_ecs_request_entity_with_name(struct w_ecs_world *world, char *name)
@@ -221,6 +223,7 @@ w_entity_id w_ecs_request_entity_with_name(struct w_ecs_world *world, char *name
 
 	// request new entity
 	w_entity_id entity = w_entity_request(&world->entities);
+	w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_CREATE], W_WORLD_HOOK_ENTITY_CREATE, world, &entity);
 
 	w_ecs_set_entity_name(world, entity, name);
 
@@ -585,6 +588,17 @@ size_t w_ecs_register_component_pre_remove_hook(struct w_ecs_world *world, w_hoo
 void w_ecs_unregister_component_pre_remove_hook(struct w_ecs_world *world, size_t hook_id)
 {
 	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_PRE_REMOVE], 0, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_entity_create_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_CREATE], W_WORLD_HOOK_ENTITY_CREATE, hook_fn);
+}
+
+void w_ecs_unregister_entity_create_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_ENTITY_CREATE], W_WORLD_HOOK_ENTITY_CREATE, hook_id);
 	if (entry) entry->enabled = false;
 }
 

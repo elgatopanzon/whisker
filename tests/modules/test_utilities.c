@@ -10,6 +10,7 @@
 #include "whisker_timer.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 #include "modules/utilities/whisker_utilities.h"
+#include "modules/utilities/whisker_utilities_entity_lifecycle.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1393,6 +1394,593 @@ END_TEST
 
 
 /*****************************
+*  tag operations            *
+*****************************/
+
+START_TEST(test_tag_set_and_has)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id tag_id = w_ecs_get_component_by_name(&g_world, "test_tag");
+
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, entity));
+
+	w_ecs_set_tag(&g_world, tag_id, entity);
+
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, entity));
+}
+END_TEST
+
+START_TEST(test_tag_remove)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id tag_id = w_ecs_get_component_by_name(&g_world, "remove_tag");
+
+	w_ecs_set_tag(&g_world, tag_id, entity);
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, entity));
+
+	w_ecs_remove_tag(&g_world, tag_id, entity);
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, entity));
+}
+END_TEST
+
+START_TEST(test_tag_str_set_and_has)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "str_test_tag", entity));
+
+	w_ecs_set_tag_str(&g_world, "str_test_tag", entity);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, "str_test_tag", entity));
+}
+END_TEST
+
+START_TEST(test_tag_str_remove)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "str_remove_tag", entity);
+	ck_assert(w_ecs_has_tag_str(&g_world, "str_remove_tag", entity));
+
+	w_ecs_remove_tag_str(&g_world, "str_remove_tag", entity);
+	ck_assert(!w_ecs_has_tag_str(&g_world, "str_remove_tag", entity));
+}
+END_TEST
+
+START_TEST(test_tag_multiple_entities)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+	w_entity_id tag_id = w_ecs_get_component_by_name(&g_world, "multi_tag");
+
+	w_ecs_set_tag(&g_world, tag_id, e1);
+
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, e1));
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, e2));
+
+	w_ecs_set_tag(&g_world, tag_id, e2);
+
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, e1));
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, e2));
+}
+END_TEST
+
+START_TEST(test_tag_idempotent_set)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id tag_id = w_ecs_get_component_by_name(&g_world, "idempotent_tag");
+
+	w_ecs_set_tag(&g_world, tag_id, entity);
+	w_ecs_set_tag(&g_world, tag_id, entity);
+	w_ecs_set_tag(&g_world, tag_id, entity);
+
+	ck_assert(w_ecs_has_tag(&g_world, tag_id, entity));
+
+	w_ecs_remove_tag(&g_world, tag_id, entity);
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, entity));
+}
+END_TEST
+
+START_TEST(test_tag_remove_nonexistent)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id tag_id = w_ecs_get_component_by_name(&g_world, "nonexistent_tag");
+
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, entity));
+	w_ecs_remove_tag(&g_world, tag_id, entity);
+	ck_assert(!w_ecs_has_tag(&g_world, tag_id, entity));
+}
+END_TEST
+
+
+/*****************************
+*  entity lifecycle hooks    *
+*****************************/
+
+START_TEST(test_lifecycle_destroy_tags_registered)
+{
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
+	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
+	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
+	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+
+	ck_assert(w_ecs_is_valid_entity(destroy_tag));
+	ck_assert(w_ecs_is_valid_entity(eof_tag));
+	ck_assert(w_ecs_is_valid_entity(eoff_tag));
+	ck_assert(w_ecs_is_valid_entity(eop_tag));
+}
+END_TEST
+
+START_TEST(test_lifecycle_destroy_end_of_frame_sets_tags)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
+	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
+
+	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(!w_ecs_has_tag(&g_world, eof_tag, entity));
+
+	w_entity_destroy_end_of_frame(&g_world, entity);
+
+	ck_assert(w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(w_ecs_has_tag(&g_world, eof_tag, entity));
+}
+END_TEST
+
+START_TEST(test_lifecycle_destroy_end_of_fixed_frame_sets_tags)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
+	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
+
+	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(!w_ecs_has_tag(&g_world, eoff_tag, entity));
+
+	w_entity_destroy_end_of_fixed_frame(&g_world, entity);
+
+	ck_assert(w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(w_ecs_has_tag(&g_world, eoff_tag, entity));
+}
+END_TEST
+
+START_TEST(test_lifecycle_destroy_end_of_phase_sets_tags)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
+	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+
+	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(!w_ecs_has_tag(&g_world, eop_tag, entity));
+
+	w_entity_destroy_end_of_phase(&g_world, entity);
+
+	ck_assert(w_ecs_has_tag(&g_world, destroy_tag, entity));
+	ck_assert(w_ecs_has_tag(&g_world, eop_tag, entity));
+}
+END_TEST
+
+// helper to rebuild query cache and call lifecycle hook
+static void call_lifecycle_hook_end_of_frame(void)
+{
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
+	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_destroy_end_of_frame_hook_(&g_world, NULL);
+}
+
+static void call_lifecycle_hook_end_of_fixed_frame(void)
+{
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
+	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_destroy_end_of_fixed_frame_hook_(&g_world, NULL);
+}
+
+static void call_lifecycle_hook_end_of_phase(void)
+{
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
+	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_destroy_end_of_phase_hook_(&g_world, NULL);
+}
+
+START_TEST(test_lifecycle_hook_destroys_entity_end_of_frame)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "marker_comp", entity);
+	ck_assert(w_ecs_has_tag_str(&g_world, "marker_comp", entity));
+
+	w_entity_destroy_end_of_frame(&g_world, entity);
+
+	call_lifecycle_hook_end_of_frame();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "marker_comp", entity));
+}
+END_TEST
+
+START_TEST(test_lifecycle_hook_destroys_entity_end_of_fixed_frame)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "marker_fixed", entity);
+	ck_assert(w_ecs_has_tag_str(&g_world, "marker_fixed", entity));
+
+	w_entity_destroy_end_of_fixed_frame(&g_world, entity);
+
+	call_lifecycle_hook_end_of_fixed_frame();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "marker_fixed", entity));
+}
+END_TEST
+
+START_TEST(test_lifecycle_hook_destroys_entity_end_of_phase)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "marker_phase", entity);
+	ck_assert(w_ecs_has_tag_str(&g_world, "marker_phase", entity));
+
+	w_entity_destroy_end_of_phase(&g_world, entity);
+
+	call_lifecycle_hook_end_of_phase();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "marker_phase", entity));
+}
+END_TEST
+
+START_TEST(test_lifecycle_hooks_independent)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+	w_entity_id e3 = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "m1", e1);
+	w_ecs_set_tag_str(&g_world, "m2", e2);
+	w_ecs_set_tag_str(&g_world, "m3", e3);
+
+	w_entity_destroy_end_of_frame(&g_world, e1);
+	w_entity_destroy_end_of_fixed_frame(&g_world, e2);
+	w_entity_destroy_end_of_phase(&g_world, e3);
+
+	call_lifecycle_hook_end_of_frame();
+	ck_assert(!w_ecs_has_tag_str(&g_world, "m1", e1));
+	ck_assert(w_ecs_has_tag_str(&g_world, "m2", e2));
+	ck_assert(w_ecs_has_tag_str(&g_world, "m3", e3));
+
+	call_lifecycle_hook_end_of_fixed_frame();
+	ck_assert(!w_ecs_has_tag_str(&g_world, "m2", e2));
+	ck_assert(w_ecs_has_tag_str(&g_world, "m3", e3));
+
+	call_lifecycle_hook_end_of_phase();
+	ck_assert(!w_ecs_has_tag_str(&g_world, "m3", e3));
+}
+END_TEST
+
+START_TEST(test_lifecycle_multiple_entities_same_hook)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+	w_entity_id e3 = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "bulk_m", e1);
+	w_ecs_set_tag_str(&g_world, "bulk_m", e2);
+	w_ecs_set_tag_str(&g_world, "bulk_m", e3);
+
+	w_entity_destroy_end_of_frame(&g_world, e1);
+	w_entity_destroy_end_of_frame(&g_world, e2);
+	w_entity_destroy_end_of_frame(&g_world, e3);
+
+	call_lifecycle_hook_end_of_frame();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "bulk_m", e1));
+	ck_assert(!w_ecs_has_tag_str(&g_world, "bulk_m", e2));
+	ck_assert(!w_ecs_has_tag_str(&g_world, "bulk_m", e3));
+}
+END_TEST
+
+START_TEST(test_lifecycle_unmarked_entity_not_destroyed)
+{
+	w_entity_id marked = w_ecs_request_entity(&g_world);
+	w_entity_id unmarked = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "surv", marked);
+	w_ecs_set_tag_str(&g_world, "surv", unmarked);
+
+	w_entity_destroy_end_of_frame(&g_world, marked);
+
+	call_lifecycle_hook_end_of_frame();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "surv", marked));
+	ck_assert(w_ecs_has_tag_str(&g_world, "surv", unmarked));
+}
+END_TEST
+
+
+/*****************************
+*  disabled_t tag tests      *
+*****************************/
+
+START_TEST(test_disabled_tag_can_be_set)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+
+	w_entity_set_disabled(&g_world, entity);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+}
+END_TEST
+
+START_TEST(test_disabled_tag_can_be_removed)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_entity_set_disabled(&g_world, entity);
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+
+	w_entity_set_enabled(&g_world, entity);
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+}
+END_TEST
+
+START_TEST(test_disabled_entity_excluded_from_query)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "test_comp", e1);
+	w_ecs_set_tag_str(&g_world, "test_comp", e2);
+
+	w_entity_set_disabled(&g_world, e1);
+
+	// rebuild cache before query
+	char *query_str = w_query_read("test_comp") w_query_not(W_ENTITY_LIFECYCLE_DISABLED_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	w_query_for_each(&g_world, query_str, {
+		count++;
+		ck_assert(itor.entity_id != e1);
+	});
+
+	ck_assert_int_eq(count, 1);
+}
+END_TEST
+
+START_TEST(test_disabled_entity_included_without_exclude)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "test_comp2", e1);
+	w_ecs_set_tag_str(&g_world, "test_comp2", e2);
+
+	w_entity_set_disabled(&g_world, e1);
+
+	// rebuild cache before query
+	char *query_str = w_query_read("test_comp2");
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	w_query_for_each(&g_world, query_str, {
+		count++;
+	});
+
+	ck_assert_int_eq(count, 2);
+}
+END_TEST
+
+
+/*****************************
+*  created_this_frame tests  *
+*****************************/
+
+START_TEST(test_created_this_frame_tag_set_on_create)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+}
+END_TEST
+
+START_TEST(test_created_this_frame_tag_cleared_by_hook)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+
+	// rebuild query cache and call cleanup hook
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_cleanup_created_this_frame_tag_hook_(&g_world, NULL);
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+}
+END_TEST
+
+START_TEST(test_created_this_frame_multiple_entities)
+{
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	w_entity_id e2 = w_ecs_request_entity(&g_world);
+	w_entity_id e3 = w_ecs_request_entity(&g_world);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e1));
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e2));
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e3));
+
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_cleanup_created_this_frame_tag_hook_(&g_world, NULL);
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e1));
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e2));
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e3));
+}
+END_TEST
+
+
+/*****************************
+*  entity lifetime tests     *
+*****************************/
+
+// helper to call lifetime expired hook
+static void call_lifetime_expired_hook(void)
+{
+	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG);
+	struct w_query *q = w_ecs_get_query(&g_world, query_str);
+	w_query_rebuild_cache(&g_world.queries, q);
+	w_entity_lifecycle_destroy_lifetime_expired_hook_(&g_world, NULL);
+}
+
+START_TEST(test_lifetime_creates_timer)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_entity_set_lifetime(&g_world, entity, 1.0);
+
+	// entity should have timer reference component
+	char timer_entity_name[128];
+	snprintf(timer_entity_name, sizeof(timer_entity_name), "%s" W_TIMER_COMPONENT_TIMER_ENTITY, W_ENTITY_LIFECYCLE_LIFETIME_TIMER_NAME);
+	ck_assert(w_ecs_has_str(&g_world, timer_entity_name, entity));
+}
+END_TEST
+
+START_TEST(test_lifetime_timer_finishes_sets_tag)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_entity_set_lifetime(&g_world, entity, 0.5);
+
+	// advance time past lifetime
+	advance_time(0.6);
+
+	// finished tag should be set
+	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG, entity));
+}
+END_TEST
+
+START_TEST(test_lifetime_expired_hook_destroys_entity)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "lifetime_marker", entity);
+	w_entity_set_lifetime(&g_world, entity, 0.5);
+
+	// advance time past lifetime
+	advance_time(0.6);
+
+	ck_assert(w_ecs_has_tag_str(&g_world, "lifetime_marker", entity));
+
+	call_lifetime_expired_hook();
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, "lifetime_marker", entity));
+}
+END_TEST
+
+START_TEST(test_lifetime_not_expired_entity_survives)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	w_ecs_set_tag_str(&g_world, "survive_marker", entity);
+	w_entity_set_lifetime(&g_world, entity, 2.0);
+
+	// advance time but not past lifetime
+	advance_time(0.5);
+
+	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG, entity));
+
+	call_lifetime_expired_hook();
+
+	ck_assert(w_ecs_has_tag_str(&g_world, "survive_marker", entity));
+}
+END_TEST
+
+
+/*****************************
+*  entity create hook tests  *
+*****************************/
+
+static int g_create_hook_call_count = 0;
+static w_entity_id g_last_created_entity = 0;
+
+static void test_entity_create_hook_(void *world, void *entity)
+{
+	(void)world;
+	g_create_hook_call_count++;
+	g_last_created_entity = *(w_entity_id *)entity;
+}
+
+START_TEST(test_entity_create_hook_fires)
+{
+	g_create_hook_call_count = 0;
+	g_last_created_entity = 0;
+
+	w_ecs_register_entity_create_hook(&g_world, test_entity_create_hook_);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	// hook called (plus the built-in created_this_frame hook)
+	ck_assert_int_ge(g_create_hook_call_count, 1);
+	ck_assert(g_last_created_entity == entity);
+}
+END_TEST
+
+START_TEST(test_entity_create_hook_fires_for_each_entity)
+{
+	g_create_hook_call_count = 0;
+
+	w_ecs_register_entity_create_hook(&g_world, test_entity_create_hook_);
+
+	w_ecs_request_entity(&g_world);
+	w_ecs_request_entity(&g_world);
+	w_ecs_request_entity(&g_world);
+
+	ck_assert_int_ge(g_create_hook_call_count, 3);
+}
+END_TEST
+
+START_TEST(test_entity_create_hook_named_entity)
+{
+	g_create_hook_call_count = 0;
+	g_last_created_entity = 0;
+
+	w_ecs_register_entity_create_hook(&g_world, test_entity_create_hook_);
+
+	w_entity_id entity = w_ecs_request_entity_with_name(&g_world, "test_named_entity");
+
+	ck_assert_int_ge(g_create_hook_call_count, 1);
+	ck_assert(g_last_created_entity == entity);
+}
+END_TEST
+
+START_TEST(test_entity_create_hook_existing_named_entity_no_fire)
+{
+	g_create_hook_call_count = 0;
+
+	w_entity_id first = w_ecs_request_entity_with_name(&g_world, "existing_entity");
+
+	w_ecs_register_entity_create_hook(&g_world, test_entity_create_hook_);
+
+	// requesting existing named entity should not fire hook
+	int count_before = g_create_hook_call_count;
+	w_entity_id second = w_ecs_request_entity_with_name(&g_world, "existing_entity");
+
+	ck_assert(first == second);
+	ck_assert_int_eq(g_create_hook_call_count, count_before);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1575,6 +2163,74 @@ Suite *utilities_suite(void)
 	tcase_add_test(tc_exp, test_fixed_exponential_near_phase_one);
 	tcase_add_test(tc_exp, test_fixed_exponential_curve_shape);
 	suite_add_tcase(s, tc_exp);
+
+	// tag operation tests
+	TCase *tc_tags = tcase_create("tag_operations");
+	tcase_add_checked_fixture(tc_tags, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_tags, 10);
+	tcase_add_test(tc_tags, test_tag_set_and_has);
+	tcase_add_test(tc_tags, test_tag_remove);
+	tcase_add_test(tc_tags, test_tag_str_set_and_has);
+	tcase_add_test(tc_tags, test_tag_str_remove);
+	tcase_add_test(tc_tags, test_tag_multiple_entities);
+	tcase_add_test(tc_tags, test_tag_idempotent_set);
+	tcase_add_test(tc_tags, test_tag_remove_nonexistent);
+	suite_add_tcase(s, tc_tags);
+
+	// entity lifecycle hook tests
+	TCase *tc_lifecycle = tcase_create("entity_lifecycle");
+	tcase_add_checked_fixture(tc_lifecycle, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_lifecycle, 10);
+	tcase_add_test(tc_lifecycle, test_lifecycle_destroy_tags_registered);
+	tcase_add_test(tc_lifecycle, test_lifecycle_destroy_end_of_frame_sets_tags);
+	tcase_add_test(tc_lifecycle, test_lifecycle_destroy_end_of_fixed_frame_sets_tags);
+	tcase_add_test(tc_lifecycle, test_lifecycle_destroy_end_of_phase_sets_tags);
+	tcase_add_test(tc_lifecycle, test_lifecycle_hook_destroys_entity_end_of_frame);
+	tcase_add_test(tc_lifecycle, test_lifecycle_hook_destroys_entity_end_of_fixed_frame);
+	tcase_add_test(tc_lifecycle, test_lifecycle_hook_destroys_entity_end_of_phase);
+	tcase_add_test(tc_lifecycle, test_lifecycle_hooks_independent);
+	tcase_add_test(tc_lifecycle, test_lifecycle_multiple_entities_same_hook);
+	tcase_add_test(tc_lifecycle, test_lifecycle_unmarked_entity_not_destroyed);
+	suite_add_tcase(s, tc_lifecycle);
+
+	// disabled_t tag tests
+	TCase *tc_disabled = tcase_create("disabled_tag");
+	tcase_add_checked_fixture(tc_disabled, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_disabled, 10);
+	tcase_add_test(tc_disabled, test_disabled_tag_can_be_set);
+	tcase_add_test(tc_disabled, test_disabled_tag_can_be_removed);
+	tcase_add_test(tc_disabled, test_disabled_entity_excluded_from_query);
+	tcase_add_test(tc_disabled, test_disabled_entity_included_without_exclude);
+	suite_add_tcase(s, tc_disabled);
+
+	// created_this_frame_t tests
+	TCase *tc_created = tcase_create("created_this_frame");
+	tcase_add_checked_fixture(tc_created, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_created, 10);
+	tcase_add_test(tc_created, test_created_this_frame_tag_set_on_create);
+	tcase_add_test(tc_created, test_created_this_frame_tag_cleared_by_hook);
+	tcase_add_test(tc_created, test_created_this_frame_multiple_entities);
+	suite_add_tcase(s, tc_created);
+
+	// entity lifetime tests
+	TCase *tc_lifetime = tcase_create("entity_lifetime");
+	tcase_add_checked_fixture(tc_lifetime, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_lifetime, 10);
+	tcase_add_test(tc_lifetime, test_lifetime_creates_timer);
+	tcase_add_test(tc_lifetime, test_lifetime_timer_finishes_sets_tag);
+	tcase_add_test(tc_lifetime, test_lifetime_expired_hook_destroys_entity);
+	tcase_add_test(tc_lifetime, test_lifetime_not_expired_entity_survives);
+	suite_add_tcase(s, tc_lifetime);
+
+	// entity create hook tests
+	TCase *tc_create_hook = tcase_create("entity_create_hook");
+	tcase_add_checked_fixture(tc_create_hook, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_create_hook, 10);
+	tcase_add_test(tc_create_hook, test_entity_create_hook_fires);
+	tcase_add_test(tc_create_hook, test_entity_create_hook_fires_for_each_entity);
+	tcase_add_test(tc_create_hook, test_entity_create_hook_named_entity);
+	tcase_add_test(tc_create_hook, test_entity_create_hook_existing_named_entity_no_fire);
+	suite_add_tcase(s, tc_create_hook);
 
 	return s;
 }
