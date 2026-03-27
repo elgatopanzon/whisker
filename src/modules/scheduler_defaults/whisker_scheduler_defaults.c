@@ -181,7 +181,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		.enabled = true,
 		.update = wm_scheduler_defaults_system_disable_startup_phase_,
 	};
-	w_ecs_register_system(world, &startup_disable);
+	w_ecs_register_system(world, "wm_scheduler_defaults_system_disable_startup_phase_", &startup_disable);
 }
 
 void wm_scheduler_defaults_free(struct w_ecs_world *world)

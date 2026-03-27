@@ -276,6 +276,7 @@ UBENCH_F_SETUP(bench_iteration_10_systems_3_components)
 	}
 
 	// register 10 systems for world_update test (one per phase)
+	char name_buf[32];
 	for (int i = 0; i < 10; i++)
 	{
 		struct w_system sys = {
@@ -285,7 +286,8 @@ UBENCH_F_SETUP(bench_iteration_10_systems_3_components)
 			.last_update_ticks = 0,
 			.update_frequency = 0
 		};
-		w_ecs_register_system(&ubench_fixture->world, &sys);
+		snprintf(name_buf, sizeof(name_buf), "sys_%d", i);
+		w_ecs_register_system(&ubench_fixture->world, name_buf, &sys);
 	}
 
 	g_accumulator = 0.0;

@@ -15,7 +15,7 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 
 	w_entity_registry_init(&world->entities, string_table);
 	w_component_registry_init(&world->components, arena, &world->entities);
-	w_system_registry_init(&world->systems);
+	w_system_registry_init(&world->systems, arena);
 
 	w_scheduler_init(&world->scheduler);
 	w_array_init_t(world->scheduler_jobs, 16);
@@ -391,10 +391,10 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 *  system API  *
 ****************/
 
-size_t w_ecs_register_system(struct w_ecs_world *world, struct w_system *system)
+size_t w_ecs_register_system(struct w_ecs_world *world, char *name, struct w_system *system)
 {
 	world->scheduler_jobs_dirty = true;
-	return w_system_register_system(&world->systems, system);
+	return w_system_register_system(&world->systems, name, system);
 }
 
 size_t w_ecs_set_system_state(struct w_ecs_world *world, size_t system_id, bool system_state)

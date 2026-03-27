@@ -6,6 +6,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_arena.h"
 #include "whisker_system_registry.h"
 
 #include <stdio.h>
@@ -19,15 +20,18 @@
 *****************************/
 
 static struct w_system_registry g_registry;
+static struct w_arena g_arena;
 
 static void system_registry_setup(void)
 {
-	w_system_registry_init(&g_registry);
+	w_arena_init(&g_arena, 4096);
+	w_system_registry_init(&g_registry, &g_arena);
 }
 
 static void system_registry_teardown(void)
 {
 	w_system_registry_free(&g_registry);
+	w_arena_free(&g_arena);
 }
 
 
@@ -64,20 +68,26 @@ END_TEST
 
 START_TEST(test_free_nulls_pointers)
 {
+	struct w_arena a;
+	w_arena_init(&a, 4096);
 	struct w_system_registry reg;
-	w_system_registry_init(&reg);
+	w_system_registry_init(&reg, &a);
 	w_system_registry_free(&reg);
 	ck_assert_ptr_null(reg.systems);
 	ck_assert_int_eq(reg.systems_length, 0);
+	w_arena_free(&a);
 }
 END_TEST
 
 START_TEST(test_free_empty_registry)
 {
+	struct w_arena a;
+	w_arena_init(&a, 4096);
 	struct w_system_registry reg;
-	w_system_registry_init(&reg);
+	w_system_registry_init(&reg, &a);
 	// should not crash on empty registry
 	w_system_registry_free(&reg);
+	w_arena_free(&a);
 }
 END_TEST
 
@@ -89,7 +99,7 @@ END_TEST
 START_TEST(test_register_returns_id_zero)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	ck_assert_int_eq(id, 0);
 }
 END_TEST
@@ -97,9 +107,9 @@ END_TEST
 START_TEST(test_register_increments_ids)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id1 = w_system_register_system(&g_registry, &sys);
-	size_t id2 = w_system_register_system(&g_registry, &sys);
-	size_t id3 = w_system_register_system(&g_registry, &sys);
+	size_t id1 = w_system_register_system(&g_registry, "sys_a", &sys);
+	size_t id2 = w_system_register_system(&g_registry, "sys_b", &sys);
+	size_t id3 = w_system_register_system(&g_registry, "sys_c", &sys);
 	ck_assert_int_eq(id1, 0);
 	ck_assert_int_eq(id2, 1);
 	ck_assert_int_eq(id3, 2);
@@ -110,9 +120,9 @@ START_TEST(test_register_increments_length)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
 	ck_assert_int_eq(g_registry.systems_length, 0);
-	w_system_register_system(&g_registry, &sys);
+	w_system_register_system(&g_registry, "sys_a", &sys);
 	ck_assert_int_eq(g_registry.systems_length, 1);
-	w_system_register_system(&g_registry, &sys);
+	w_system_register_system(&g_registry, "sys_b", &sys);
 	ck_assert_int_eq(g_registry.systems_length, 2);
 }
 END_TEST
@@ -120,7 +130,7 @@ END_TEST
 START_TEST(test_register_sets_enabled_true)
 {
 	struct w_system sys = {.phase_id = 0, .enabled = false, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert(got->enabled);
 }
@@ -129,7 +139,7 @@ END_TEST
 START_TEST(test_register_resets_last_update_ticks)
 {
 	struct w_system sys = {.phase_id = 0, .last_update_ticks = 12345, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_int_eq(got->last_update_ticks, 0);
 }
@@ -138,7 +148,7 @@ END_TEST
 START_TEST(test_register_preserves_phase_id)
 {
 	struct w_system sys = {.phase_id = 42, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_int_eq(got->phase_id, 42);
 }
@@ -147,7 +157,7 @@ END_TEST
 START_TEST(test_register_preserves_update_function)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_ptr_eq(got->update, test_update_func);
 }
@@ -156,7 +166,7 @@ END_TEST
 START_TEST(test_register_preserves_update_frequency)
 {
 	struct w_system sys = {.phase_id = 0, .update_frequency = 60, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_int_eq(got->update_frequency, 60);
 }
@@ -170,7 +180,7 @@ END_TEST
 START_TEST(test_get_returns_registered)
 {
 	struct w_system sys = {.phase_id = 99, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_ptr_nonnull(got);
 	ck_assert_int_eq(got->phase_id, 99);
@@ -194,9 +204,9 @@ END_TEST
 START_TEST(test_get_boundary_valid)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	w_system_register_system(&g_registry, &sys);
-	w_system_register_system(&g_registry, &sys);
-	w_system_register_system(&g_registry, &sys);
+	w_system_register_system(&g_registry, "sys_a", &sys);
+	w_system_register_system(&g_registry, "sys_b", &sys);
+	w_system_register_system(&g_registry, "sys_c", &sys);
 
 	// ID 2 is valid (last element)
 	struct w_system *got = w_system_get_system_entry(&g_registry, 2);
@@ -207,9 +217,9 @@ END_TEST
 START_TEST(test_get_boundary_invalid)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	w_system_register_system(&g_registry, &sys);
-	w_system_register_system(&g_registry, &sys);
-	w_system_register_system(&g_registry, &sys);
+	w_system_register_system(&g_registry, "sys_a", &sys);
+	w_system_register_system(&g_registry, "sys_b", &sys);
+	w_system_register_system(&g_registry, "sys_c", &sys);
 
 	// ID 3 is invalid (one past last)
 	struct w_system *got = w_system_get_system_entry(&g_registry, 3);
@@ -223,9 +233,9 @@ START_TEST(test_get_returns_correct_system)
 	struct w_system sys2 = {.phase_id = 20, .update = test_update_func};
 	struct w_system sys3 = {.phase_id = 30, .update = test_update_func};
 
-	size_t id1 = w_system_register_system(&g_registry, &sys1);
-	size_t id2 = w_system_register_system(&g_registry, &sys2);
-	size_t id3 = w_system_register_system(&g_registry, &sys3);
+	size_t id1 = w_system_register_system(&g_registry, "sys_a", &sys1);
+	size_t id2 = w_system_register_system(&g_registry, "sys_b", &sys2);
+	size_t id3 = w_system_register_system(&g_registry, "sys_c", &sys3);
 
 	ck_assert_int_eq(w_system_get_system_entry(&g_registry, id1)->phase_id, 10);
 	ck_assert_int_eq(w_system_get_system_entry(&g_registry, id2)->phase_id, 20);
@@ -241,7 +251,7 @@ END_TEST
 START_TEST(test_set_state_disable)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert(got->enabled);
 
@@ -253,7 +263,7 @@ END_TEST
 START_TEST(test_set_state_enable)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 
 	// first disable
@@ -284,9 +294,9 @@ END_TEST
 START_TEST(test_set_state_multiple_systems)
 {
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id1 = w_system_register_system(&g_registry, &sys);
-	size_t id2 = w_system_register_system(&g_registry, &sys);
-	size_t id3 = w_system_register_system(&g_registry, &sys);
+	size_t id1 = w_system_register_system(&g_registry, "sys_a", &sys);
+	size_t id2 = w_system_register_system(&g_registry, "sys_b", &sys);
+	size_t id3 = w_system_register_system(&g_registry, "sys_c", &sys);
 
 	// all start enabled
 	ck_assert(w_system_get_system_entry(&g_registry, id1)->enabled);
@@ -310,10 +320,12 @@ START_TEST(test_many_systems_stress)
 {
 	const int count = 100;
 	size_t system_ids[100];
+	char name_buf[32];
 
 	for (int i = 0; i < count; i++) {
 		struct w_system sys = {.phase_id = (size_t)i, .update = test_update_func};
-		system_ids[i] = w_system_register_system(&g_registry, &sys);
+		snprintf(name_buf, sizeof(name_buf), "sys_%d", i);
+		system_ids[i] = w_system_register_system(&g_registry, name_buf, &sys);
 	}
 
 	ck_assert_int_eq(g_registry.systems_length, count);
@@ -331,10 +343,12 @@ START_TEST(test_systems_beyond_initial_allocation)
 {
 	// initial allocation is 16, register more than that
 	const int count = 32;
+	char name_buf[32];
 
 	for (int i = 0; i < count; i++) {
 		struct w_system sys = {.phase_id = (size_t)i, .update = test_update_func};
-		w_system_register_system(&g_registry, &sys);
+		snprintf(name_buf, sizeof(name_buf), "sys_%d", i);
+		w_system_register_system(&g_registry, name_buf, &sys);
 	}
 
 	ck_assert_int_eq(g_registry.systems_length, count);
@@ -354,7 +368,7 @@ START_TEST(test_system_update_function_callable)
 	g_last_delta_time = 0.0;
 
 	struct w_system sys = {.phase_id = 0, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 
 	// call the update function through the pointer
@@ -368,7 +382,7 @@ END_TEST
 START_TEST(test_system_null_update_function)
 {
 	struct w_system sys = {.phase_id = 0, .update = NULL};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_ptr_null(got->update);
 }
@@ -377,7 +391,7 @@ END_TEST
 START_TEST(test_modify_system_via_pointer)
 {
 	struct w_system sys = {.phase_id = 0, .update_frequency = 30, .update = test_update_func};
-	size_t id = w_system_register_system(&g_registry, &sys);
+	size_t id = w_system_register_system(&g_registry, "sys_a", &sys);
 
 	struct w_system *got = w_system_get_system_entry(&g_registry, id);
 	ck_assert_int_eq(got->update_frequency, 30);

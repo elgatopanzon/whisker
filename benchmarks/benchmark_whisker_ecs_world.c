@@ -73,7 +73,7 @@ UBENCH_F_SETUP(bench_update_1_system)
 		.last_update_ticks = 0,
 		.update_frequency = 0
 	};
-	w_ecs_register_system(&ubench_fixture->world, &sys);
+	w_ecs_register_system(&ubench_fixture->world, "system_math_workload", &sys);
 
 	g_accumulator = 0.0;
 }
@@ -129,6 +129,7 @@ static void init_world_with_phases_(
 
 	// register 10 systems distributed across phases
 	size_t systems_per_phase = 10 / num_phases;
+	char name_buf[32];
 	for (int i = 0; i < 10; i++)
 	{
 		struct w_system sys = {
@@ -138,7 +139,8 @@ static void init_world_with_phases_(
 			.last_update_ticks = 0,
 			.update_frequency = 0
 		};
-		w_ecs_register_system(world, &sys);
+		snprintf(name_buf, sizeof(name_buf), "sys_%d", i);
+		w_ecs_register_system(world, name_buf, &sys);
 	}
 }
 

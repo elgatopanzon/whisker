@@ -238,7 +238,7 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 			.enabled = true, \
 			.update = name, \
 		}; \
-		w_ecs_register_system(world, &sys); \
+		w_ecs_register_system(world, #name, &sys); \
 	} \
 
 #define w_ecs_system(name, phase, query, work) \
@@ -260,9 +260,22 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	w_ecs_declare_system_register_fn(name, phase) \
 
 // register a system with the ECS scheduler
-size_t w_ecs_register_system(struct w_ecs_world *world, struct w_system *system);
+size_t w_ecs_register_system(struct w_ecs_world *world, char *name, struct w_system *system);
 size_t w_ecs_set_system_state(struct w_ecs_world *world, size_t system_id, bool system_state);
 struct w_system *w_ecs_get_system_entry(struct w_ecs_world *world, size_t system_id);
+
+// get system ID by name
+#define w_ecs_get_system_id_by_name(w, name) w_system_get_id_by_name(&(w)->systems, name)
+
+// get system entry by name
+#define w_ecs_get_system_entry_str(w, name) w_system_get_system_entry_str(&(w)->systems, name)
+
+// set system state by name
+#define w_ecs_set_system_state_str(w, name, state) \
+	do { \
+		size_t *_id = w_system_get_id_by_name(&(w)->systems, name); \
+		if (_id) w_ecs_set_system_state(w, *_id, state); \
+	} while (0)
 
 // register a scheduler phase
 size_t w_ecs_register_system_phase(struct w_ecs_world *world, struct w_scheduler_phase *phase);

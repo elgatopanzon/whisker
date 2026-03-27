@@ -192,7 +192,7 @@ START_TEST(test_register_system)
 		.update = test_system_a,
 		.update_frequency = 0,
 	};
-	size_t sys_id = w_ecs_register_system(&g_world, &sys);
+	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 	ck_assert_int_eq(sys_id, 0);
 	ck_assert_int_eq(g_world.systems.systems_length, 1);
 }
@@ -203,7 +203,7 @@ START_TEST(test_register_system_marks_jobs_dirty)
 	g_world.scheduler_jobs_dirty = false;
 
 	struct w_system sys = {.phase_id = 1, .update = test_system_a};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	ck_assert(g_world.scheduler_jobs_dirty);
 }
@@ -218,9 +218,9 @@ START_TEST(test_register_multiple_systems)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a};
-	size_t id1 = w_ecs_register_system(&g_world, &sys);
-	size_t id2 = w_ecs_register_system(&g_world, &sys);
-	size_t id3 = w_ecs_register_system(&g_world, &sys);
+	size_t id1 = w_ecs_register_system(&g_world, "sys_a", &sys);
+	size_t id2 = w_ecs_register_system(&g_world, "sys_b", &sys);
+	size_t id3 = w_ecs_register_system(&g_world, "sys_c", &sys);
 
 	ck_assert_int_eq(id1, 0);
 	ck_assert_int_eq(id2, 1);
@@ -252,7 +252,7 @@ START_TEST(test_update_calls_system)
 		.update = test_system_a,
 		.update_frequency = 0,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 
@@ -278,7 +278,7 @@ START_TEST(test_update_multiple_times)
 		.update = test_system_a,
 		.update_frequency = 0,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 	w_ecs_update(&g_world);
@@ -318,9 +318,9 @@ START_TEST(test_update_multiple_systems_same_phase)
 	struct w_system sys_a = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
 	struct w_system sys_b = {.phase_id = phase_id, .update = test_system_b, .update_frequency = 0};
 	struct w_system sys_c = {.phase_id = phase_id, .update = test_system_c, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys_a);
-	w_ecs_register_system(&g_world, &sys_b);
-	w_ecs_register_system(&g_world, &sys_c);
+	w_ecs_register_system(&g_world, "test_system_a", &sys_a);
+	w_ecs_register_system(&g_world, "test_system_b", &sys_b);
+	w_ecs_register_system(&g_world, "test_system_c", &sys_c);
 
 	w_ecs_update(&g_world);
 
@@ -353,7 +353,7 @@ START_TEST(test_frequency_zero_uses_timestep_delta)
 		.update = test_system_a,
 		.update_frequency = 0,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 
@@ -383,8 +383,8 @@ START_TEST(test_frequency_zero_different_timestep_deltas)
 
 	struct w_system sys_a = {.phase_id = phase1_id, .update = test_system_a, .update_frequency = 0};
 	struct w_system sys_b = {.phase_id = phase2_id, .update = test_system_b, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys_a);
-	w_ecs_register_system(&g_world, &sys_b);
+	w_ecs_register_system(&g_world, "test_system_a", &sys_a);
+	w_ecs_register_system(&g_world, "test_system_b", &sys_b);
 
 	w_ecs_update(&g_world);
 
@@ -417,7 +417,7 @@ START_TEST(test_frequency_skips_until_enough_ticks)
 		.update = test_system_a,
 		.update_frequency = 3,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// tick 0: ticks_elapsed = 0 - 0 = 0 < 3, skip
 	w_ecs_update(&g_world);
@@ -458,7 +458,7 @@ START_TEST(test_frequency_updates_last_update_ticks)
 		.update = test_system_a,
 		.update_frequency = 2,
 	};
-	size_t sys_id = w_ecs_register_system(&g_world, &sys);
+	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// initial last_update_ticks should be 0
 	struct w_system *sys_entry = w_ecs_get_system_entry(&g_world, sys_id);
@@ -495,7 +495,7 @@ START_TEST(test_frequency_accumulated_delta_time)
 		.update = test_system_a,
 		.update_frequency = 5,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// tick 5: 5 ticks elapsed * 0.010 = 0.050 delta
 	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 5;
@@ -523,8 +523,8 @@ START_TEST(test_frequency_mixed_systems)
 	struct w_system sys_a = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
 	// system B: every 3 ticks
 	struct w_system sys_b = {.phase_id = phase_id, .update = test_system_b, .update_frequency = 3};
-	w_ecs_register_system(&g_world, &sys_a);
-	w_ecs_register_system(&g_world, &sys_b);
+	w_ecs_register_system(&g_world, "test_system_a", &sys_a);
+	w_ecs_register_system(&g_world, "test_system_b", &sys_b);
 
 	// run updates for ticks 0, 1, 2, 3
 	for (int i = 0; i <= 3; i++) {
@@ -558,7 +558,7 @@ START_TEST(test_frequency_delta_on_late_run)
 		.update = test_system_a,
 		.update_frequency = 2,
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// first run at tick 2: 2 ticks * 0.010 = 0.020
 	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 2;
@@ -591,7 +591,7 @@ START_TEST(test_disabled_system_not_called)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	size_t sys_id = w_ecs_register_system(&g_world, &sys);
+	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// disable the system
 	w_ecs_set_system_state(&g_world, sys_id, false);
@@ -616,7 +616,7 @@ START_TEST(test_reenable_system_called)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	size_t sys_id = w_ecs_register_system(&g_world, &sys);
+	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	// disable
 	w_ecs_set_system_state(&g_world, sys_id, false);
@@ -678,9 +678,9 @@ START_TEST(test_systems_in_different_phases_order)
 	struct w_system sys3 = {.phase_id = p3, .update = order_system_3, .update_frequency = 0};
 	struct w_system sys1 = {.phase_id = p1, .update = order_system_1, .update_frequency = 0};
 	struct w_system sys2 = {.phase_id = p2, .update = order_system_2, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys3);
-	w_ecs_register_system(&g_world, &sys1);
-	w_ecs_register_system(&g_world, &sys2);
+	w_ecs_register_system(&g_world, "order_system_3", &sys3);
+	w_ecs_register_system(&g_world, "order_system_1", &sys1);
+	w_ecs_register_system(&g_world, "order_system_2", &sys2);
 
 	w_ecs_update(&g_world);
 
@@ -1062,7 +1062,7 @@ START_TEST(test_system_executes_during_update)
 		.update = system_increment_counter_,
 		.update_frequency = 0
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "system_increment_counter", &sys);
 
 	// counter should be zero before update
 	ck_assert_int_eq(g_sysexec_counter, 0);
@@ -1094,6 +1094,7 @@ START_TEST(test_multiple_systems_execute_during_update)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	// register 5 systems in same phase
+	char name_buf[32];
 	for (int i = 0; i < 5; i++)
 	{
 		struct w_system sys = {
@@ -1102,7 +1103,8 @@ START_TEST(test_multiple_systems_execute_during_update)
 			.update = system_increment_counter_,
 			.update_frequency = 0
 		};
-		w_ecs_register_system(&g_world, &sys);
+		snprintf(name_buf, sizeof(name_buf), "sys_%d", i);
+		w_ecs_register_system(&g_world, name_buf, &sys);
 	}
 
 	w_ecs_update(&g_world);
@@ -1133,7 +1135,7 @@ START_TEST(test_system_executes_multiple_updates)
 		.update = system_increment_counter_,
 		.update_frequency = 0
 	};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "system_increment_counter", &sys);
 
 	// run 10 updates
 	for (int i = 0; i < 10; i++)
@@ -1162,7 +1164,7 @@ START_TEST(test_rebuild_count_after_first_update)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 	ck_assert_uint_eq(g_world.scheduler.schedule.rebuild_count, 1);
@@ -1178,7 +1180,7 @@ START_TEST(test_rebuild_count_subsequent_updates_no_rebuild)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 	ck_assert_uint_eq(g_world.scheduler.schedule.rebuild_count, 1);
@@ -1200,13 +1202,13 @@ START_TEST(test_rebuild_count_register_system_triggers_rebuild)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys);
+	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 	ck_assert_uint_eq(g_world.scheduler.schedule.rebuild_count, 1);
 
 	struct w_system sys2 = {.phase_id = phase_id, .update = test_system_b, .update_frequency = 0};
-	w_ecs_register_system(&g_world, &sys2);
+	w_ecs_register_system(&g_world, "test_system_b", &sys2);
 
 	w_ecs_update(&g_world);
 	ck_assert_uint_eq(g_world.scheduler.schedule.rebuild_count, 2);
@@ -1224,7 +1226,7 @@ START_TEST(test_rebuild_count_disable_system_triggers_rebuild)
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
 	struct w_system sys = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	size_t sys_id = w_ecs_register_system(&g_world, &sys);
+	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 
 	w_ecs_update(&g_world);
 	ck_assert_uint_eq(g_world.scheduler.schedule.rebuild_count, 1);

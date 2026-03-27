@@ -9,20 +9,23 @@
 #include "whisker_system_registry.h"
 
 
-void w_system_registry_init(struct w_system_registry *registry)
+void w_system_registry_init(struct w_system_registry *registry, struct w_arena *arena)
 {
+	registry->arena = arena;
 	registry->systems_length = 0;
 
 	w_array_init_t(registry->systems, 16);
+	w_hashmap_t_init(&registry->system_names, arena, 16, w_hashmap_hash_str, w_hashmap_eq_str);
 }
 void w_system_registry_free(struct w_system_registry *registry)
 {
 	free_null(registry->systems);
 	registry->systems_length = 0;
+	w_hashmap_t_free(&registry->system_names);
 }
 
 
-size_t w_system_register_system(struct w_system_registry *registry, struct w_system *system)
+size_t w_system_register_system(struct w_system_registry *registry, char *name, struct w_system *system)
 {
 	w_array_ensure_alloc_block_size(
 		registry->systems,
@@ -35,7 +38,12 @@ size_t w_system_register_system(struct w_system_registry *registry, struct w_sys
 
 	registry->systems[registry->systems_length] = *system;
 
-	return registry->systems_length++;
+	size_t id = registry->systems_length++;
+
+	// store name -> ID mapping
+	w_hashmap_t_set(&registry->system_names, name, id);
+
+	return id;
 }
 
 void w_system_set_system_state(struct w_system_registry *registry, size_t system_id, bool state)
