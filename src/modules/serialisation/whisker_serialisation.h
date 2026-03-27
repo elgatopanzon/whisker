@@ -12,6 +12,7 @@
 
 #define WM_SERIALISATION_REGISTRY_NAME "wm_serialisation_registry"
 #define WM_SERIALISATION_NO_SERIALISE_TAG_NAME "wm_serialisation_exclude_"
+#define WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME "wm_serialisation_as_id_"
 
 #define WM_SERIALISATION_PARAMS_BUFFER_SIZE 1024
 #define WM_SERIALISATION_BUFFER_BLOCK_SIZE 16384 
@@ -183,6 +184,7 @@ size_t w_serialisation_type_size_(uint type_id);
 bool w_deserialisation_parse_metadata_(struct wm_deserialisation_ctx *ctx, const char *line, uint32_t *expected_entities, uint32_t *expected_components);
 bool w_deserialisation_parse_entity_(struct w_ecs_world *world, struct wm_deserialisation_ctx *ctx, char *line, int line_num);
 bool w_deserialisation_parse_set_(struct w_ecs_world *world, struct wm_serialisation_registry *registry, struct wm_deserialisation_ctx *ctx, char *line, int line_num);
+bool w_deserialisation_parse_setid_(struct w_ecs_world *world, struct wm_serialisation_registry *registry, struct wm_deserialisation_ctx *ctx, char *line, int line_num);
 
 
 /*****************************************

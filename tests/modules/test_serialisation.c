@@ -2156,6 +2156,186 @@ END_TEST
 
 
 /*****************************
+*  setid tests               *
+*****************************/
+
+START_TEST(test_dump_setid_emitted_when_marker_present)
+{
+	// create entity and component
+	w_entity_id ent = w_ecs_request_entity_with_name(&g_world, "buf_ent");
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "buf_data");
+	int32_t val = 42;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, ent, &val, sizeof(val));
+
+	// tag the component with serialise-as-id marker
+	w_ecs_set_tag_str(&g_world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, comp);
+
+	struct wm_serialisation_ctx sctx = {0};
+	bool ok = w_serialisation_dump_to_buffer(&g_world, &sctx);
+	ck_assert(ok);
+
+	// buffer should contain setid with entity ID, not set with entity name
+	char expected[128];
+	snprintf(expected, sizeof(expected), "setid %u \"buf_data\" int32_t 42", ent);
+	ck_assert_ptr_nonnull(strstr(sctx.buffer, expected));
+
+	// should NOT contain a name-based set for this component
+	ck_assert_ptr_null(strstr(sctx.buffer, "set \"buf_ent\" \"buf_data\""));
+
+	free(sctx.buffer);
+	free(sctx.entities);
+	free(sctx.components);
+}
+END_TEST
+
+START_TEST(test_dump_set_emitted_when_marker_absent)
+{
+	// create entity and component without marker
+	w_entity_id ent = w_ecs_request_entity_with_name(&g_world, "normal_ent");
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "health");
+	int32_t val = 100;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, ent, &val, sizeof(val));
+
+	struct wm_serialisation_ctx sctx = {0};
+	bool ok = w_serialisation_dump_to_buffer(&g_world, &sctx);
+	ck_assert(ok);
+
+	// should contain name-based set, not setid
+	ck_assert_ptr_nonnull(strstr(sctx.buffer, "set \"normal_ent\" \"health\" int32_t 100"));
+	ck_assert_ptr_null(strstr(sctx.buffer, "setid"));
+
+	free(sctx.buffer);
+	free(sctx.entities);
+	free(sctx.components);
+}
+END_TEST
+
+START_TEST(test_restore_setid_sets_component_at_exact_id)
+{
+	// pre-create some entities so we have a known ID
+	w_entity_id e0 = w_ecs_request_entity(&g_world);
+	w_entity_id e1 = w_ecs_request_entity(&g_world);
+	(void)e0;
+
+	char buf_str[256];
+	snprintf(buf_str, sizeof(buf_str),
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 0\n"
+		"# components 0\n"
+		"setid %u \"hp\" int32_t 77\n",
+		e1);
+	char *buf = make_buffer(buf_str);
+
+	struct wm_deserialisation_ctx dctx = {0};
+	bool ok = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(ok);
+	ck_assert_uint_eq(dctx.components_loaded, 1);
+
+	// verify component data at exact entity ID
+	w_entity_id hp_comp = w_ecs_get_component_by_name(&g_world, "hp");
+	int32_t *val = w_ecs_get_component_(&g_world, hp_comp, e1);
+	ck_assert_ptr_nonnull(val);
+	ck_assert_int_eq(*val, 77);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_restore_setid_unknown_type_fails)
+{
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 0\n"
+		"# components 0\n"
+		"setid 5 \"comp\" fake_type 123\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool ok = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(!ok);
+	ck_assert_int_ne(dctx.err, 0);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_restore_setid_malformed_id_fails)
+{
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 0\n"
+		"# components 0\n"
+		"setid abc \"comp\" int32_t 5\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool ok = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(!ok);
+	ck_assert_int_ne(dctx.err, 0);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_restore_setid_malformed_no_comp_quote_fails)
+{
+	char *buf = make_buffer(
+		"# whisker save\n"
+		"# version 0\n"
+		"# entities 0\n"
+		"# components 0\n"
+		"setid 5 comp int32_t 5\n"
+	);
+	struct wm_deserialisation_ctx dctx = {0};
+	bool ok = w_serialisation_restore_from_buffer(&g_world, buf, strlen(buf), &dctx);
+	ck_assert(!ok);
+	ck_assert_int_ne(dctx.err, 0);
+
+	free(dctx.unparsed);
+	free(buf);
+}
+END_TEST
+
+START_TEST(test_e2e_setid_round_trip)
+{
+	// create entity and component with serialise-as-id marker
+	w_entity_id ent = w_ecs_request_entity_with_name(&g_world, "slot");
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "slot_val");
+	float val = 3.14f;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float, comp, ent, &val, sizeof(val));
+	w_ecs_set_tag_str(&g_world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, comp);
+
+	// dump
+	struct wm_serialisation_ctx sctx = {0};
+	bool dump_ok = w_serialisation_dump_to_buffer(&g_world, &sctx);
+	ck_assert(dump_ok);
+
+	// verify setid in buffer
+	ck_assert_ptr_nonnull(strstr(sctx.buffer, "setid"));
+
+	// restore into same world (entities already exist at same IDs)
+	struct wm_deserialisation_ctx dctx = {0};
+	bool restore_ok = w_serialisation_restore_from_buffer(&g_world, sctx.buffer, sctx.buffer_length, &dctx);
+	ck_assert(restore_ok);
+
+	// verify value at exact entity ID
+	float *restored = w_ecs_get_component_(&g_world, comp, ent);
+	ck_assert_ptr_nonnull(restored);
+	ck_assert_float_eq_tol(*restored, 3.14f, 0.001f);
+
+	free(dctx.unparsed);
+	free(sctx.buffer);
+	free(sctx.entities);
+	free(sctx.components);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -2314,6 +2494,18 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_version, test_version_zero_with_no_migration_hooks);
 	tcase_add_test(tc_version, test_version_counts_migration_hooks);
 	suite_add_tcase(s, tc_version);
+
+	TCase *tc_setid = tcase_create("setid");
+	tcase_add_checked_fixture(tc_setid, serialisation_setup, serialisation_teardown);
+	tcase_set_timeout(tc_setid, 10);
+	tcase_add_test(tc_setid, test_dump_setid_emitted_when_marker_present);
+	tcase_add_test(tc_setid, test_dump_set_emitted_when_marker_absent);
+	tcase_add_test(tc_setid, test_restore_setid_sets_component_at_exact_id);
+	tcase_add_test(tc_setid, test_restore_setid_unknown_type_fails);
+	tcase_add_test(tc_setid, test_restore_setid_malformed_id_fails);
+	tcase_add_test(tc_setid, test_restore_setid_malformed_no_comp_quote_fails);
+	tcase_add_test(tc_setid, test_e2e_setid_round_trip);
+	suite_add_tcase(s, tc_setid);
 
 	TCase *tc_edge = tcase_create("edge_cases");
 	tcase_add_checked_fixture(tc_edge, serialisation_setup, serialisation_teardown);

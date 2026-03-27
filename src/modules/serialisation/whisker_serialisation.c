@@ -166,6 +166,9 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 	struct wm_serialisation_component_ctx comp_ctx;
 	comp_ctx.ctx = ctx;
 	
+	// look up the serialise-as-id tag component once
+	w_entity_id as_id_tag = w_ecs_get_component_by_name(world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME);
+
 	// loop over component IDs, fetch entry, execute hooks
 	for (size_t ci = 0; ci < ctx->components_length; ++ci)
 	{
@@ -179,6 +182,10 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 		comp_ctx.component_type_name = W_COMPONENT_TYPE_NAME(entry->type_id);
 		comp_ctx.component_entry = entry;
 
+		// check if this component is marked for ID-based serialisation
+		bool use_setid = (as_id_tag != W_ENTITY_INVALID)
+			&& w_ecs_has_component_(world, as_id_tag, component_entity);
+
 		w_sparse_bitset_for_each(&entry->data_bitset) {
 			comp_ctx.entity = i;
 			comp_ctx.entity_name = w_ecs_get_entity_name(world, i);
@@ -189,12 +196,16 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 			// run serialise hooks
 			w_hook_registry_run_hooks(
 				&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_COMPONENT_SERIALISE],
-				entry->type_id, 
+				entry->type_id,
 				world, &comp_ctx
 			);
 
 			// write component set commands
-			w_serialisation_push_ctx_command_f_(ctx, "set \"%s\" \"%s\" %s %s", comp_ctx.entity_name, comp_ctx.component_name, comp_ctx.component_type_name, comp_ctx.hook_params_buffer);
+			if (use_setid) {
+				w_serialisation_push_ctx_command_f_(ctx, "setid %u \"%s\" %s %s", comp_ctx.entity, comp_ctx.component_name, comp_ctx.component_type_name, comp_ctx.hook_params_buffer);
+			} else {
+				w_serialisation_push_ctx_command_f_(ctx, "set \"%s\" \"%s\" %s %s", comp_ctx.entity_name, comp_ctx.component_name, comp_ctx.component_type_name, comp_ctx.hook_params_buffer);
+			}
 		};
 	}
 
@@ -470,6 +481,121 @@ bool w_deserialisation_parse_set_(struct w_ecs_world *world, struct wm_serialisa
 	return true;
 }
 
+bool w_deserialisation_parse_setid_(struct w_ecs_world *world, struct wm_serialisation_registry *registry, struct wm_deserialisation_ctx *ctx, char *line, int line_num)
+{
+	if (strncmp(line, "setid ", 6) != 0) return false;
+
+	// format: setid <entity_id> "comp_name" type_name params...
+	char *p = line + 6;
+
+	// extract entity ID (raw integer)
+	char *id_end = NULL;
+	unsigned long entity_id_val = strtoul(p, &id_end, 10);
+	if (id_end == p || !id_end) {
+		ctx->err = 1;
+		ctx->err_message = "malformed setid command: invalid entity ID";
+		ctx->err_line = line_num;
+		return true;
+	}
+	w_entity_id entity_id = (w_entity_id)entity_id_val;
+	p = id_end;
+
+	// expect ' "' before component name
+	if (p[0] != ' ' || p[1] != '"') {
+		ctx->err = 1;
+		ctx->err_message = "malformed setid command: expected space+quote before component name";
+		ctx->err_line = line_num;
+		return true;
+	}
+	p += 2;
+
+	// extract component name
+	char *comp_name_start = p;
+	char *comp_name_end = strchr(p, '"');
+	if (!comp_name_end) {
+		ctx->err = 1;
+		ctx->err_message = "malformed setid command: missing component name closing quote";
+		ctx->err_line = line_num;
+		return true;
+	}
+
+	*comp_name_end = '\0';
+	p = comp_name_end + 1;
+
+	// expect ' ' before type name
+	if (*p != ' ') {
+		*comp_name_end = '"';
+		ctx->err = 1;
+		ctx->err_message = "malformed setid command: expected space after component name";
+		ctx->err_line = line_num;
+		return true;
+	}
+	p++;
+
+	// extract type name (space-delimited or end of line)
+	char *type_start = p;
+	char *type_end = strchr(p, ' ');
+	char *params = "";
+	char saved_type_end = '\0';
+
+	if (type_end) {
+		saved_type_end = *type_end;
+		*type_end = '\0';
+		params = type_end + 1;
+	}
+
+	// resolve type_id from type name
+	uint32_t type_id = W_COMPONENT_TYPE_FROM_NAME(type_start);
+	size_t data_size = W_COMPONENT_TYPE_SIZE(type_id);
+
+	// restore type_end
+	if (type_end) *type_end = saved_type_end;
+
+	// look up component by name
+	w_entity_id comp_entity_id = w_ecs_get_component_by_name(world, comp_name_start);
+
+	// restore null terminator
+	*comp_name_end = '"';
+
+	if (type_id == UINT32_MAX) {
+		ctx->err = 1;
+		ctx->err_message = "setid command references unknown type";
+		ctx->err_line = line_num;
+		return true;
+	}
+
+	// allocate value buffer on stack and zero it
+	uint8_t value_buf[256] = {0};
+
+	// set up deserialisation component context
+	struct wm_deserialisation_component_ctx dcomp_ctx = {
+		.ctx = ctx,
+		.entity = entity_id,
+		.entity_name = NULL,
+		.component_entity_id = comp_entity_id,
+		.component_name = NULL,
+		.component_type_id = type_id,
+		.component_type_name = NULL,
+		.component_entry = w_component_registry_get_entry(&world->components, comp_entity_id),
+		.value_buffer = (char *)value_buf,
+	};
+	strncpy(dcomp_ctx.hook_params_buffer, params, sizeof(dcomp_ctx.hook_params_buffer) - 1);
+	dcomp_ctx.hook_params_buffer[sizeof(dcomp_ctx.hook_params_buffer) - 1] = '\0';
+
+	// run deserialise hooks to populate value_buf
+	w_hook_registry_run_hooks(
+		&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_COMPONENT_DESERIALISE],
+		type_id,
+		world, &dcomp_ctx
+	);
+
+	// set component data at the exact entity ID position
+	w_ecs_set_component_(world, type_id, comp_entity_id, entity_id, value_buf, data_size);
+	ctx->components_loaded++;
+
+	return true;
+}
+
 bool w_serialisation_restore_from_buffer(struct w_ecs_world *world, char *buffer, size_t buf_len, struct wm_deserialisation_ctx *ctx)
 {
 	struct wm_serialisation_registry *registry = w_ecs_singleton_get(world, WM_SERIALISATION_REGISTRY_NAME);
@@ -539,6 +665,10 @@ bool w_serialisation_restore_from_buffer(struct w_ecs_world *world, char *buffer
 		}
 		// step 3: set component commands
 		else if (w_deserialisation_parse_set_(world, registry, ctx, cursor, line_num)) {
+			// handled (or error set)
+		}
+		// step 3b: setid component commands (ID-based addressing)
+		else if (w_deserialisation_parse_setid_(world, registry, ctx, cursor, line_num)) {
 			// handled (or error set)
 		}
 		// unrecognized line
