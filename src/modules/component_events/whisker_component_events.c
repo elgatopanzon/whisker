@@ -56,32 +56,6 @@ static void ensure_tags_initialized_(
 	reg->event_tags[comp_id].initialized = true;
 }
 
-
-/*****************************
-*  cleanup hook              *
-*****************************/
-
-// drain removal buffer - processes all items including those added during processing
-static void cleanup_hook_(void *world_, void *data_)
-{
-	(void)data_;
-	struct w_ecs_world *world = world_;
-	struct wm_component_events_registry *reg = wm_component_events_get_registry(world);
-	if (!reg) return;
-
-	// index-based loop: length can grow during iteration
-	for (size_t i = 0; i < reg->removal_buffer_length; i++)
-	{
-		w_pack32x2 pair = reg->removal_buffer[i];
-		w_entity_id owner = pair.left;
-		w_entity_id tag_id = pair.right;
-		w_component_remove(&world->components, tag_id, owner);
-	}
-
-	reg->removal_buffer_length = 0;
-}
-
-
 /*****************************
 *  hook callbacks            *
 *****************************/
@@ -160,7 +134,7 @@ void wm_component_events_init(struct w_ecs_world *world)
 	w_ecs_set_module_resource(world, WM_COMPONENT_EVENTS_MODULE_RESOURCE_ID, reg);
 
 	// register cleanup hook to run at beginning of each update
-	w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_BEGIN, cleanup_hook_);
+	component_events_cleanup_register(world);
 }
 
 void wm_component_events_free(struct w_ecs_world *world)

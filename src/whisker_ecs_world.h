@@ -429,6 +429,147 @@ size_t w_ecs_register_entity_destroy_hook(struct w_ecs_world *world, w_hook_fn h
 // unregister an entity destroy hook by ID
 void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook_id);
 
+
+/***************************
+*  hook definition macros  *
+***************************/
+
+// define an update lifecycle hook function and its register function
+// subtype: BEGIN, END, TIMESTEP_BEGIN, TIMESTEP_END, PHASE_BEGIN, PHASE_END
+// inside work: world (struct w_ecs_world *) and action (struct w_scheduler_action *) are pre-cast
+#define w_ecs_update_hook(name, subtype, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_update_hook(world, W_WORLD_HOOK_UPDATE_##subtype, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_scheduler_action *action = (struct w_scheduler_action *)data; \
+		(void)world; (void)action; \
+		work; \
+	} \
+
+// define a component set hook function and its register function
+// fires when a component of the given type_id is set
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_set_hook(name, type_id, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_set_hook(world, (type_id), name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define a component remove hook function and its register function
+// fires when a component of the given type_id is removed
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_remove_hook(name, type_id, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_remove_hook(world, (type_id), name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define a global component pre-set hook function and its register function
+// fires before any component is set
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_pre_set_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_pre_set_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define a global component pre-remove hook function and its register function
+// fires before any component is removed
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_pre_remove_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_pre_remove_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define a component-specific pre-set hook function and its register function
+// fires before the component with comp_id is set
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_id_pre_set_hook(name, comp_id, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_id_pre_set_hook(world, (comp_id), name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define a component-specific pre-remove hook function and its register function
+// fires before the component with comp_id is removed
+// inside work: world (struct w_ecs_world *) and payload (struct w_component_action_payload *) are pre-cast
+#define w_ecs_component_id_pre_remove_hook(name, comp_id, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_component_id_pre_remove_hook(world, (comp_id), name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		struct w_component_action_payload *payload = (struct w_component_action_payload *)data; \
+		(void)world; (void)payload; \
+		work; \
+	} \
+
+// define an entity create hook function and its register function
+// fires when an entity is created
+// inside work: world (struct w_ecs_world *) and entity (w_entity_id *) are pre-cast
+#define w_ecs_entity_create_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_entity_create_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		w_entity_id *entity = (w_entity_id *)data; \
+		(void)world; (void)entity; \
+		work; \
+	} \
+
+// define an entity destroy hook function and its register function
+// fires when an entity is destroyed
+// inside work: world (struct w_ecs_world *) and entity (w_entity_id *) are pre-cast
+#define w_ecs_entity_destroy_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_entity_destroy_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		w_entity_id *entity = (w_entity_id *)data; \
+		(void)world; (void)entity; \
+		work; \
+	} \
+
+
 // temporarily disable buffering to execute code block directly
 #define w_ecs_world_do_unbuffered(w, block) do { \
 	bool _was_buffered = (w)->buffering_enabled; \

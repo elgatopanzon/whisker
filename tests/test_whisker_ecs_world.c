@@ -1532,6 +1532,186 @@ END_TEST
 
 
 /*****************************
+*  hook definition macros    *
+*****************************/
+
+static int g_hook_macro_counter = 0;
+static w_entity_id g_hook_macro_entity_id = W_ENTITY_INVALID;
+
+w_ecs_update_hook(hook_macro_update_begin, BEGIN, {
+	g_hook_macro_counter++;
+})
+
+w_ecs_component_set_hook(hook_macro_comp_set, 0, {
+	g_hook_macro_counter++;
+})
+
+w_ecs_component_remove_hook(hook_macro_comp_remove, 0, {
+	g_hook_macro_counter++;
+})
+
+w_ecs_component_pre_set_hook(hook_macro_comp_pre_set, {
+	g_hook_macro_counter++;
+})
+
+w_ecs_component_pre_remove_hook(hook_macro_comp_pre_remove, {
+	g_hook_macro_counter++;
+})
+
+static w_entity_id g_hook_macro_id_pre_set_comp_id = W_ENTITY_INVALID;
+
+w_ecs_component_id_pre_set_hook(hook_macro_comp_id_pre_set, g_hook_macro_id_pre_set_comp_id, {
+	g_hook_macro_counter++;
+})
+
+static w_entity_id g_hook_macro_id_pre_remove_comp_id = W_ENTITY_INVALID;
+
+w_ecs_component_id_pre_remove_hook(hook_macro_comp_id_pre_remove, g_hook_macro_id_pre_remove_comp_id, {
+	g_hook_macro_counter++;
+})
+
+w_ecs_entity_create_hook(hook_macro_entity_create, {
+	g_hook_macro_counter++;
+	g_hook_macro_entity_id = *entity;
+})
+
+w_ecs_entity_destroy_hook(hook_macro_entity_destroy, {
+	g_hook_macro_counter++;
+	g_hook_macro_entity_id = *entity;
+})
+
+START_TEST(test_hook_macro_update_begin_fires)
+{
+	g_hook_macro_counter = 0;
+	hook_macro_update_begin_register(&g_world);
+
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	w_scheduler_register_phase(&g_world.scheduler, &phase);
+
+	w_ecs_update(&g_world);
+
+	ck_assert_int_ge(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_set_fires)
+{
+	g_hook_macro_counter = 0;
+	hook_macro_comp_set_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "hm_comp_set");
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp, entity, &val, sizeof(val));
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_remove_fires)
+{
+	g_hook_macro_counter = 0;
+	hook_macro_comp_remove_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "hm_comp_remove");
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp, entity, &val, sizeof(val));
+	w_ecs_remove_component_(&g_world, comp, entity);
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_pre_set_fires)
+{
+	g_hook_macro_counter = 0;
+	hook_macro_comp_pre_set_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "hm_pre_set");
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp, entity, &val, sizeof(val));
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_pre_remove_fires)
+{
+	g_hook_macro_counter = 0;
+	hook_macro_comp_pre_remove_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "hm_pre_remove");
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, comp, entity, &val, sizeof(val));
+	w_ecs_remove_component_(&g_world, comp, entity);
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_id_pre_set_fires)
+{
+	g_hook_macro_counter = 0;
+	g_hook_macro_id_pre_set_comp_id = w_ecs_get_component_by_name(&g_world, "hm_id_pre_set");
+	hook_macro_comp_id_pre_set_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, g_hook_macro_id_pre_set_comp_id, entity, &val, sizeof(val));
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_component_id_pre_remove_fires)
+{
+	g_hook_macro_counter = 0;
+	g_hook_macro_id_pre_remove_comp_id = w_ecs_get_component_by_name(&g_world, "hm_id_pre_remove");
+	hook_macro_comp_id_pre_remove_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	int val = 1;
+	w_ecs_set_component_(&g_world, 0, g_hook_macro_id_pre_remove_comp_id, entity, &val, sizeof(val));
+	w_ecs_remove_component_(&g_world, g_hook_macro_id_pre_remove_comp_id, entity);
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+}
+END_TEST
+
+START_TEST(test_hook_macro_entity_create_fires)
+{
+	g_hook_macro_counter = 0;
+	g_hook_macro_entity_id = W_ENTITY_INVALID;
+	hook_macro_entity_create_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+	ck_assert_uint_eq(g_hook_macro_entity_id, entity);
+}
+END_TEST
+
+START_TEST(test_hook_macro_entity_destroy_fires)
+{
+	g_hook_macro_counter = 0;
+	g_hook_macro_entity_id = W_ENTITY_INVALID;
+	hook_macro_entity_destroy_register(&g_world);
+
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_ecs_return_entity(&g_world, entity);
+
+	ck_assert_int_eq(g_hook_macro_counter, 1);
+	ck_assert_uint_eq(g_hook_macro_entity_id, entity);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1676,6 +1856,20 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_module_res, test_module_resource_clear);
 	tcase_add_test(tc_module_res, test_module_resource_overwrite);
 	suite_add_tcase(s, tc_module_res);
+
+	TCase *tc_hook_macros = tcase_create("hook_definition_macros");
+	tcase_add_checked_fixture(tc_hook_macros, world_setup, world_teardown);
+	tcase_set_timeout(tc_hook_macros, 10);
+	tcase_add_test(tc_hook_macros, test_hook_macro_update_begin_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_set_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_remove_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_pre_set_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_pre_remove_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_id_pre_set_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_component_id_pre_remove_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_entity_create_fires);
+	tcase_add_test(tc_hook_macros, test_hook_macro_entity_destroy_fires);
+	suite_add_tcase(s, tc_hook_macros);
 
 	return s;
 }
