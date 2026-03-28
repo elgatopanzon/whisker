@@ -113,25 +113,61 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 	// 1. only serialise entities with names
 	// 2. exclude named entities with WM_SERIALISATION_NO_SERIALISE_TAG_NAME tag component
 	// 3. all components with type w_entity_id serialise as name not ID
-	
+
 	// prepare list of persistent entities
 	ctx->entities_length = 0;
 	ctx->entities_size = 0;
 	ctx->entities = w_serialisation_get_persistent_entity_list(world, &ctx->entities_length, &ctx->entities_size);
-
-	ctx->entities_saved = ctx->entities_length;
 
 	// prepare list of component IDs
 	ctx->components_length = 0;
 	ctx->components_size = 0;
 	ctx->components = w_serialisation_get_components_list(world, &ctx->components_length, &ctx->components_size);
 
-	ctx->components_saved = ctx->components_length;
+	// look up the exclude tag after building entity/component lists to avoid
+	// adding the tag entity itself to the lists
+	w_entity_id exclude_tag = w_ecs_get_component_by_name(world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+
+	// pre-compute array of entity IDs tagged with exclude
+	size_t excl_block_size = 64 * sizeof(w_entity_id);
+	w_array_declare(w_entity_id, excl);
+	excl_length = 0;
+	w_array_init_t(excl, excl_block_size);
+
+	if (exclude_tag != W_ENTITY_INVALID) {
+		struct w_component_entry *excl_entry = w_component_registry_get_entry(&world->components, exclude_tag);
+		if (excl_entry) {
+			w_sparse_bitset_for_each(&excl_entry->data_bitset) {
+				w_array_ensure_alloc_block_size(excl, excl_length + 1, excl_block_size);
+				excl[excl_length++] = i;
+			};
+		}
+	}
+
+	// count actual entities and component types to be written (for header)
+	size_t actual_entities = 0;
+	for (size_t i = 0; i < ctx->entities_length; ++i) {
+		bool skip = false;
+		for (size_t j = 0; j < excl_length; ++j) {
+			if (ctx->entities[i] == excl[j]) { skip = true; break; }
+		}
+		if (!skip) actual_entities++;
+	}
+
+	size_t actual_components = 0;
+	for (size_t ci = 0; ci < ctx->components_length; ++ci) {
+		if (exclude_tag != W_ENTITY_INVALID && w_ecs_has_component_(world, exclude_tag, ctx->components[ci]))
+			continue;
+		actual_components++;
+	}
+
+	ctx->entities_saved = actual_entities;
+	ctx->components_saved = actual_components;
 
 	// step 0: trigger pre-save lifecycle hooks
 	w_hook_registry_run_hooks(
 		&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE],
-		WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE, 
+		WM_SERIALISATION_LIFECYCLE_HOOK_PRE_SAVE,
 		world, ctx
 	);
 
@@ -147,25 +183,32 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 	// # version X
 	w_serialisation_push_ctx_command_f_(ctx, "# version %u", version);
 
-	w_serialisation_push_ctx_command_f_(ctx, "# entities %u", ctx->entities_length);
-	w_serialisation_push_ctx_command_f_(ctx, "# components %u", ctx->components_length);
-	
-	
+	w_serialisation_push_ctx_command_f_(ctx, "# entities %u", actual_entities);
+	w_serialisation_push_ctx_command_f_(ctx, "# components %u", actual_components);
+
+
 	// step 2: write entities commands
 	// entity command: entity "name"
 	for (size_t i = 0; i < ctx->entities_length; ++i)
 	{
+		// skip entities tagged with exclude
+		bool skip = false;
+		for (size_t j = 0; j < excl_length; ++j) {
+			if (ctx->entities[i] == excl[j]) { skip = true; break; }
+		}
+		if (skip) continue;
+
 		w_serialisation_push_ctx_command_f_(ctx, "entity \"%s\"", w_ecs_get_entity_name(world, ctx->entities[i]));
 	}
-	
-	
+
+
 	// step 3: component data
 	// component command: set "entity_name" "comp_name" type_name [params...]
-	
+
 	// temp component ctx
 	struct wm_serialisation_component_ctx comp_ctx;
 	comp_ctx.ctx = ctx;
-	
+
 	// look up the serialise-as-id tag component once
 	w_entity_id as_id_tag = w_ecs_get_component_by_name(world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME);
 
@@ -173,6 +216,11 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 	for (size_t ci = 0; ci < ctx->components_length; ++ci)
 	{
 		w_entity_id component_entity = ctx->components[ci];
+
+		// skip component types tagged with exclude
+		if (exclude_tag != W_ENTITY_INVALID && w_ecs_has_component_(world, exclude_tag, component_entity))
+			continue;
+
 		struct w_component_entry *entry = w_component_registry_get_entry(&world->components, component_entity);
 
 		// assign comp ctx values
@@ -187,6 +235,13 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 			&& w_ecs_has_component_(world, as_id_tag, component_entity);
 
 		w_sparse_bitset_for_each(&entry->data_bitset) {
+			// skip entities tagged with exclude
+			bool skip = false;
+			for (size_t j = 0; j < excl_length; ++j) {
+				if (i == excl[j]) { skip = true; break; }
+			}
+			if (skip) continue;
+
 			comp_ctx.entity = i;
 			comp_ctx.entity_name = w_ecs_get_entity_name(world, i);
 
@@ -209,10 +264,12 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 		};
 	}
 
+	free(excl);
+
 	// step 4: trigger post-save lifecycle hooks
 	w_hook_registry_run_hooks(
 		&registry->hooks[WM_SERIALISATION_HOOK_REGISTRY_LIFECYCLE],
-		WM_SERIALISATION_LIFECYCLE_HOOK_POST_SAVE, 
+		WM_SERIALISATION_LIFECYCLE_HOOK_POST_SAVE,
 		world, ctx
 	);
 

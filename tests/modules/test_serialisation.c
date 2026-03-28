@@ -2336,6 +2336,103 @@ END_TEST
 
 
 /*****************************
+*  exclude tag tests         *
+*****************************/
+
+START_TEST(test_component_type_exclude_tag_skips_component)
+{
+	// create named entity with a component
+	w_entity_id entity = w_ecs_request_entity_with_name(&g_world, "some_entity");
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "excluded_comp");
+
+	int32_t val = 99;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, entity, &val, sizeof(val));
+
+	// tag the component TYPE entity with the exclude tag
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_ecs_set_tag(&g_world, excl, comp);
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+
+	// no set command for excluded_comp should appear
+	ck_assert_ptr_null(strstr(ctx.buffer, "\"excluded_comp\""));
+
+	free(ctx.buffer);
+	free(ctx.entities);
+	free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_entity_exclude_tag_skips_entity)
+{
+	// create two named entities
+	w_entity_id excl_ent = w_ecs_request_entity_with_name(&g_world, "excluded_entity");
+	w_entity_id keep_ent = w_ecs_request_entity_with_name(&g_world, "kept_entity");
+	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "some_comp");
+
+	int32_t val = 7;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, excl_ent, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, keep_ent, &val, sizeof(val));
+
+	// tag excl_ent with the exclude tag
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_ecs_set_tag(&g_world, excl, excl_ent);
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+
+	// excluded entity should not appear in entity commands or set commands
+	ck_assert_ptr_null(strstr(ctx.buffer, "\"excluded_entity\""));
+
+	// kept entity should still appear
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "\"kept_entity\""));
+
+	free(ctx.buffer);
+	free(ctx.entities);
+	free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_exclude_tag_other_entities_and_components_still_serialise)
+{
+	// setup: mix of excluded and non-excluded entities and components
+	w_entity_id saved_ent = w_ecs_request_entity_with_name(&g_world, "saved_ent");
+	w_entity_id skipped_ent = w_ecs_request_entity_with_name(&g_world, "skipped_ent");
+
+	w_entity_id saved_comp = w_ecs_get_component_by_name(&g_world, "saved_comp");
+	w_entity_id skipped_comp = w_ecs_get_component_by_name(&g_world, "skipped_comp");
+
+	int32_t val = 1;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, saved_comp, saved_ent, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, saved_comp, skipped_ent, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, skipped_comp, saved_ent, &val, sizeof(val));
+
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	// exclude skipped_ent by entity tag
+	w_ecs_set_tag(&g_world, excl, skipped_ent);
+	// exclude skipped_comp by component type tag
+	w_ecs_set_tag(&g_world, excl, skipped_comp);
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+
+	// saved entity and its component data should be present
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "\"saved_ent\""));
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "\"saved_comp\""));
+
+	// skipped entity and skipped component type should be absent
+	ck_assert_ptr_null(strstr(ctx.buffer, "\"skipped_ent\""));
+	ck_assert_ptr_null(strstr(ctx.buffer, "\"skipped_comp\""));
+
+	free(ctx.buffer);
+	free(ctx.entities);
+	free(ctx.components);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -2513,6 +2610,14 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_edge, test_restore_empty_buffer);
 	tcase_add_test(tc_edge, test_restore_empty_lines_skipped);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_exclude = tcase_create("exclude_tag");
+	tcase_add_checked_fixture(tc_exclude, serialisation_setup, serialisation_teardown);
+	tcase_set_timeout(tc_exclude, 10);
+	tcase_add_test(tc_exclude, test_component_type_exclude_tag_skips_component);
+	tcase_add_test(tc_exclude, test_entity_exclude_tag_skips_entity);
+	tcase_add_test(tc_exclude, test_exclude_tag_other_entities_and_components_still_serialise);
+	suite_add_tcase(s, tc_exclude);
 
 	return s;
 }
