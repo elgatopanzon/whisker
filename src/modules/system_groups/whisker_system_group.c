@@ -368,7 +368,7 @@ void wm_system_group_init(struct w_ecs_world *world)
 
 	struct w_system_group_registry *reg = w_mem_xcalloc_t(1, struct w_system_group_registry);
 	w_system_group_registry_init(reg, world->arena);
-	w_ecs_set_module_resource(world, W_SYSTEM_GROUP_MODULE_RESOURCE_ID, reg);
+	w_ecs_set_module_resource(world, WM_SYSTEM_GROUP_MODULE_RESOURCE_ID, reg);
 
 	w_ecs_register_update_hook(world, W_WORLD_HOOK_UPDATE_BEGIN, w_system_group_update_begin_hook_);
 }
@@ -380,10 +380,10 @@ void wm_system_group_free(struct w_ecs_world *world)
 
 	w_system_group_registry_free(reg);
 	free(reg);
-	w_ecs_clear_module_resource(world, W_SYSTEM_GROUP_MODULE_RESOURCE_ID);
+	w_ecs_clear_module_resource(world, WM_SYSTEM_GROUP_MODULE_RESOURCE_ID);
 }
 
 struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world *world)
 {
-	return w_ecs_get_module_resource(world, W_SYSTEM_GROUP_MODULE_RESOURCE_ID);
+	return w_ecs_get_module_resource(world, WM_SYSTEM_GROUP_MODULE_RESOURCE_ID);
 }

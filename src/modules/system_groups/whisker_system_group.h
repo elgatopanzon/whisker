@@ -17,7 +17,10 @@
 #define WHISKER_SYSTEM_GROUP_H
 
 // module resource ID for fast world lookup
-#define W_SYSTEM_GROUP_MODULE_RESOURCE_ID 2
+#include "modules/whisker_module_ids.h"
+
+/* index 0: the system group registry singleton */
+#define WM_SYSTEM_GROUP_MODULE_RESOURCE_ID WM_MODULE_RESOURCE_ID(SYSTEM_GROUPS, 0)
 
 // root group: holds list of sub-group IDs registered under it
 struct w_system_group_root

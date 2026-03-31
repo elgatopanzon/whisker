@@ -16,7 +16,10 @@
 *****************************/
 
 // module resource ID for fast world lookup
-#define WM_COMPONENT_EVENTS_MODULE_RESOURCE_ID 1
+#include "modules/whisker_module_ids.h"
+
+/* index 0: the event registry singleton */
+#define WM_COMPONENT_EVENTS_MODULE_RESOURCE_ID WM_MODULE_RESOURCE_ID(COMPONENT_EVENTS, 0)
 
 #ifndef WM_COMPONENT_EVENTS_TAG_ARRAY_BLOCK_SIZE
 #define WM_COMPONENT_EVENTS_TAG_ARRAY_BLOCK_SIZE 64
