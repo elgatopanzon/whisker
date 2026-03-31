@@ -158,19 +158,45 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name);
 *******************/
 
 // use the macros for set/get/remove/has
+// entity ID + component ID (base macros)
 #define w_ecs_set_ex(w, t, tt, te, e, d) w_ecs_set_component_(w, tt##_##t, te, e, (t*)d, sizeof(t));
-#define w_ecs_set_str_ex(w, t, tt, n, e, d) w_ecs_set_component_(w, tt##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
 #define w_ecs_set(w, t, te, e, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, te, e, (t*)d, sizeof(t));
-#define w_ecs_set_str(w, t, n, e, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
 
 #define w_ecs_get(w, t, te, e) (t *)w_ecs_get_component_(w, te, e);
-#define w_ecs_get_str(w, t, n, e) (t *)w_ecs_get_component_(w, w_ecs_get_component_by_name(w, n), e);
 
 #define w_ecs_remove(w, te, e) w_ecs_remove_component_(w, te, e);
-#define w_ecs_remove_str(w, n, e) w_ecs_remove_component_(w, w_ecs_get_component_by_name(w, n), e);
 
 #define w_ecs_has(w, te, e) w_ecs_has_component_(w, te, e)
+
+// entity ID + string component name (_str suffix)
+#define w_ecs_set_str_ex(w, t, tt, n, e, d) w_ecs_set_component_(w, tt##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
+#define w_ecs_set_str(w, t, n, e, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, w_ecs_get_component_by_name(w, n), e, (t*)d, sizeof(t));
+
+#define w_ecs_get_str(w, t, n, e) (t *)w_ecs_get_component_(w, w_ecs_get_component_by_name(w, n), e);
+
+#define w_ecs_remove_str(w, n, e) w_ecs_remove_component_(w, w_ecs_get_component_by_name(w, n), e);
+
 #define w_ecs_has_str(w, n, e) w_ecs_has_component_(w, w_ecs_get_component_by_name(w, n), e)
+
+// string entity name + component ID (_entity_str suffix)
+#define w_ecs_set_entity_str_ex(w, t, tt, te, en, d) w_ecs_set_component_(w, tt##_##t, te, w_ecs_get_entity_by_name(w, en), (t*)d, sizeof(t));
+#define w_ecs_set_entity_str(w, t, te, en, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, te, w_ecs_get_entity_by_name(w, en), (t*)d, sizeof(t));
+
+#define w_ecs_get_entity_str(w, t, te, en) (t *)w_ecs_get_component_(w, te, w_ecs_get_entity_by_name(w, en));
+
+#define w_ecs_remove_entity_str(w, te, en) w_ecs_remove_component_(w, te, w_ecs_get_entity_by_name(w, en));
+
+#define w_ecs_has_entity_str(w, te, en) w_ecs_has_component_(w, te, w_ecs_get_entity_by_name(w, en))
+
+// string entity name + string component name (_both_str suffix)
+#define w_ecs_set_both_str_ex(w, t, tt, n, en, d) w_ecs_set_component_(w, tt##_##t, w_ecs_get_component_by_name(w, n), w_ecs_get_entity_by_name(w, en), (t*)d, sizeof(t));
+#define w_ecs_set_both_str(w, t, n, en, d) w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, w_ecs_get_component_by_name(w, n), w_ecs_get_entity_by_name(w, en), (t*)d, sizeof(t));
+
+#define w_ecs_get_both_str(w, t, n, en) (t *)w_ecs_get_component_(w, w_ecs_get_component_by_name(w, n), w_ecs_get_entity_by_name(w, en));
+
+#define w_ecs_remove_both_str(w, n, en) w_ecs_remove_component_(w, w_ecs_get_component_by_name(w, n), w_ecs_get_entity_by_name(w, en));
+
+#define w_ecs_has_both_str(w, n, en) w_ecs_has_component_(w, w_ecs_get_component_by_name(w, n), w_ecs_get_entity_by_name(w, en))
 
 // unsafe variants (skip bounds checks, caller must ensure validity)
 #define w_ecs_set_unsafe_ex(w, t, tt, te, e, d) w_ecs_unsafe_set_component_(w, tt##_##t, te, e, (t *)d, sizeof(t));
@@ -180,16 +206,29 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name);
 
 #define w_ecs_has_unsafe(w, te, e) w_ecs_unsafe_has_component_(w, te, e)
 
-// tags wrapped as uint8_t
+// tags wrapped as uint8_t (entity ID + component ID)
 #define w_ecs_set_tag(w, te, e) \
     w_ecs_set(w, uint8_t, te, e, &(uint8_t){0})
 #define w_ecs_has_tag(w, te, e) w_ecs_has(w, te, e)
 #define w_ecs_remove_tag(w, te, e) w_ecs_remove(w, te, e)
 
+// tags with string component name (entity ID + string component name)
 #define w_ecs_set_tag_str(w, n, e) \
     w_ecs_set(w, uint8_t, w_ecs_get_component_by_name(w, n), e, &(uint8_t){0})
 #define w_ecs_has_tag_str(w, n, e) w_ecs_has(w, w_ecs_get_component_by_name(w, n), e)
 #define w_ecs_remove_tag_str(w, n, e) w_ecs_remove(w, w_ecs_get_component_by_name(w, n), e)
+
+// tags with string entity name (string entity name + component ID)
+#define w_ecs_set_tag_entity_str(w, te, en) \
+    w_ecs_set_entity_str(w, uint8_t, te, en, &(uint8_t){0})
+#define w_ecs_has_tag_entity_str(w, te, en) w_ecs_has_entity_str(w, te, en)
+#define w_ecs_remove_tag_entity_str(w, te, en) w_ecs_remove_entity_str(w, te, en)
+
+// tags with both strings (string entity name + string component name)
+#define w_ecs_set_tag_both_str(w, n, en) \
+    w_ecs_set_both_str(w, uint8_t, n, en, &(uint8_t){0})
+#define w_ecs_has_tag_both_str(w, n, en) w_ecs_has_both_str(w, n, en)
+#define w_ecs_remove_tag_both_str(w, n, en) w_ecs_remove_both_str(w, n, en)
 
 
 // set a component on an entity
