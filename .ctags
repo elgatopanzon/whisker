@@ -1,0 +1,5 @@
+--recurse=yes
+--exclude=build
+--exclude=.git
+--languages=C
+--c-kinds=+defgstuvpm

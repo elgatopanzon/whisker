@@ -75,5 +75,8 @@ vgcore*
 # perf reports
 perf*
 
-#ignore vim sessions
+# ignore vim sessions
 *.vim
+
+# ignore ctags tags file
+tags
