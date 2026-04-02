@@ -26,19 +26,33 @@
 
 struct w_rendering_display_config 
 {
+	// display resolution and monitor selection
 	w_vec2i window_resolution; 
-	w_string_table_id window_title_id;
 	uint8_t monitor_index;
+
+	// display filtering options
 	bool vsync;
+	bool high_dpi;
+
+	// window title and basic options
+	w_string_table_id window_title_id;
+
+	// window mode options
 	bool fullscreen;
 	bool borderless;
 	bool resizable;
-	bool minimized;
 	bool maximised;
+	bool minimized;
+
+	// window appearance options
 	bool always_on_top;
-	bool continue_running_minimised;
+	bool undecorated;
+	bool transparent;
 	bool hidden;
-	bool high_dpi;
+	bool mouse_passthrough;
+
+	// window behaviour options
+	bool continue_running_minimised;
 	bool handle_window_close;
 };
 
@@ -56,26 +70,47 @@ enum W_RENDERING_BLEND_MODE
 };
 struct w_rendering_render_config 
 {
+	// general rendering toggles
 	bool enabled;
+	bool handle_drawing_lifecycle;
+
+	// resolution and aspect
 	w_vec2i render_resolution;
 	bool keep_aspect_ratio;
+
+	// filtering options
 	uint8_t texture_filter;
+	uint8_t msaa_samples;
+	uint8_t anisotropic_level;
+
+	// color and clearing
 	w_color window_clear_color;
 	w_color render_clear_color;
 	bool clear_enabled;
+
+	// performance
 	uint32_t target_fps;
-	uint8_t msaa_samples;
-	uint8_t anisotropic_level;
+
+	// rendering modes
 	bool wireframe_mode;
+	bool interlaced_mode;
+
+	// color and lighting correction
 	bool gamma_correction;
+
+	// blending and culling
+	enum W_RENDERING_CULL_MODE default_cull_mode;
+	enum W_RENDERING_BLEND_MODE default_blend_mode;
+
+	// interpolation
 	bool interpolation;
 	float interpolation_alpha;
+
+	// depth and stencil
 	bool depth_test;
 	bool depth_write;
 	bool scissor_test;
 	bool stencil_test;
-	enum W_RENDERING_CULL_MODE default_cull_mode;
-	enum W_RENDERING_BLEND_MODE default_blend_mode;
 };
 
 // active rendering state
