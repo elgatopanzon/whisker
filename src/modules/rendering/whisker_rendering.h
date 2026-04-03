@@ -49,6 +49,7 @@ struct w_rendering_display_config
 	bool undecorated;
 	bool transparent;
 	bool hidden;
+	bool unfocused;
 	bool mouse_passthrough;
 
 	// window behaviour options
