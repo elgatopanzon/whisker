@@ -20,6 +20,17 @@ endif()
 ####################
 project(whisker C)
 
+# build options - use if(NOT DEFINED) to respect values set by parent projects
+if(NOT DEFINED WHISKER_BENCHMARKS)
+    option(WHISKER_BENCHMARKS "Build whisker benchmarks" ON)
+endif()
+if(NOT DEFINED WHISKER_TESTS)
+    option(WHISKER_TESTS "Build whisker tests" ON)
+endif()
+if(NOT DEFINED WHISKER_MODULES)
+    option(WHISKER_MODULES "Build whisker modules" ON)
+endif()
+
 # set and force c standard
 set(C_STANDARD 11)
 set(C_STANDARD_REQUIRED ON)
@@ -98,13 +109,17 @@ include(FetchContent)
 add_subdirectory(src)
 
 # include optional modules
-add_subdirectory(src/modules)
+if(WHISKER_MODULES)
+    add_subdirectory(src/modules)
+endif()
 
 # enable ctest
-enable_testing()
-
-# include the tests directory
-add_subdirectory(tests)
+if(WHISKER_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # include the benchmarks directory
-add_subdirectory(benchmarks)
+if(WHISKER_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
