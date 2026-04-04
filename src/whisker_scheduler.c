@@ -185,6 +185,38 @@ size_t w_scheduler_register_phase(struct w_scheduler *scheduler, struct w_schedu
 
 	return id;
 }
+size_t w_scheduler_register_phase_at(struct w_scheduler *scheduler, struct w_scheduler_phase *phase, size_t desired_id)
+{
+	// collision detection: reject duplicate IDs
+	struct w_scheduler_phase *existing = w_scheduler_get_phase(scheduler, desired_id);
+	if (existing) return SIZE_MAX;
+
+	// ensure phase array large enough
+	w_array_ensure_alloc_block_size(
+		scheduler->phases,
+		scheduler->phases_length + 1,
+		W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
+	);
+
+	// ensure phase order large enough
+	w_array_ensure_alloc_block_size(
+		scheduler->phases_order,
+		scheduler->phases_order_length + 1,
+		W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
+	);
+
+	size_t idx = scheduler->phases_length++;
+	scheduler->phases[idx] = *phase;
+	scheduler->phases[idx].id = desired_id;
+
+	// append id to phase order list
+	scheduler->phases_order[scheduler->phases_order_length++] = desired_id;
+
+	scheduler->schedule.schedule_dirty = true;
+
+	return desired_id;
+}
+
 struct w_scheduler_phase *w_scheduler_get_phase(struct w_scheduler *scheduler, size_t phase_id)
 {
 	return ARRAY_SELECT(struct w_scheduler_phase, scheduler->phases, scheduler->phases_length, id, == phase_id);
@@ -297,6 +329,38 @@ size_t w_scheduler_register_time_step(struct w_scheduler *scheduler, struct w_sc
 
 	return id;
 }
+size_t w_scheduler_register_time_step_at(struct w_scheduler *scheduler, struct w_scheduler_time_step *time_step, size_t desired_id)
+{
+	// collision detection: reject duplicate IDs
+	struct w_scheduler_time_step *existing = w_scheduler_get_time_step(scheduler, desired_id);
+	if (existing) return SIZE_MAX;
+
+	// ensure time_step array large enough
+	w_array_ensure_alloc_block_size(
+		scheduler->time_steps,
+		scheduler->time_steps_length + 1,
+		W_SCHEDULER_TIMESTEPS_REALLOC_BLOCK_SIZE
+	);
+
+	// ensure time_step order large enough
+	w_array_ensure_alloc_block_size(
+		scheduler->time_steps_order,
+		scheduler->time_steps_order_length + 1,
+		W_SCHEDULER_TIMESTEPS_REALLOC_BLOCK_SIZE
+	);
+
+	size_t idx = scheduler->time_steps_length++;
+	scheduler->time_steps[idx] = *time_step;
+	scheduler->time_steps[idx].id = desired_id;
+
+	// append id to time_step order list
+	scheduler->time_steps_order[scheduler->time_steps_order_length++] = desired_id;
+
+	scheduler->schedule.schedule_dirty = true;
+
+	return desired_id;
+}
+
 struct w_scheduler_time_step *w_scheduler_get_time_step(struct w_scheduler *scheduler, size_t time_step_id)
 {
 	return ARRAY_SELECT(struct w_scheduler_time_step, scheduler->time_steps, scheduler->time_steps_length, id, == time_step_id);

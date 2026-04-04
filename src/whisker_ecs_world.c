@@ -414,6 +414,11 @@ size_t w_ecs_register_system_phase(struct w_ecs_world *world, struct w_scheduler
 	return w_scheduler_register_phase(&world->scheduler, phase);
 }
 
+size_t w_ecs_register_system_phase_at(struct w_ecs_world *world, struct w_scheduler_phase *phase, size_t id)
+{
+	return w_scheduler_register_phase_at(&world->scheduler, phase, id);
+}
+
 struct w_scheduler_phase *w_ecs_get_system_phase(struct w_ecs_world *world, size_t phase_id)
 {
 	return w_scheduler_get_phase(&world->scheduler, phase_id);
@@ -442,6 +447,11 @@ void w_ecs_reset_system_phases(struct w_ecs_world *world)
 size_t w_ecs_register_system_time_step(struct w_ecs_world *world, struct w_scheduler_time_step *time_step)
 {
 	return w_scheduler_register_time_step(&world->scheduler, time_step);
+}
+
+size_t w_ecs_register_system_time_step_at(struct w_ecs_world *world, struct w_scheduler_time_step *time_step, size_t id)
+{
+	return w_scheduler_register_time_step_at(&world->scheduler, time_step, id);
 }
 
 struct w_scheduler_time_step *w_ecs_get_system_time_step(struct w_ecs_world *world, size_t time_step_id)

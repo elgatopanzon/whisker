@@ -770,6 +770,173 @@ END_TEST
 
 
 /*****************************
+*  sparse ID registration   *
+*****************************/
+
+START_TEST(test_phase_register_at_assigns_id)
+{
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = 0};
+	size_t id = w_scheduler_register_phase_at(&g_scheduler, &phase, 100);
+	ck_assert_int_eq(id, 100);
+
+	struct w_scheduler_phase *got = w_scheduler_get_phase(&g_scheduler, 100);
+	ck_assert_ptr_nonnull(got);
+	ck_assert_int_eq(got->id, 100);
+	ck_assert(got->enabled);
+}
+END_TEST
+
+START_TEST(test_phase_register_at_gaps)
+{
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = 0};
+	size_t id1 = w_scheduler_register_phase_at(&g_scheduler, &phase, 100);
+	size_t id2 = w_scheduler_register_phase_at(&g_scheduler, &phase, 200);
+	size_t id3 = w_scheduler_register_phase_at(&g_scheduler, &phase, 500);
+
+	ck_assert_int_eq(id1, 100);
+	ck_assert_int_eq(id2, 200);
+	ck_assert_int_eq(id3, 500);
+
+	// all retrievable
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 100));
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 200));
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 500));
+
+	// non-existent IDs return NULL
+	ck_assert_ptr_null(w_scheduler_get_phase(&g_scheduler, 0));
+	ck_assert_ptr_null(w_scheduler_get_phase(&g_scheduler, 300));
+}
+END_TEST
+
+START_TEST(test_phase_register_at_duplicate_rejected)
+{
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = 0};
+	size_t id1 = w_scheduler_register_phase_at(&g_scheduler, &phase, 42);
+	ck_assert_int_eq(id1, 42);
+
+	// duplicate should be rejected
+	size_t id2 = w_scheduler_register_phase_at(&g_scheduler, &phase, 42);
+	ck_assert_int_eq(id2, SIZE_MAX);
+
+	// only one phase registered
+	ck_assert_int_eq(g_scheduler.phases_length, 1);
+}
+END_TEST
+
+START_TEST(test_phase_register_at_ordering_works)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t ts_id = w_scheduler_register_time_step(&g_scheduler, &ts);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t p1 = w_scheduler_register_phase_at(&g_scheduler, &phase, 100);
+	size_t p2 = w_scheduler_register_phase_at(&g_scheduler, &phase, 200);
+	size_t p3 = w_scheduler_register_phase_at(&g_scheduler, &phase, 500);
+
+	// initial order: 100, 200, 500
+	ck_assert_int_eq(g_scheduler.phases_order[0], 100);
+	ck_assert_int_eq(g_scheduler.phases_order[1], 200);
+	ck_assert_int_eq(g_scheduler.phases_order[2], 500);
+
+	// move 500 before 100
+	w_scheduler_set_phase_runs_before(&g_scheduler, p3, p1);
+	ck_assert_int_eq(g_scheduler.phases_order[0], 500);
+	ck_assert_int_eq(g_scheduler.phases_order[1], 100);
+	ck_assert_int_eq(g_scheduler.phases_order[2], 200);
+
+	(void)p2;
+}
+END_TEST
+
+START_TEST(test_phase_register_at_schedule_generation)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t ts_id = w_scheduler_register_time_step(&g_scheduler, &ts);
+
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
+	size_t p1 = w_scheduler_register_phase_at(&g_scheduler, &phase, 100);
+
+	struct w_scheduler_job jobs[] = {
+		{.job_id = 42, .phase_id = p1},
+	};
+
+	struct w_scheduler_schedule *sched = w_scheduler_get_schedule(&g_scheduler, jobs, 1);
+	// BEGIN, TS_BEGIN, PHASE_BEGIN, DISPATCH, PHASE_END, TS_END, END
+	ck_assert_int_eq(sched->items_length, 7);
+	ck_assert_int_eq(sched->items[2].phase_id, 100);
+	ck_assert_int_eq(sched->items[3].action, W_SCHEDULER_ACTIONS_DISPATCH);
+	ck_assert_int_eq(sched->items[3].job_idx, 42);
+}
+END_TEST
+
+START_TEST(test_timestep_register_at_assigns_id)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t id = w_scheduler_register_time_step_at(&g_scheduler, &ts, 50);
+	ck_assert_int_eq(id, 50);
+
+	struct w_scheduler_time_step *got = w_scheduler_get_time_step(&g_scheduler, 50);
+	ck_assert_ptr_nonnull(got);
+	ck_assert_int_eq(got->id, 50);
+	ck_assert(got->enabled);
+}
+END_TEST
+
+START_TEST(test_timestep_register_at_gaps)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t id1 = w_scheduler_register_time_step_at(&g_scheduler, &ts, 10);
+	size_t id2 = w_scheduler_register_time_step_at(&g_scheduler, &ts, 100);
+	size_t id3 = w_scheduler_register_time_step_at(&g_scheduler, &ts, 999);
+
+	ck_assert_int_eq(id1, 10);
+	ck_assert_int_eq(id2, 100);
+	ck_assert_int_eq(id3, 999);
+
+	ck_assert_ptr_nonnull(w_scheduler_get_time_step(&g_scheduler, 10));
+	ck_assert_ptr_nonnull(w_scheduler_get_time_step(&g_scheduler, 100));
+	ck_assert_ptr_nonnull(w_scheduler_get_time_step(&g_scheduler, 999));
+	ck_assert_ptr_null(w_scheduler_get_time_step(&g_scheduler, 0));
+	ck_assert_ptr_null(w_scheduler_get_time_step(&g_scheduler, 50));
+}
+END_TEST
+
+START_TEST(test_timestep_register_at_duplicate_rejected)
+{
+	struct w_scheduler_time_step ts = {.enabled = true};
+	size_t id1 = w_scheduler_register_time_step_at(&g_scheduler, &ts, 7);
+	ck_assert_int_eq(id1, 7);
+
+	size_t id2 = w_scheduler_register_time_step_at(&g_scheduler, &ts, 7);
+	ck_assert_int_eq(id2, SIZE_MAX);
+
+	ck_assert_int_eq(g_scheduler.time_steps_length, 1);
+}
+END_TEST
+
+START_TEST(test_mixed_auto_and_at_registration)
+{
+	// auto-assign gets 0, 1
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = 0};
+	size_t auto1 = w_scheduler_register_phase(&g_scheduler, &phase);
+	size_t auto2 = w_scheduler_register_phase(&g_scheduler, &phase);
+	ck_assert_int_eq(auto1, 0);
+	ck_assert_int_eq(auto2, 1);
+
+	// explicit at 100
+	size_t at1 = w_scheduler_register_phase_at(&g_scheduler, &phase, 100);
+	ck_assert_int_eq(at1, 100);
+
+	// all three retrievable
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 0));
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 1));
+	ck_assert_ptr_nonnull(w_scheduler_get_phase(&g_scheduler, 100));
+	ck_assert_int_eq(g_scheduler.phases_length, 3);
+}
+END_TEST
+
+
+/*****************************
 *  schedule rebuild_count    *
 *****************************/
 
@@ -958,6 +1125,20 @@ Suite *whisker_scheduler_suite(void)
 	tcase_add_test(tc_edge, test_complex_reordering);
 	tcase_add_test(tc_edge, test_jobs_no_matching_phase);
 	suite_add_tcase(s, tc_edge);
+
+	TCase *tc_sparse = tcase_create("sparse_id_registration");
+	tcase_add_checked_fixture(tc_sparse, scheduler_setup, scheduler_teardown);
+	tcase_set_timeout(tc_sparse, 10);
+	tcase_add_test(tc_sparse, test_phase_register_at_assigns_id);
+	tcase_add_test(tc_sparse, test_phase_register_at_gaps);
+	tcase_add_test(tc_sparse, test_phase_register_at_duplicate_rejected);
+	tcase_add_test(tc_sparse, test_phase_register_at_ordering_works);
+	tcase_add_test(tc_sparse, test_phase_register_at_schedule_generation);
+	tcase_add_test(tc_sparse, test_timestep_register_at_assigns_id);
+	tcase_add_test(tc_sparse, test_timestep_register_at_gaps);
+	tcase_add_test(tc_sparse, test_timestep_register_at_duplicate_rejected);
+	tcase_add_test(tc_sparse, test_mixed_auto_and_at_registration);
+	suite_add_tcase(s, tc_sparse);
 
 	TCase *tc_rebuild = tcase_create("schedule_rebuild_count");
 	tcase_add_checked_fixture(tc_rebuild, scheduler_setup, scheduler_teardown);

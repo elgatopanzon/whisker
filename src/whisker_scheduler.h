@@ -95,8 +95,10 @@ void w_scheduler_free(struct w_scheduler *scheduler);
 // get the schedule
 struct w_scheduler_schedule *w_scheduler_get_schedule(struct w_scheduler *scheduler, struct w_scheduler_job *jobs, size_t jobs_count);
 
-// phase management: register a phase
+// phase management: register a phase (auto-assigns sequential ID)
 size_t w_scheduler_register_phase(struct w_scheduler *scheduler, struct w_scheduler_phase *phase);
+// phase management: register a phase at a specific ID (sparse/explicit)
+size_t w_scheduler_register_phase_at(struct w_scheduler *scheduler, struct w_scheduler_phase *phase, size_t desired_id);
 // phase management: get phase
 struct w_scheduler_phase *w_scheduler_get_phase(struct w_scheduler *scheduler, size_t phase_id);
 // phase management: set phase enabled/disabled
@@ -108,8 +110,10 @@ void w_scheduler_set_phase_runs_before(struct w_scheduler *scheduler, size_t pha
 // phase management: set phase runs after
 void w_scheduler_set_phase_runs_after(struct w_scheduler *scheduler, size_t phase_id, size_t runs_after_phase_id);
 
-// timestep management: register a timestep
+// timestep management: register a timestep (auto-assigns sequential ID)
 size_t w_scheduler_register_time_step(struct w_scheduler *scheduler, struct w_scheduler_time_step *time_step);
+// timestep management: register a timestep at a specific ID (sparse/explicit)
+size_t w_scheduler_register_time_step_at(struct w_scheduler *scheduler, struct w_scheduler_time_step *time_step, size_t desired_id);
 // timestep management: get timestep
 struct w_scheduler_time_step *w_scheduler_get_time_step(struct w_scheduler *scheduler, size_t time_step_id);
 // timestep management: set timestep enabled/disabled

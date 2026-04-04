@@ -316,8 +316,11 @@ struct w_system *w_ecs_get_system_entry(struct w_ecs_world *world, size_t system
 		if (_id) w_ecs_set_system_state(w, *_id, state); \
 	} while (0)
 
-// register a scheduler phase
+// register a scheduler phase (auto-assigns sequential ID)
 size_t w_ecs_register_system_phase(struct w_ecs_world *world, struct w_scheduler_phase *phase);
+
+// register a scheduler phase at a specific ID (sparse/explicit)
+size_t w_ecs_register_system_phase_at(struct w_ecs_world *world, struct w_scheduler_phase *phase, size_t id);
 
 // get a scheduler phase by ID
 struct w_scheduler_phase *w_ecs_get_system_phase(struct w_ecs_world *world, size_t phase_id);
@@ -334,8 +337,11 @@ void w_ecs_set_system_phase_runs_after(struct w_ecs_world *world, size_t phase_i
 // reset all scheduler phases
 void w_ecs_reset_system_phases(struct w_ecs_world *world);
 
-// register a scheduler time step
+// register a scheduler time step (auto-assigns sequential ID)
 size_t w_ecs_register_system_time_step(struct w_ecs_world *world, struct w_scheduler_time_step *time_step);
+
+// register a scheduler time step at a specific ID (sparse/explicit)
+size_t w_ecs_register_system_time_step_at(struct w_ecs_world *world, struct w_scheduler_time_step *time_step, size_t id);
 
 // get a scheduler time step by ID
 struct w_scheduler_time_step *w_ecs_get_system_time_step(struct w_ecs_world *world, size_t time_step_id);
