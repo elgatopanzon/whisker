@@ -78,6 +78,7 @@ struct w_rendering_render_config
 	// resolution and aspect
 	w_vec2i render_resolution;
 	bool keep_aspect_ratio;
+	bool nearest_neighbour;
 
 	// filtering options
 	uint8_t texture_filter;
