@@ -69,6 +69,12 @@ enum W_RENDERING_BLEND_MODE
 	W_RENDERING_BLEND_MODE_ADDITIVE,
 	W_RENDERING_BLEND_MODE_MULTIPLY,
 };
+enum W_RENDERING_SCALING_MODE
+{
+	W_RENDERING_SCALING_STRETCH,   // fill window, ignore aspect ratio
+	W_RENDERING_SCALING_FIT,       // letterbox/pillarbox, maintain aspect ratio
+	W_RENDERING_SCALING_INTEGER,   // pixel-perfect integer multiples only
+};
 struct w_rendering_render_config 
 {
 	// general rendering toggles
@@ -77,8 +83,7 @@ struct w_rendering_render_config
 
 	// resolution and aspect
 	w_vec2i render_resolution;
-	bool keep_aspect_ratio;
-	bool nearest_neighbour;
+	enum W_RENDERING_SCALING_MODE scaling_mode;
 
 	// filtering options
 	uint8_t texture_filter;
