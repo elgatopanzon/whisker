@@ -75,6 +75,15 @@ enum W_RENDERING_SCALING_MODE
 	W_RENDERING_SCALING_FIT,       // letterbox/pillarbox, maintain aspect ratio
 	W_RENDERING_SCALING_INTEGER,   // pixel-perfect integer multiples only
 };
+enum W_RENDERING_TEXTURE_FILTER
+{
+    W_RENDERING_TEXTURE_FILTER_POINT,
+    W_RENDERING_TEXTURE_FILTER_BILINEAR,
+    W_RENDERING_TEXTURE_FILTER_TRILINEAR,
+    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_4X,
+    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_8X,
+    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_16X,
+};
 struct w_rendering_render_config 
 {
 	// general rendering toggles
@@ -86,7 +95,7 @@ struct w_rendering_render_config
 	enum W_RENDERING_SCALING_MODE scaling_mode;
 
 	// filtering options
-	uint8_t texture_filter;
+	enum W_RENDERING_TEXTURE_FILTER texture_filter;
 	uint8_t msaa_samples;
 	uint8_t anisotropic_level;
 
