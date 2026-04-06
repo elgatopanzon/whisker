@@ -18,6 +18,30 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	struct w_rendering_render_state *render_state = w_mem_xcalloc_t(1, struct w_rendering_render_state);
 	w_ecs_set_module_resource(world, WM_RENDERING_RENDER_STATE_RESOURCE_ID, render_state);
 
+	// register custom rendering phases
+	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER};
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_SCALE);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_SCALE);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_SCALE);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_FILTER);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_FILTER);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_FILTER);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_DRAW);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_DRAW);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_DRAW);
+
+	// assign phases order
+	// Chain: POST_RENDER -> scale -> filter -> draw
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_SCALE, WM_PHASE_POST_RENDER);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_SCALE, WM_RENDER_PHASE_PRE_SCALE);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_SCALE, WM_RENDER_PHASE_ON_SCALE);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_FILTER, WM_RENDER_PHASE_POST_SCALE);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_FILTER, WM_RENDER_PHASE_PRE_FILTER);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_FILTER, WM_RENDER_PHASE_ON_FILTER);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_DRAW, WM_RENDER_PHASE_POST_FILTER);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_DRAW, WM_RENDER_PHASE_PRE_DRAW);
+	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_DRAW, WM_RENDER_PHASE_ON_DRAW);
+
 
 	/*******************
 	*  camera module  *

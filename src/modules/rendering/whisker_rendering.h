@@ -138,6 +138,20 @@ struct w_rendering_render_state
 	w_recti render_texture_rect;
 };
 
+// custom rendering phases
+enum WM_RENDER_PHASE
+{
+	WM_RENDER_PHASE_PRE_SCALE = 100,
+	WM_RENDER_PHASE_ON_SCALE = 101,
+	WM_RENDER_PHASE_POST_SCALE = 102,
+	WM_RENDER_PHASE_PRE_FILTER = 103,
+	WM_RENDER_PHASE_ON_FILTER = 104,
+	WM_RENDER_PHASE_POST_FILTER = 105,
+	WM_RENDER_PHASE_PRE_DRAW = 106,
+	WM_RENDER_PHASE_ON_DRAW = 107,
+	WM_RENDER_PHASE_POST_DRAW = 108,
+};
+
 // initialize the rendering module
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *rendering_config);
 
