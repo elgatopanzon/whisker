@@ -8,6 +8,8 @@
 #include "whisker_rendering.h"
 #include "whisker_rendering_camera.h"
 
+#include "whisker_rendering_scaling.c"
+
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {
 	// set world resources
@@ -41,6 +43,12 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_DRAW, WM_RENDER_PHASE_POST_FILTER);
 	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_DRAW, WM_RENDER_PHASE_PRE_DRAW);
 	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_DRAW, WM_RENDER_PHASE_ON_DRAW);
+
+	// scaling systems
+	whisker_rendering_scaling_rect_init_register(world);
+	whisker_rendering_scaling_stretch_register(world);
+	whisker_rendering_scaling_fit_register(world);
+	whisker_rendering_scaling_integer_register(world);
 
 
 	/*******************
