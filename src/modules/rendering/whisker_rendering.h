@@ -80,9 +80,7 @@ enum W_RENDERING_TEXTURE_FILTER
     W_RENDERING_TEXTURE_FILTER_POINT,
     W_RENDERING_TEXTURE_FILTER_BILINEAR,
     W_RENDERING_TEXTURE_FILTER_TRILINEAR,
-    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_4X,
-    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_8X,
-    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC_16X,
+    W_RENDERING_TEXTURE_FILTER_ANISOTROPIC,
 };
 struct w_rendering_render_config 
 {
@@ -134,8 +132,17 @@ struct w_rendering_render_state
 {
 	uint32_t render_fps;
 	float render_frame_time;
-	w_vec2i window_resolution;
-	w_recti render_texture_rect;
+	w_vec2 window_resolution;
+
+	// scaling
+	w_rect render_texture_source;
+	w_rect render_texture_destination;
+	float scaling_factor;
+
+	// draw
+	w_vec2 draw_origin;
+	float draw_rotation;
+	w_color draw_tint;
 };
 
 // custom rendering phases
