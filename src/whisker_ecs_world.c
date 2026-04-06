@@ -127,8 +127,7 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				break;
 			case W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN:
 			{
-				// if update_time_target is 0 (uninitialized), treat as single update
-				int n = (action->time_step->update_time_target == 0) ? 1 : w_time_step_advance(action->time_step);
+				int n = w_time_step_advance(action->time_step);
 				if (n <= 0)
 				{
 					// skip entire timestep - find the matching TIMESTEP_END
