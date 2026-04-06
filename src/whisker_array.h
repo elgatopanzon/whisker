@@ -22,6 +22,7 @@
 #define w_array_init_t(name, count) \
 	name = w_mem_xcalloc_t((count), *name); \
 	name##_size = (count) * sizeof(*name); \
+	name##_length = 0; \
 
 #define w_array_realloc(name, length) \
 	name = w_mem_xrecalloc(name, name##_size, (length) * sizeof(*name)); \
