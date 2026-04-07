@@ -7,6 +7,7 @@
 
 #include "whisker_rendering.h"
 #include "whisker_rendering_camera.h"
+#include "whisker_rendering_camera.c"
 
 #include "whisker_rendering_scaling.c"
 
