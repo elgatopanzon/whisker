@@ -14,6 +14,7 @@
 #include "whisker_macros.h"
 #include "whisker_random.h"
 #include "whisker_time.h"
+#include "whisker_math.h"
 
 // memory
 #include "whisker_memory.h"

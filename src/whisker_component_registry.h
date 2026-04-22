@@ -98,7 +98,12 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_w_pack8x8 = 44,
 	W_COMPONENT_TYPE_w_pack32x2 = 45,
 
-	W_COMPONENT_TYPE_COUNT = 46,
+	// quaternions
+	W_COMPONENT_TYPE_w_quat = 46,
+	W_COMPONENT_TYPE_w_quati = 47,
+	W_COMPONENT_TYPE_w_quatu = 48,
+
+	W_COMPONENT_TYPE_COUNT = 49,
 };
 
 // static array of canonical type names keyed by enum ID
@@ -141,6 +146,9 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_w_pack8x4]   = "w_pack8x4",
 	[W_COMPONENT_TYPE_w_pack8x8]   = "w_pack8x8",
 	[W_COMPONENT_TYPE_w_pack32x2]  = "w_pack32x2",
+	[W_COMPONENT_TYPE_w_quat]      = "w_quat",
+	[W_COMPONENT_TYPE_w_quati]      = "w_quati",
+	[W_COMPONENT_TYPE_w_quatu]      = "w_quatu",
 };
 
 static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
@@ -182,6 +190,9 @@ static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_w_pack8x4]   = sizeof(w_pack8x4),
 	[W_COMPONENT_TYPE_w_pack8x8]   = sizeof(w_pack8x8),
 	[W_COMPONENT_TYPE_w_pack32x2]  = sizeof(w_pack32x2),
+	[W_COMPONENT_TYPE_w_quat]  = sizeof(w_quat),
+	[W_COMPONENT_TYPE_w_quati]  = sizeof(w_quati),
+	[W_COMPONENT_TYPE_w_quatu]  = sizeof(w_quatu),
 };
 
 // get string name for a component type enum ID, NULL if invalid

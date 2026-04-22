@@ -39,6 +39,14 @@ DEFINE_VEC4_STRUCT(w_vec4, float, x, y, z, w);
 DEFINE_VEC4_STRUCT(w_vec4i, int, x, y, z, w);
 DEFINE_VEC4_STRUCT(w_vec4u, uint, x, y, z, w);
 
+/*****************
+*  quaternions  *
+*****************/
+
+DEFINE_VEC4_STRUCT(w_quat, float, x, y, z, w);
+DEFINE_VEC4_STRUCT(w_quati, int, x, y, z, w);
+DEFINE_VEC4_STRUCT(w_quatu, uint, x, y, z, w);
+
 /**************
 *  matrices  *
 **************/
