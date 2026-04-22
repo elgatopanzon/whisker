@@ -334,6 +334,13 @@ void w_ecs_set_system_phase_runs_before(struct w_ecs_world *world, size_t phase_
 // set a phase to run after another phase
 void w_ecs_set_system_phase_runs_after(struct w_ecs_world *world, size_t phase_id, size_t runs_after_phase_id);
 
+// set a list of phases as a chain
+void w_ecs_set_phase_chain_(struct w_ecs_world* world, uint* phases, size_t count);
+#define w_ecs_set_phase_chain(world, ...) do { \
+    uint _phases[] = {__VA_ARGS__}; \
+    w_ecs_set_phase_chain_(world, _phases, sizeof(_phases)/sizeof(_phases[0])); \
+} while(0)
+
 // reset all scheduler phases
 void w_ecs_reset_system_phases(struct w_ecs_world *world);
 

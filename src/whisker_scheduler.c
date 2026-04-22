@@ -297,6 +297,12 @@ void w_scheduler_set_phase_runs_after(struct w_scheduler *scheduler, size_t phas
 	w_scheduler_move_phase_(scheduler, phase_id, runs_after_phase_id, false);
 }
 
+void w_scheduler_chain_phases_(struct w_scheduler *scheduler, uint* phases, size_t count)
+{
+    for (size_t i = 1; i < count; i++) {
+        w_scheduler_set_time_step_runs_after(scheduler, phases[i], phases[i-1]);
+    }
+}
 
 /***********************************
 *  timestep management functions  *

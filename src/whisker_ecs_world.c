@@ -438,6 +438,11 @@ void w_ecs_set_system_phase_runs_after(struct w_ecs_world *world, size_t phase_i
 	w_scheduler_set_phase_runs_after(&world->scheduler, phase_id, runs_after_phase_id);
 }
 
+void w_ecs_set_phase_chain_(struct w_ecs_world* world, uint* phases, size_t count)
+{
+	w_scheduler_chain_phases_(&world->scheduler, phases, count);
+}
+
 void w_ecs_reset_system_phases(struct w_ecs_world *world)
 {
 	w_scheduler_reset_phases(&world->scheduler);

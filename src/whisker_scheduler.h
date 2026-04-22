@@ -109,6 +109,13 @@ void w_scheduler_reset_phases(struct w_scheduler *scheduler);
 void w_scheduler_set_phase_runs_before(struct w_scheduler *scheduler, size_t phase_id, size_t runs_before_phase_id);
 // phase management: set phase runs after
 void w_scheduler_set_phase_runs_after(struct w_scheduler *scheduler, size_t phase_id, size_t runs_after_phase_id);
+// phase management: chain a list of chains together
+void w_scheduler_chain_phases_(struct w_scheduler *scheduler, uint* phases, size_t count);
+
+#define w_scheduler_chain_phases(world, ...) do { \
+    uint _phases[] = {__VA_ARGS__}; \
+    w_scheduler_chain_phases_(world, _phases, sizeof(_phases)/sizeof(_phases[0])); \
+} while(0)
 
 // timestep management: register a timestep (auto-assigns sequential ID)
 size_t w_scheduler_register_time_step(struct w_scheduler *scheduler, struct w_scheduler_time_step *time_step);
