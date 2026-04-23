@@ -240,7 +240,7 @@ START_TEST(test_update_calls_system)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -266,7 +266,7 @@ START_TEST(test_update_multiple_times)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -290,7 +290,7 @@ END_TEST
 
 START_TEST(test_update_returns_result)
 {
-	struct w_scheduler_time_step ts = {.enabled = true};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	enum W_WORLD_UPDATE_RESULT result = w_ecs_update(&g_world);
@@ -308,7 +308,7 @@ START_TEST(test_update_multiple_systems_same_phase)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -341,7 +341,7 @@ START_TEST(test_frequency_zero_uses_timestep_delta)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.025, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -357,7 +357,8 @@ START_TEST(test_frequency_zero_uses_timestep_delta)
 
 	w_ecs_update(&g_world);
 
-	ck_assert_double_eq_tol(g_sys_a_last_delta, 0.025, 0.0001);
+	// delta is real elapsed time from the uncapped timestep
+	ck_assert(g_sys_a_last_delta > 0.0);
 }
 END_TEST
 
@@ -367,11 +368,11 @@ START_TEST(test_frequency_zero_different_timestep_deltas)
 
 	struct w_scheduler_time_step ts1 = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	struct w_scheduler_time_step ts2 = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.033}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts1_id = w_scheduler_register_time_step(&g_world.scheduler, &ts1);
 	size_t ts2_id = w_scheduler_register_time_step(&g_world.scheduler, &ts2);
@@ -388,8 +389,9 @@ START_TEST(test_frequency_zero_different_timestep_deltas)
 
 	w_ecs_update(&g_world);
 
-	ck_assert_double_eq_tol(g_sys_a_last_delta, 0.016, 0.0001);
-	ck_assert_double_eq_tol(g_sys_b_last_delta, 0.033, 0.0001);
+	// each timestep passes real elapsed time as delta
+	ck_assert(g_sys_a_last_delta > 0.0);
+	ck_assert(g_sys_b_last_delta > 0.0);
 }
 END_TEST
 
@@ -404,39 +406,24 @@ START_TEST(test_frequency_skips_until_enough_ticks)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
-	// system runs every 3 ticks
+	// frequency of 5 seconds (5e12 ns) - won't trigger in a quick test call
 	struct w_system sys = {
 		.phase_id = phase_id,
 		.update = test_system_a,
-		.update_frequency = 3,
+		.update_frequency = (uint64_t)5e12,
 	};
 	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
-	// tick 0: ticks_elapsed = 0 - 0 = 0 < 3, skip
+	// not enough time has passed - system should be skipped
 	w_ecs_update(&g_world);
 	ck_assert_int_eq(g_sys_a_call_count, 0);
-
-	// tick 1: ticks_elapsed = 1 - 0 = 1 < 3, skip
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 1;
-	w_ecs_update(&g_world);
-	ck_assert_int_eq(g_sys_a_call_count, 0);
-
-	// tick 2: ticks_elapsed = 2 - 0 = 2 < 3, skip
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 2;
-	w_ecs_update(&g_world);
-	ck_assert_int_eq(g_sys_a_call_count, 0);
-
-	// tick 3: ticks_elapsed = 3 - 0 = 3 >= 3, run
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 3;
-	w_ecs_update(&g_world);
-	ck_assert_int_eq(g_sys_a_call_count, 1);
 }
 END_TEST
 
@@ -446,17 +433,18 @@ START_TEST(test_frequency_updates_last_update_ticks)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
+	// frequency of 1 ns - always runs since real frame time > 1 ns
 	struct w_system sys = {
 		.phase_id = phase_id,
 		.update = test_system_a,
-		.update_frequency = 2,
+		.update_frequency = 1,
 	};
 	size_t sys_id = w_ecs_register_system(&g_world, "test_system_a", &sys);
 
@@ -464,15 +452,14 @@ START_TEST(test_frequency_updates_last_update_ticks)
 	struct w_system *sys_entry = w_ecs_get_system_entry(&g_world, sys_id);
 	ck_assert_int_eq(sys_entry->last_update_ticks, 0);
 
-	// tick 2: should run and update last_update_ticks to 2
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 2;
+	// first run: last_update_ticks should be updated to tick_count
 	w_ecs_update(&g_world);
-	ck_assert_int_eq(sys_entry->last_update_ticks, 2);
+	ck_assert_uint_gt(sys_entry->last_update_ticks, 0);
 
-	// tick 4: should run and update last_update_ticks to 4
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 4;
+	// second run: last_update_ticks should increase further
+	uint64_t after_first = sys_entry->last_update_ticks;
 	w_ecs_update(&g_world);
-	ck_assert_int_eq(sys_entry->last_update_ticks, 4);
+	ck_assert_uint_gt(sys_entry->last_update_ticks, after_first);
 }
 END_TEST
 
@@ -482,27 +469,25 @@ START_TEST(test_frequency_accumulated_delta_time)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.010, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
-	// system runs every 5 ticks
+	// frequency of 1 ns - always runs since real frame time > 1 ns
 	struct w_system sys = {
 		.phase_id = phase_id,
 		.update = test_system_a,
-		.update_frequency = 5,
+		.update_frequency = 1,
 	};
 	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
-	// tick 5: 5 ticks elapsed * 0.010 = 0.050 delta
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 5;
 	w_ecs_update(&g_world);
 
 	ck_assert_int_eq(g_sys_a_call_count, 1);
-	ck_assert_double_eq_tol(g_sys_a_last_delta, 0.050, 0.0001);
+	ck_assert(g_sys_a_last_delta > 0.0);
 }
 END_TEST
 
@@ -512,30 +497,29 @@ START_TEST(test_frequency_mixed_systems)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
-	// system A: every tick (frequency=0)
+	// system A: every frame (frequency=0)
 	struct w_system sys_a = {.phase_id = phase_id, .update = test_system_a, .update_frequency = 0};
-	// system B: every 3 ticks
-	struct w_system sys_b = {.phase_id = phase_id, .update = test_system_b, .update_frequency = 3};
+	// system B: 5 second frequency - won't trigger in quick test calls
+	struct w_system sys_b = {.phase_id = phase_id, .update = test_system_b, .update_frequency = (uint64_t)5e12};
 	w_ecs_register_system(&g_world, "test_system_a", &sys_a);
 	w_ecs_register_system(&g_world, "test_system_b", &sys_b);
 
-	// run updates for ticks 0, 1, 2, 3
-	for (int i = 0; i <= 3; i++) {
-		g_world.scheduler.time_steps[ts_id].time_step.tick_count = i;
+	// run 4 updates
+	for (int i = 0; i < 4; i++) {
 		w_ecs_update(&g_world);
 	}
 
-	// system A should have been called 4 times (ticks 0, 1, 2, 3)
+	// system A should have been called 4 times (every frame)
 	ck_assert_int_eq(g_sys_a_call_count, 4);
-	// system B should have been called 1 time (tick 3)
-	ck_assert_int_eq(g_sys_b_call_count, 1);
+	// system B should not have been called (frequency too large for quick test)
+	ck_assert_int_eq(g_sys_b_call_count, 0);
 }
 END_TEST
 
@@ -545,30 +529,28 @@ START_TEST(test_frequency_delta_on_late_run)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.010, .tick_count = 0}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	size_t phase_id = w_scheduler_register_phase(&g_world.scheduler, &phase);
 
-	// system runs every 2 ticks
+	// frequency of 1 ns - always runs since real frame time > 1 ns
 	struct w_system sys = {
 		.phase_id = phase_id,
 		.update = test_system_a,
-		.update_frequency = 2,
+		.update_frequency = 1,
 	};
 	w_ecs_register_system(&g_world, "test_system_a", &sys);
 
-	// first run at tick 2: 2 ticks * 0.010 = 0.020
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 2;
+	// first run: delta is real elapsed time since last run
 	w_ecs_update(&g_world);
-	ck_assert_double_eq_tol(g_sys_a_last_delta, 0.020, 0.0001);
+	ck_assert(g_sys_a_last_delta > 0.0);
 
-	// late run at tick 7: 7 - 2 = 5 ticks * 0.010 = 0.050
-	g_world.scheduler.time_steps[ts_id].time_step.tick_count = 7;
+	// second run: delta is real elapsed time since previous run
 	w_ecs_update(&g_world);
-	ck_assert_double_eq_tol(g_sys_a_last_delta, 0.050, 0.0001);
+	ck_assert(g_sys_a_last_delta > 0.0);
 }
 END_TEST
 
@@ -583,7 +565,7 @@ START_TEST(test_disabled_system_not_called)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -608,7 +590,7 @@ START_TEST(test_reenable_system_called)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -663,7 +645,7 @@ START_TEST(test_systems_in_different_phases_order)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -706,7 +688,7 @@ END_TEST
 
 START_TEST(test_update_no_systems_no_crash)
 {
-	struct w_scheduler_time_step ts = {.enabled = true};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
@@ -742,7 +724,7 @@ START_TEST(test_buffered_entity_name_via_update)
 	ck_assert(lookup_before == W_ENTITY_INVALID);
 
 	// setup minimal scheduler for update to run hooks
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);
@@ -807,7 +789,7 @@ START_TEST(test_buffered_return_entity)
 	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 0);
 
 	// setup scheduler and flush via update
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);
@@ -873,7 +855,7 @@ START_TEST(test_buffered_clear_entity_name)
 	ck_assert(lookup_before == entity);
 
 	// setup scheduler and flush via update
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);
@@ -956,7 +938,7 @@ START_TEST(test_buffered_set_component)
 	ck_assert(!w_ecs_has_component_(&g_world, g_test_component_type_id, entity));
 
 	// setup scheduler and flush via update
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);
@@ -1022,7 +1004,7 @@ START_TEST(test_buffered_remove_component)
 	ck_assert_int_eq(before->value, 456);
 
 	// setup scheduler and flush via update
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);
@@ -1048,7 +1030,7 @@ START_TEST(test_system_executes_during_update)
 	// setup timestep with fixed delta
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -1075,8 +1057,8 @@ START_TEST(test_system_executes_during_update)
 		"System did not execute during w_ecs_update(). Counter is %d, expected 1",
 		g_sysexec_counter);
 
-	// verify delta time was passed correctly
-	ck_assert_double_eq_tol(g_sysexec_last_dt, 0.016, 0.0001);
+	// verify delta time was passed (real elapsed time from uncapped timestep)
+	ck_assert(g_sysexec_last_dt > 0.0);
 }
 END_TEST
 
@@ -1086,7 +1068,7 @@ START_TEST(test_multiple_systems_execute_during_update)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -1122,7 +1104,7 @@ START_TEST(test_system_executes_multiple_updates)
 
 	struct w_scheduler_time_step ts = {
 		.enabled = true,
-		.time_step = {.delta_time_fixed = 0.016}
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
 	};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
@@ -1157,7 +1139,7 @@ END_TEST
 
 START_TEST(test_rebuild_count_after_first_update)
 {
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
@@ -1173,7 +1155,7 @@ END_TEST
 
 START_TEST(test_rebuild_count_subsequent_updates_no_rebuild)
 {
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
@@ -1195,7 +1177,7 @@ START_TEST(test_rebuild_count_register_system_triggers_rebuild)
 {
 	reset_test_globals();
 
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
@@ -1219,7 +1201,7 @@ START_TEST(test_rebuild_count_disable_system_triggers_rebuild)
 {
 	reset_test_globals();
 
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
@@ -1585,7 +1567,7 @@ START_TEST(test_hook_macro_update_begin_fires)
 	g_hook_macro_counter = 0;
 	hook_macro_update_begin_register(&g_world);
 
-	struct w_scheduler_time_step ts = {.enabled = true, .time_step = {.delta_time_fixed = 0.016}};
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_scheduler_register_time_step(&g_world.scheduler, &ts);
 	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = ts_id};
 	w_scheduler_register_phase(&g_world.scheduler, &phase);

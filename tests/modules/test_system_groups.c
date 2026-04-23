@@ -1153,8 +1153,8 @@ static void int_setup(void)
 	w_string_table_init(&g_itable, &g_iarena, 16, 64, NULL);
 	w_ecs_world_init(&g_iworld, &g_itable, &g_iarena);
 
-	/* one timestep: update_time_target == 0 means "always run once" */
-	struct w_scheduler_time_step ts = {.enabled = true};
+	/* one timestep: uncapped variable rate, always runs once per frame */
+	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
 	size_t ts_id = w_ecs_register_system_time_step(&g_iworld, &ts);
 
 	/* one phase tied to that timestep */

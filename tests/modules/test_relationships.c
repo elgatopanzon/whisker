@@ -513,7 +513,7 @@ END_TEST
 START_TEST(test_cascade_with_update_cycle)
 {
 	// register a phase and timestep so w_ecs_update can run
-	struct w_scheduler_time_step ts = { .enabled = true };
+	struct w_scheduler_time_step ts = { .enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true) };
 	size_t ts_id = w_ecs_register_system_time_step(&g_world, &ts);
 	(void)ts_id;
 
