@@ -28,6 +28,7 @@
 	static struct w_query *_q_ = NULL; \
 	struct w_query_iterator itor; \
 	if (!_q_) _q_ = w_query_registry_get_query(&(w)->queries, q); \
+	w_query_rebuild_cache(&(w)->queries, _q_); \
 	w_query_iterator_begin(&itor, _q_); \
 	size_t dense_length = itor.query->archetype_slices_dense_length; \
 	size_t sparse_length = itor.query->archetype_slices_sparse_length; \

@@ -287,6 +287,7 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	// init bitset cache if needed
 	if (!query->bitset_cache.bitsets)
 	{
+		debug_printf("init bitset cache for query %d", query->raw_query);
 		w_array_init_t(query->bitset_cache.bitsets, query->terms_length);
 
 		// assign bitset pointers from component registry
@@ -362,8 +363,11 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	}
 
 	// check if intersection cache is stale
-	if (w_sparse_bitset_intersect_cache_stale(&query->bitset_cache))
+	// w_sparse_bitset_intersect_cache_stale returns UINT64_MAX when fresh (not stale)
+	if (w_sparse_bitset_intersect_cache_stale(&query->bitset_cache) != UINT64_MAX)
 	{
+		debug_printf("rebuild archetype for query: %s (gen %lu)", w_string_table_lookup(registry->string_table, query->raw_query), query->bitset_cache.cache_generation);
+
 		// rebuild bitset indexes cache
 		w_sparse_bitset_intersect(&query->bitset_cache);
 

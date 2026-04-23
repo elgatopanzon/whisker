@@ -92,8 +92,10 @@ void w_sparse_bitset_set(struct w_sparse_bitset *bitset, uint64_t index)
 		page->bits = w_arena_calloc(bitset->arena, (1ULL << bitset->page_shift_) * sizeof(*page->bits));
 	}
 
-	// set actual bits
-	page->bits[local_word] |= w_sparse_bitset_bit_mask(index);
+	// set actual bits - only increment generation when state actually changes
+	uint64_t mask = w_sparse_bitset_bit_mask(index);
+	bool was_clear = !(page->bits[local_word] & mask);
+	page->bits[local_word] |= mask;
 
 	// update page metadata
 	if (local_word < page->first_set) page->first_set = local_word;
@@ -101,6 +103,7 @@ void w_sparse_bitset_set(struct w_sparse_bitset *bitset, uint64_t index)
 
 	// set lookup bit
 	bitset->lookup_pages[page_lookup_index] |= w_sparse_bitset_bit_mask(page_index);
+	if (was_clear) bitset->generation++;
 }
 
 void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
@@ -116,6 +119,9 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 	if (!page->bits) return;
 
 	uint32_t local_word = w_sparse_bitset_local_word(word_index, bitset->page_mask_);
+
+	// only increment generation when state actually changes
+	bool was_set = (page->bits[local_word] & w_sparse_bitset_bit_mask(index)) != 0;
 	page->bits[local_word] &= w_sparse_bitset_bit_clear_mask(index);
 
 	// clear lookup bit if page is empty
@@ -131,6 +137,7 @@ void w_sparse_bitset_clear(struct w_sparse_bitset *bitset, uint64_t index)
 		page->first_set = UINT32_MAX;
 		page->last_set = 0;
 	}
+	if (was_set) bitset->generation++;
 }
 
 bool w_sparse_bitset_get(struct w_sparse_bitset *bitset, uint64_t index)
