@@ -176,33 +176,36 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 // assign system (by name) to root group (always active systems)
 #define w_system_group_assign_to_root_group(world, root_name, system_name) \
 	do { \
+		((void)sizeof(&(system_name))); \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
 		w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _gid); \
-		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
+		size_t *_sid = w_system_get_id_by_name(&(world)->systems, #system_name); \
 		if (_gid && _sid) w_system_group_assign_system(_reg, *_gid, *_sid); \
 	} while (0)
 
 // assign system (by name) to a specific sub-group (active only in that state)
 #define w_system_group_assign_to_sub_group(world, sub_name, system_name) \
 	do { \
+		((void)sizeof(&(system_name))); \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
 		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
-		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
+		size_t *_sid = w_system_get_id_by_name(&(world)->systems, #system_name); \
 		if (_gid && _sid) w_system_group_assign_system(_reg, *_gid, *_sid); \
 	} while (0)
 
 // assign system (by name) to all sub-groups of a root group
 #define w_system_group_assign_to_all_sub_groups(world, root_name, system_name) \
 	do { \
+		((void)sizeof(&(system_name))); \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
 		w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _gid); \
-		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
+		size_t *_sid = w_system_get_id_by_name(&(world)->systems, #system_name); \
 		if (_gid && _sid) { \
 			struct w_system_group_root *_root = (_reg)->root_groups[*_gid]; \
 			if (_root) { \
@@ -265,22 +268,24 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 // register system (by name) as on-enter callback for a sub-group (by name)
 #define w_system_group_register_on_enter_system(world, sub_name, system_name) \
 	do { \
+		((void)sizeof(&(system_name))); \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
 		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
-		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
+		size_t *_sid = w_system_get_id_by_name(&(world)->systems, #system_name); \
 		if (_gid && _sid) w_system_group_register_on_enter(_reg, *_gid, *_sid); \
 	} while (0)
 
 // register system (by name) as on-exit callback for a sub-group (by name)
 #define w_system_group_register_on_exit_system(world, sub_name, system_name) \
 	do { \
+		((void)sizeof(&(system_name))); \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
 		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
-		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
+		size_t *_sid = w_system_get_id_by_name(&(world)->systems, #system_name); \
 		if (_gid && _sid) w_system_group_register_on_exit(_reg, *_gid, *_sid); \
 	} while (0)
 
