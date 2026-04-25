@@ -32,18 +32,31 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_DRAW);
 	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_DRAW);
 	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_DRAW);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_WORLD);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_WORLD);
+	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_WORLD);
 
 	// assign phases order
-	// Chain: POST_RENDER -> scale -> filter -> draw
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_SCALE, WM_PHASE_POST_RENDER);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_SCALE, WM_RENDER_PHASE_PRE_SCALE);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_SCALE, WM_RENDER_PHASE_ON_SCALE);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_FILTER, WM_RENDER_PHASE_POST_SCALE);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_FILTER, WM_RENDER_PHASE_PRE_FILTER);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_FILTER, WM_RENDER_PHASE_ON_FILTER);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_PRE_DRAW, WM_RENDER_PHASE_POST_FILTER);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_ON_DRAW, WM_RENDER_PHASE_PRE_DRAW);
-	w_ecs_set_system_phase_runs_after(world, WM_RENDER_PHASE_POST_DRAW, WM_RENDER_PHASE_ON_DRAW);
+	// world draw phases
+	w_ecs_set_phase_chain(world,
+		WM_PHASE_ON_RENDER,
+		WM_RENDER_PHASE_PRE_WORLD,
+		WM_RENDER_PHASE_ON_WORLD,
+		WM_RENDER_PHASE_POST_WORLD
+	);
+	// final draw phases: POST_RENDER -> scale -> filter -> draw
+	w_ecs_set_phase_chain(world,
+		WM_PHASE_POST_RENDER,
+		WM_RENDER_PHASE_PRE_SCALE,
+		WM_RENDER_PHASE_ON_SCALE,
+		WM_RENDER_PHASE_POST_SCALE,
+		WM_RENDER_PHASE_PRE_FILTER,
+		WM_RENDER_PHASE_ON_FILTER,
+		WM_RENDER_PHASE_POST_FILTER,
+		WM_RENDER_PHASE_PRE_DRAW,
+		WM_RENDER_PHASE_ON_DRAW,
+		WM_RENDER_PHASE_POST_DRAW,
+	);
 
 	// scaling systems
 	whisker_rendering_scaling_rect_init_register(world);
@@ -51,17 +64,27 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	whisker_rendering_scaling_fit_register(world);
 	whisker_rendering_scaling_integer_register(world);
 
-
 	/*******************
 	*  camera module  *
 	*******************/
 	
 	// init camera state resource
 	struct w_rendering_camera_state *camera_state = w_mem_xcalloc_t(1, struct w_rendering_camera_state);
+
+	// init a default camera
+	camera_state->camera_entity_id = W_ENTITY_INVALID;
+
+	camera_state->camera_position = ((w_vec3){ -6.0f, 0.0f, 0.0f });
+    camera_state->camera_target = ((w_vec3){ 0.0f, 0.0f, 0.0f });
+    camera_state->camera_up = ((w_vec3){ 0.0f, 1.0f, 0.0f });
+    camera_state->camera_fov_deg = 45.0f;
+    camera_state->camera_projection = W_RENDERING_CAMERA_PROJECTION_PERSPECTIVE;
+
 	w_ecs_set_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID, camera_state);
 
 	// register camera systems
 	camera_request_active_camera_register(world);
+	camera_state_sync_register(world);
 }
 
 void wm_rendering_free(struct w_ecs_world *world)

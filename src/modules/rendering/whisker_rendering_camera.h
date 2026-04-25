@@ -22,12 +22,23 @@
 /* index 3: camera state (rendering/camera sub-module) */
 #define WM_RENDERING_CAMERA_STATE_RESOURCE_ID WM_MODULE_RESOURCE_ID(RENDERING, 3)
 
+enum W_RENDERING_CAMERA_PROJECTION
+{
+	W_RENDERING_CAMERA_PROJECTION_PERSPECTIVE,
+	W_RENDERING_CAMERA_PROJECTION_ORTHOGRAPHIC,
+};
+
 struct w_rendering_camera_state 
 {
 	bool active;
 	w_entity_id camera_entity_id;
-};
 
+	w_vec3 camera_position;
+	w_vec3 camera_target;
+	w_vec3 camera_up;
+	float camera_fov_deg;
+	enum W_RENDERING_CAMERA_PROJECTION camera_projection;
+};
 
 /***********************
 *  camera components  *
@@ -37,6 +48,12 @@ struct w_rendering_camera_state
 
 // FOV Y in degrees
 #define W_RENDERING_CAMERA_COMPONENT_FOV "camera_fov_deg"
+
+// up vector
+#define W_RENDERING_CAMERA_COMPONENT_UP "camera_up"
+
+// target vector
+#define W_RENDERING_CAMERA_COMPONENT_TARGET "camera_target"
 
 // near and far planes e.g. 0.1 / 1000
 #define W_RENDERING_CAMERA_COMPONENT_NEAR_CLIP "camera_near_clip"
