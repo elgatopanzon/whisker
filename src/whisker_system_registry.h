@@ -51,7 +51,7 @@ struct w_system *w_system_get_system_entry(struct w_system_registry *registry, s
 #define w_system_get_id_by_name(registry, name) \
 	({ \
 		size_t *_out; \
-		w_hashmap_t_get(&(registry)->system_names, (name), _out); \
+		w_hashmap_t_get_str(&(registry)->system_names, (name), _out); \
 		_out; \
 	})
 

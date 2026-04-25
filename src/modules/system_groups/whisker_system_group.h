@@ -169,7 +169,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 	({ \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		size_t *_out = NULL; \
-		if (_reg) w_hashmap_t_get(&(_reg)->group_names, (name), _out); \
+		if (_reg) w_hashmap_t_get_str(&(_reg)->group_names, (name), _out); \
 		_out; \
 	})
 
@@ -179,7 +179,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (root_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) w_system_group_assign_system(_reg, *_gid, *_sid); \
 	} while (0)
@@ -190,7 +190,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (sub_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) w_system_group_assign_system(_reg, *_gid, *_sid); \
 	} while (0)
@@ -201,7 +201,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (root_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) { \
 			struct w_system_group_root *_root = (_reg)->root_groups[*_gid]; \
@@ -220,8 +220,8 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		size_t *_rid = NULL; \
 		size_t *_sid = NULL; \
 		if (_reg) { \
-			w_hashmap_t_get(&(_reg)->group_names, (root_name), _rid); \
-			w_hashmap_t_get(&(_reg)->group_names, (sub_name), _sid); \
+			w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _rid); \
+			w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _sid); \
 		} \
 		struct w_system_group_changes _ch = {0}; \
 		if (_reg && _rid && _sid) _ch = w_system_group_change_sub(_reg, &(world)->systems, *_rid, *_sid); \
@@ -234,7 +234,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 	({ \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		size_t *_rid = NULL; \
-		if (_reg) w_hashmap_t_get(&(_reg)->group_names, (root_name), _rid); \
+		if (_reg) w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _rid); \
 		size_t _result = SIZE_MAX; \
 		if (_rid) _result = w_system_group_get_active_sub_id(_reg, *_rid); \
 		_result; \
@@ -245,7 +245,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 	({ \
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		size_t *_rid = NULL; \
-		if (_reg) w_hashmap_t_get(&(_reg)->group_names, (root_name), _rid); \
+		if (_reg) w_hashmap_t_get_str(&(_reg)->group_names, (root_name), _rid); \
 		bool _result = false; \
 		if (_rid) _result = w_system_group_is_active_group_name(_reg, *_rid, sub_name); \
 		_result; \
@@ -257,7 +257,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (sub_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) w_system_group_exclude_system(_reg, *_gid, *_sid); \
 	} while (0)
@@ -268,7 +268,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (sub_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) w_system_group_register_on_enter(_reg, *_gid, *_sid); \
 	} while (0)
@@ -279,7 +279,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		struct w_system_group_registry *_reg = wm_system_group_get_registry(world); \
 		if (!_reg) break; \
 		size_t *_gid; \
-		w_hashmap_t_get(&(_reg)->group_names, (sub_name), _gid); \
+		w_hashmap_t_get_str(&(_reg)->group_names, (sub_name), _gid); \
 		size_t *_sid = w_system_get_id_by_name(&(world)->systems, system_name); \
 		if (_gid && _sid) w_system_group_register_on_exit(_reg, *_gid, *_sid); \
 	} while (0)
