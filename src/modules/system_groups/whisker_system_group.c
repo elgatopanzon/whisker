@@ -354,7 +354,13 @@ void w_system_group_update_begin_hook_(void *ctx, void *data)
 	w_sparse_bitset_init(&reg->temp_systems, reg->arena, W_SPARSE_BITSET_PAGE_SHIFT);
 
 	// apply all queued enable/disable changes
+	size_t queue_size = reg->change_queue_length;
 	w_system_group_process_queue(reg, &world->systems);
+
+	if (queue_size > 0)
+	{
+		world->scheduler_jobs_dirty = true;
+	}
 }
 
 

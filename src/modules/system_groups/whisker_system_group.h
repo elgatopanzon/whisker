@@ -225,6 +225,7 @@ struct w_system_group_registry *wm_system_group_get_registry(struct w_ecs_world 
 		} \
 		struct w_system_group_changes _ch = {0}; \
 		if (_reg && _rid && _sid) _ch = w_system_group_change_sub(_reg, &(world)->systems, *_rid, *_sid); \
+		if (_ch.enable_length > 0 || _ch.disable_length > 0) (world)->scheduler_jobs_dirty = true; \
 		_ch; \
 	})
 
