@@ -6,6 +6,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_types.h"
 #include "whisker_time.h"
 #include "whisker_arena.h"
 #include "whisker_array.h"
