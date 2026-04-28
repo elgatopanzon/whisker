@@ -42,6 +42,7 @@ enum W_SCHEDULER_ACTIONS
 struct w_scheduler_phase 
 {
 	bool enabled;
+	char *name;
 	size_t id;
 	size_t time_step_id;
 };
@@ -50,6 +51,7 @@ struct w_scheduler_phase
 struct w_scheduler_time_step 
 {
 	bool enabled;
+	char *name;
 	size_t id;
 	struct whisker_time_step time_step;
 };

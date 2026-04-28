@@ -28,7 +28,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "PRE"};
 	struct w_scheduler_time_step ts_default        = {.enabled = true, .time_step = w_time_step_create(
 		0,
 		1,
@@ -38,7 +38,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "DEFAULT"};
 	struct w_scheduler_time_step ts_default_fixed  = {.enabled = true, .time_step = w_time_step_create(
 		fixed_update_rate,
 		1,
@@ -48,7 +48,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "DEFAULT_FIXED"};
 	struct w_scheduler_time_step ts_default_post   = {.enabled = true, .time_step = w_time_step_create(
 		0,
 		1,
@@ -58,7 +58,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "DEFAULT_POST"};
 	struct w_scheduler_time_step ts_default_render = {.enabled = true, .time_step = w_time_step_create(
 		0,
 		1,
@@ -68,7 +68,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "DEFAULT_RENDER"};
 	struct w_scheduler_time_step ts_reserved       = {.enabled = true, .time_step = w_time_step_create(
 		0,
 		1,
@@ -78,7 +78,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name= "RESERVED"};
 	struct w_scheduler_time_step ts_post           = {.enabled = true, .time_step = w_time_step_create(
 		0,
 		1,
@@ -88,7 +88,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		WM_SCHEDULER_DEFAULTS_DELTA_AVG_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_ENABLED,
 		WM_SCHEDULER_DEFAULTS_DELTA_ACC_CLAMP_ENABLED
-	)};
+	), .name = "POST"};
 
 	size_t ts_pre_id            = w_ecs_register_system_time_step_at(world, &ts_pre, WM_TIMESTEP_PRE);
 	size_t ts_default_id        = w_ecs_register_system_time_step_at(world, &ts_default, WM_TIMESTEP_DEFAULT);
@@ -107,30 +107,30 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 	w_ecs_set_system_time_step_runs_before(world, ts_reserved_id, ts_post_id);
 
 	// register phases with timestep assignments
-	struct w_scheduler_phase p_pre              = {.enabled = true, .time_step_id = ts_pre_id};
-	struct w_scheduler_phase p_on_startup       = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_pre_load         = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_on_load          = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_post_load        = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_pre_update       = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_on_update        = {.enabled = true, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_post_update      = {.enabled = true, .time_step_id = ts_default_post_id};
-	struct w_scheduler_phase p_pre_fixed_update  = {.enabled = true, .time_step_id = ts_default_fixed_id};
-	struct w_scheduler_phase p_on_fixed_update   = {.enabled = true, .time_step_id = ts_default_fixed_id};
-	struct w_scheduler_phase p_post_fixed_update = {.enabled = true, .time_step_id = ts_default_fixed_id};
-	struct w_scheduler_phase p_final_fixed      = {.enabled = true, .time_step_id = ts_default_fixed_id};
-	struct w_scheduler_phase p_post_fixed       = {.enabled = true, .time_step_id = ts_default_fixed_id};
-	struct w_scheduler_phase p_final            = {.enabled = true, .time_step_id = ts_default_post_id};
-	struct w_scheduler_phase p_pre_render       = {.enabled = true, .time_step_id = ts_default_render_id};
-	struct w_scheduler_phase p_on_render        = {.enabled = true, .time_step_id = ts_default_render_id};
-	struct w_scheduler_phase p_post_render      = {.enabled = true, .time_step_id = ts_default_render_id};
-	struct w_scheduler_phase p_final_render     = {.enabled = true, .time_step_id = ts_default_render_id};
-	struct w_scheduler_phase p_reserved         = {.enabled = true, .time_step_id = ts_reserved_id};
-	struct w_scheduler_phase p_post             = {.enabled = true, .time_step_id = ts_post_id};
+	struct w_scheduler_phase p_pre              = {.enabled = true, .time_step_id = ts_pre_id, .name = "PRE"};
+	struct w_scheduler_phase p_on_startup       = {.enabled = true, .time_step_id = ts_default_id, .name = "ON_STARTUP"};
+	struct w_scheduler_phase p_pre_load         = {.enabled = true, .time_step_id = ts_default_id, .name = "PRE_LOAD"};
+	struct w_scheduler_phase p_on_load          = {.enabled = true, .time_step_id = ts_default_id, .name = "ON_LOAD"};
+	struct w_scheduler_phase p_post_load        = {.enabled = true, .time_step_id = ts_default_id, .name = "POST_LOAD"};
+	struct w_scheduler_phase p_pre_update       = {.enabled = true, .time_step_id = ts_default_id, .name = "PRE_UPDATE"};
+	struct w_scheduler_phase p_on_update        = {.enabled = true, .time_step_id = ts_default_id, .name = "ON_UPDATE"};
+	struct w_scheduler_phase p_post_update      = {.enabled = true, .time_step_id = ts_default_post_id, .name = "POST_UPDATE"};
+	struct w_scheduler_phase p_pre_fixed_update  = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "PRE_FIXED_UPDATE"};
+	struct w_scheduler_phase p_on_fixed_update   = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "ON_FIXED_UPDATE"};
+	struct w_scheduler_phase p_post_fixed_update = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "POST_FIXED_UPDATED"};
+	struct w_scheduler_phase p_final_fixed      = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "FINAL_FIXED"};
+	struct w_scheduler_phase p_post_fixed       = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "POST_FIXED"};
+	struct w_scheduler_phase p_final            = {.enabled = true, .time_step_id = ts_default_post_id, .name = "FINAL"};
+	struct w_scheduler_phase p_pre_render       = {.enabled = true, .time_step_id = ts_default_render_id, .name = "PRE_RENDER"};
+	struct w_scheduler_phase p_on_render        = {.enabled = true, .time_step_id = ts_default_render_id, .name = "ON_RENDER"};
+	struct w_scheduler_phase p_post_render      = {.enabled = true, .time_step_id = ts_default_render_id, .name = "POST_RENDER"};
+	struct w_scheduler_phase p_final_render     = {.enabled = true, .time_step_id = ts_default_render_id, .name = "FINAL_RENDER"};
+	struct w_scheduler_phase p_reserved         = {.enabled = true, .time_step_id = ts_reserved_id, .name = "RESERVED"};
+	struct w_scheduler_phase p_post             = {.enabled = true, .time_step_id = ts_post_id, .name = "POST"};
 
 	// restart and shutdown phases disabled by default (on-demand)
-	struct w_scheduler_phase p_on_restart       = {.enabled = false, .time_step_id = ts_default_id};
-	struct w_scheduler_phase p_on_shutdown      = {.enabled = false, .time_step_id = ts_default_id};
+	struct w_scheduler_phase p_on_restart       = {.enabled = false, .time_step_id = ts_default_id, .name = "ON_RESTART"};
+	struct w_scheduler_phase p_on_shutdown      = {.enabled = false, .time_step_id = ts_default_id, .name = "ON_SHUTDOWN"};
 
 	size_t id_pre              = w_ecs_register_system_phase_at(world, &p_pre, WM_PHASE_PRE);
 	size_t id_on_startup       = w_ecs_register_system_phase_at(world, &p_on_startup, WM_PHASE_ON_STARTUP);

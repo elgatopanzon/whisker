@@ -21,19 +21,31 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_ecs_set_module_resource(world, WM_RENDERING_RENDER_STATE_RESOURCE_ID, render_state);
 
 	// register custom rendering phases
-	struct w_scheduler_phase phase = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER};
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_SCALE);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_SCALE);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_SCALE);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_FILTER);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_FILTER);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_FILTER);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_DRAW);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_DRAW);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_DRAW);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_PRE_WORLD);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_ON_WORLD);
-	w_ecs_register_system_phase_at(world, &phase, WM_RENDER_PHASE_POST_WORLD);
+	struct w_scheduler_phase phase_pre_scale = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_SCALE"};
+	struct w_scheduler_phase phase_on_scale = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_SCALE"};
+	struct w_scheduler_phase phase_post_scale = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_SCALE"};
+	struct w_scheduler_phase phase_pre_filter = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_FILTER"};
+	struct w_scheduler_phase phase_on_filter = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_FILTER"};
+	struct w_scheduler_phase phase_post_filter = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_FILTER"};
+	struct w_scheduler_phase phase_pre_draw = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_DRAW"};
+	struct w_scheduler_phase phase_on_draw = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_DRAW"};
+	struct w_scheduler_phase phase_post_draw = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_DRAW"};
+	struct w_scheduler_phase phase_pre_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_WORLD"};
+	struct w_scheduler_phase phase_on_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_WORLD"};
+	struct w_scheduler_phase phase_post_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_WORLD"};
+
+	w_ecs_register_system_phase_at(world, &phase_pre_scale, WM_RENDER_PHASE_PRE_SCALE);
+	w_ecs_register_system_phase_at(world, &phase_on_scale, WM_RENDER_PHASE_ON_SCALE);
+	w_ecs_register_system_phase_at(world, &phase_post_scale, WM_RENDER_PHASE_POST_SCALE);
+	w_ecs_register_system_phase_at(world, &phase_pre_filter, WM_RENDER_PHASE_PRE_FILTER);
+	w_ecs_register_system_phase_at(world, &phase_on_filter, WM_RENDER_PHASE_ON_FILTER);
+	w_ecs_register_system_phase_at(world, &phase_post_filter, WM_RENDER_PHASE_POST_FILTER);
+	w_ecs_register_system_phase_at(world, &phase_pre_draw, WM_RENDER_PHASE_PRE_DRAW);
+	w_ecs_register_system_phase_at(world, &phase_on_draw, WM_RENDER_PHASE_ON_DRAW);
+	w_ecs_register_system_phase_at(world, &phase_post_draw, WM_RENDER_PHASE_POST_DRAW);
+	w_ecs_register_system_phase_at(world, &phase_pre_world, WM_RENDER_PHASE_PRE_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_on_world, WM_RENDER_PHASE_ON_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_post_world, WM_RENDER_PHASE_POST_WORLD);
 
 	// assign phases order
 	// world draw phases
