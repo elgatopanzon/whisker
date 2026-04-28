@@ -702,5 +702,45 @@ void w_ecs_cmd_clear_entity_name(void *world, void *entity);
 void w_ecs_cmd_set_component(void *world, void *payload);
 void w_ecs_cmd_remove_component(void *world, void *payload);
 
+
+/******************************
+*  world init helper macros  *
+******************************/
+// these macros allow creating and freeing the entire world and its
+// dependencies, essentially managed, to reduce boilerplate required
+
+#define w_ecs_world_init_full(world_name) \
+	struct w_arena _##world_name##_arena; \
+	w_arena_init(&_##world_name##_arena, 0); \
+	struct w_string_table _##world_name##_string_table; \
+	    w_string_table_init(&_##world_name##_string_table, &_##world_name##_arena, \
+                        WHISKER_STRING_TABLE_REALLOC_SIZE, \
+                        WHISKER_STRING_TABLE_BUCKETS_SIZE, NULL); \
+	struct w_ecs_world world_name; \
+    w_ecs_world_init(&world_name, &_##world_name##_string_table, &_##world_name##_arena); \
+
+#define w_ecs_world_update(world, custom_loop) \
+	while (w_ecs_update(&world) != W_WORLD_UPDATE_RESULT_SHUTDOWN) { \
+		custom_loop \
+	} \
+
+#define w_ecs_world_free_full(world) \
+	w_ecs_world_free(&world); \
+    w_string_table_free(&_##world##_string_table); \
+    w_arena_free(&_##world##_arena); \
+
+#define w_ecs_world_bootstrap(world_name, init_code) \
+	w_ecs_world_init_full(world_name); \
+	{ init_code }; \
+	w_ecs_world_update(world_name, {}); \
+	w_ecs_world_free_full(world_name); \
+
+#define w_ecs_world_bootstrap_custom(world_name, init_code, custom_loop, dispose_code) \
+	w_ecs_world_init_full(world_name); \
+	{ init_code }; \
+	w_ecs_world_update(world_name, custom_loop); \
+	{ dispose_code }; \
+	w_ecs_world_free_full(world_name); \
+
 #endif /* WHISKER_ECS_WORLD_H */
 
