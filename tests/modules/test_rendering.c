@@ -53,8 +53,8 @@ static void rendering_teardown(void)
 
 START_TEST(test_rendering_phase_count)
 {
-	// 20 from scheduler_defaults + 9 from rendering module
-	ck_assert_int_eq(g_world.scheduler.phases_order_length, 29);
+	// 22 from scheduler_defaults + 12 from rendering module
+	ck_assert_int_eq(g_world.scheduler.phases_order_length, 34);
 }
 END_TEST
 
@@ -132,12 +132,13 @@ END_TEST
 
 START_TEST(test_phase_ordering_rendering_module)
 {
-	// POST_RENDER < PRE_SCALE < ON_SCALE < POST_SCALE < PRE_FILTER < ON_FILTER
-	// < POST_FILTER < PRE_DRAW < ON_DRAW < POST_DRAW < FINAL_RENDER
+	// FINAL_RENDER < PRE_SCALE < ON_SCALE < POST_SCALE < PRE_FILTER < ON_FILTER
+	// < POST_FILTER < PRE_DRAW < ON_DRAW < POST_DRAW
+	// (rendering module phases now come after FINAL_RENDER in execution order)
 	size_t *order = g_world.scheduler.phases_order;
 	size_t len = g_world.scheduler.phases_order_length;
 
-	size_t pos_post_render  = 0;
+	size_t pos_final_render = 0;
 	size_t pos_pre_scale    = 0;
 	size_t pos_on_scale     = 0;
 	size_t pos_post_scale   = 0;
@@ -147,10 +148,9 @@ START_TEST(test_phase_ordering_rendering_module)
 	size_t pos_pre_draw     = 0;
 	size_t pos_on_draw      = 0;
 	size_t pos_post_draw    = 0;
-	size_t pos_final_render = 0;
 
 	for (size_t i = 0; i < len; i++) {
-		if (order[i] == WM_PHASE_POST_RENDER)          pos_post_render  = i;
+		if (order[i] == WM_PHASE_FINAL_RENDER)         pos_final_render = i;
 		if (order[i] == WM_RENDER_PHASE_PRE_SCALE)     pos_pre_scale    = i;
 		if (order[i] == WM_RENDER_PHASE_ON_SCALE)      pos_on_scale     = i;
 		if (order[i] == WM_RENDER_PHASE_POST_SCALE)    pos_post_scale   = i;
@@ -160,10 +160,9 @@ START_TEST(test_phase_ordering_rendering_module)
 		if (order[i] == WM_RENDER_PHASE_PRE_DRAW)      pos_pre_draw     = i;
 		if (order[i] == WM_RENDER_PHASE_ON_DRAW)       pos_on_draw      = i;
 		if (order[i] == WM_RENDER_PHASE_POST_DRAW)     pos_post_draw    = i;
-		if (order[i] == WM_PHASE_FINAL_RENDER)         pos_final_render = i;
 	}
 
-	ck_assert_uint_lt(pos_post_render,  pos_pre_scale);
+	ck_assert_uint_lt(pos_final_render, pos_pre_scale);
 	ck_assert_uint_lt(pos_pre_scale,    pos_on_scale);
 	ck_assert_uint_lt(pos_on_scale,     pos_post_scale);
 	ck_assert_uint_lt(pos_post_scale,   pos_pre_filter);
@@ -172,7 +171,6 @@ START_TEST(test_phase_ordering_rendering_module)
 	ck_assert_uint_lt(pos_post_filter,  pos_pre_draw);
 	ck_assert_uint_lt(pos_pre_draw,     pos_on_draw);
 	ck_assert_uint_lt(pos_on_draw,      pos_post_draw);
-	ck_assert_uint_lt(pos_post_draw,    pos_final_render);
 }
 END_TEST
 
