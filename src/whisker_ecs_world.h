@@ -365,6 +365,8 @@ void w_ecs_set_system_time_step_runs_after(struct w_ecs_world *world, size_t tim
 // reset all scheduler time steps
 void w_ecs_reset_system_time_steps(struct w_ecs_world *world);
 
+// scheduler: run all systems registered to a phase directly (bypasses scheduler)
+void w_ecs_run_phase_systems(struct w_ecs_world *world, size_t phase_id);
 
 /***********************
 *  module resources   *

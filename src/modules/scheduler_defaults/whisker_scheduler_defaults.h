@@ -82,6 +82,8 @@ enum WM_PHASE
 	WM_PHASE_FINAL_RENDER = 17,
 	WM_PHASE_RESERVED = 18,
 	WM_PHASE_POST = 19,
+	WM_PHASE_ON_RESTART = 20,
+	WM_PHASE_ON_SHUTDOWN = 21,
 };
 
 // register default timesteps and phases on the world scheduler

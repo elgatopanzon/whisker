@@ -57,7 +57,7 @@ END_TEST
 
 START_TEST(test_phase_count)
 {
-	ck_assert_int_eq(g_world.scheduler.phases_length, 20);
+	ck_assert_int_eq(g_world.scheduler.phases_length, 22);
 }
 END_TEST
 
@@ -289,6 +289,44 @@ END_TEST
 
 
 /*****************************
+*  shutdown phase execution  *
+*****************************/
+
+static int g_shutdown_counter = 0;
+
+static void test_shutdown_system_(void *ctx, double delta_time)
+{
+	(void)ctx;
+	(void)delta_time;
+	g_shutdown_counter++;
+}
+
+START_TEST(test_shutdown_phase_executes_once)
+{
+	g_shutdown_counter = 0;
+
+	// register a system to ON_SHUTDOWN phase
+	struct w_system shutdown_sys = {
+		.phase_id = WM_PHASE_ON_SHUTDOWN,
+		.enabled = true,
+		.update = test_shutdown_system_,
+	};
+	w_ecs_register_system(&g_world, "test_shutdown_system_", &shutdown_sys);
+
+	// trigger shutdown
+	g_world.update_result = W_WORLD_UPDATE_RESULT_SHUTDOWN;
+
+	// run one update - the POST phase system should enable ON_SHUTDOWN
+	// and rebuild scheduler to include it in the current iteration
+	w_ecs_update(&g_world);
+
+	// verify shutdown system executed exactly once
+	ck_assert_int_eq(g_shutdown_counter, 1);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -337,6 +375,12 @@ Suite *scheduler_defaults_suite(void)
 	tcase_add_test(tc_state, test_all_phases_enabled);
 	tcase_add_test(tc_state, test_all_timesteps_enabled);
 	suite_add_tcase(s, tc_state);
+
+	TCase *tc_shutdown = tcase_create("shutdown_phase");
+	tcase_add_checked_fixture(tc_shutdown, defaults_setup, defaults_teardown);
+	tcase_set_timeout(tc_shutdown, 10);
+	tcase_add_test(tc_shutdown, test_shutdown_phase_executes_once);
+	suite_add_tcase(s, tc_shutdown);
 
 	return s;
 }

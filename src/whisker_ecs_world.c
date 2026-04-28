@@ -82,6 +82,26 @@ static inline void w_ecs_rebuild_scheduler_jobs_(struct w_ecs_world *world)
 	}
 }
 
+void w_ecs_run_phase_systems(struct w_ecs_world *world, size_t phase_id)
+{
+	// get phase to find its timestep
+	struct w_scheduler_phase *phase = w_scheduler_get_phase(&world->scheduler, phase_id);
+	if (!phase) return;
+
+	struct w_scheduler_time_step *ts = w_scheduler_get_time_step(&world->scheduler, phase->time_step_id);
+	double delta_time = ts ? ts->time_step.delta_time_fixed : 0.0;
+
+	// iterate all systems, run those matching this phase
+	for (size_t i = 0; i < world->systems.systems_length; ++i)
+	{
+		struct w_system *sys = &world->systems.systems[i];
+		if (!sys->enabled) continue;
+		if (sys->phase_id != phase_id) continue;
+
+		sys->update(world, delta_time);
+	}
+}
+
 static inline void w_ecs_update_hook_flush_command_buffer_(void *world_, void *action_)
 {
 	struct w_ecs_world *world = world_;
@@ -107,6 +127,7 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 	size_t count = schedule->items_length;
 	struct w_scheduler_action *schedule_items = schedule->items;
 	struct w_system *systems = world->systems.systems;
+	struct w_hook_registry *hooks = world->hooks;
 
 	// timestep loop tracking
 	size_t timestep_begin_idx = 0;
@@ -120,10 +141,10 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 			case W_SCHEDULER_ACTIONS_NOOP:
 				break;
 			case W_SCHEDULER_ACTIONS_SCHEDULE_BEGIN:
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_BEGIN, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_BEGIN, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_SCHEDULE_END:
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_END, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_END, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN:
 			{
@@ -145,11 +166,11 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				}
 				timestep_begin_idx = i;
 				timestep_iterations_remaining = n - 1; // first iteration runs now
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_TIMESTEP_BEGIN, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_TIMESTEP_BEGIN, world, action);
 				break;
 			}
 			case W_SCHEDULER_ACTIONS_TIMESTEP_END:
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_TIMESTEP_END, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_TIMESTEP_END, world, action);
 				// check if more iterations needed
 				if (timestep_iterations_remaining > 0)
 				{
@@ -158,10 +179,10 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				}
 				break;
 			case W_SCHEDULER_ACTIONS_PHASE_BEGIN:
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_PHASE_BEGIN, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_PHASE_BEGIN, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_PHASE_END:
-				w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_PHASE_END, world, action);
+				w_hook_registry_run_hooks(&hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_PHASE_END, world, action);
 				break;
 			case W_SCHEDULER_ACTIONS_DISPATCH:
 			{

@@ -7,6 +7,7 @@
 
 #include "whisker_scheduler_defaults.h"
 #include "systems/system_disable_startup_phase.h"
+#include "systems/system_enable_restart_shutdown_phases.h"
 
 void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_rate)
 {
@@ -128,6 +129,10 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 	struct w_scheduler_phase p_reserved         = {.enabled = true, .time_step_id = ts_reserved_id};
 	struct w_scheduler_phase p_post             = {.enabled = true, .time_step_id = ts_post_id};
 
+	// restart and shutdown phases disabled by default (on-demand)
+	struct w_scheduler_phase p_on_restart       = {.enabled = false, .time_step_id = ts_default_id};
+	struct w_scheduler_phase p_on_shutdown      = {.enabled = false, .time_step_id = ts_default_id};
+
 	size_t id_pre              = w_ecs_register_system_phase_at(world, &p_pre, WM_PHASE_PRE);
 	size_t id_on_startup       = w_ecs_register_system_phase_at(world, &p_on_startup, WM_PHASE_ON_STARTUP);
 	size_t id_pre_load         = w_ecs_register_system_phase_at(world, &p_pre_load, WM_PHASE_PRE_LOAD);
@@ -148,6 +153,8 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 	size_t id_final_render     = w_ecs_register_system_phase_at(world, &p_final_render, WM_PHASE_FINAL_RENDER);
 	size_t id_reserved         = w_ecs_register_system_phase_at(world, &p_reserved, WM_PHASE_RESERVED);
 	size_t id_post             = w_ecs_register_system_phase_at(world, &p_post, WM_PHASE_POST);
+	size_t id_on_restart       = w_ecs_register_system_phase_at(world, &p_on_restart, WM_PHASE_ON_RESTART);
+	size_t id_on_shutdown       = w_ecs_register_system_phase_at(world, &p_on_shutdown, WM_PHASE_ON_SHUTDOWN);
 
 	// phase ordering within WM_TIMESTEP_DEFAULT
 	w_ecs_set_system_phase_runs_before(world, id_on_startup, id_pre_load);
@@ -170,6 +177,10 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 	w_ecs_set_system_phase_runs_before(world, id_on_render, id_post_render);
 	w_ecs_set_system_phase_runs_before(world, id_post_render, id_final_render);
 
+	// restart and shutdown phases
+	w_ecs_set_system_phase_runs_after(world, id_on_restart, id_post);
+	w_ecs_set_system_phase_runs_after(world, id_on_shutdown, id_post);
+
 	// suppress unused warnings for single-phase timesteps
 	(void)id_pre;
 	(void)id_reserved;
@@ -182,6 +193,16 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 		.update = wm_scheduler_defaults_system_disable_startup_phase_,
 	};
 	w_ecs_register_system(world, "wm_scheduler_defaults_system_disable_startup_phase_", &startup_disable);
+
+	// restart/shutdown phase enabler: enables ON_RESTART or ON_SHUTDOWN phases
+	// when world->update_result signals restart or shutdown, then forces scheduler
+	// rebuild to append those phases to the current update iteration
+	struct w_system restart_shutdown_enable = {
+		.phase_id = id_post,
+		.enabled = true,
+		.update = wm_scheduler_defaults_system_enable_restart_shutdown_phases_,
+	};
+	w_ecs_register_system(world, "wm_scheduler_defaults_system_enable_restart_shutdown_phases_", &restart_shutdown_enable);
 }
 
 void wm_scheduler_defaults_free(struct w_ecs_world *world)
