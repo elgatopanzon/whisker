@@ -10,9 +10,9 @@
 void w_debug_print_value_layout(void *obj, size_t len, const char *name)
 {
     unsigned char *bytes = (unsigned char *)obj;
-    fprintf(stderr, "Layout of '%s' [%zu bytes]:", name, len);
+    fprintf(stdout, "Layout of '%s' [%zu bytes]:", name, len);
     for (size_t i = 0; i < len; i++) {
-        fprintf(stderr, " 0x%02x", bytes[i]);
+        fprintf(stdout, " 0x%02x", bytes[i]);
     }
-    fprintf(stderr, "\n");
+    fprintf(stdout, "\n");
 }

@@ -12,15 +12,15 @@
 
 #ifndef NDEBUG
 #define trace_printf(fmt, ...) \
-    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+    fprintf(stdout, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #define debug_printf(fmt, ...) \
 	debug_log(DEBUG, _, fmt, ##__VA_ARGS__)
 
 #define debug_log(log_level, log_module, log_format, ...) \
-    fprintf(stderr, "%s | %s | " log_format "\n", #log_level, #log_module, ##__VA_ARGS__)
+    fprintf(stdout, "%s | %s | " log_format "\n", #log_level, #log_module, ##__VA_ARGS__)
 #define trace_log(log_level, log_module, log_format, ...) \
-    fprintf(stderr, "%s | %s | " log_format, #log_level, #log_module, ##__VA_ARGS__); \
-    fprintf(stderr, " [%s:%d]\n", __FILE__, __LINE__)
+    fprintf(stdout, "%s | %s | " log_format, #log_level, #log_module, ##__VA_ARGS__); \
+    fprintf(stdout, " [%s:%d]\n", __FILE__, __LINE__)
 
 #define w_assert(exp) \
 	w_assert_eq(exp, true)

@@ -10,44 +10,44 @@
 #include <check.h>
 #include <unistd.h>
 
-// stderr capture helpers using dup2+tmpfile pattern
-static int saved_stderr;
-static FILE *stderr_capture;
+// stdout capture helpers using dup2+tmpfile pattern
+static int saved_stdout;
+static FILE *stdout_capture;
 
-static void capture_stderr_start(void)
+static void capture_stdout_start(void)
 {
-    fflush(stderr);
-    saved_stderr = dup(STDERR_FILENO);
-    stderr_capture = tmpfile();
-    dup2(fileno(stderr_capture), STDERR_FILENO);
+    fflush(stdout);
+    saved_stdout = dup(STDOUT_FILENO);
+    stdout_capture = tmpfile();
+    dup2(fileno(stdout_capture), STDOUT_FILENO);
 }
 
-static char *capture_stderr_stop(void)
+static char *capture_stdout_stop(void)
 {
-    fflush(stderr);
-    dup2(saved_stderr, STDERR_FILENO);
-    close(saved_stderr);
+    fflush(stdout);
+    dup2(saved_stdout, STDOUT_FILENO);
+    close(saved_stdout);
 
-    fseek(stderr_capture, 0, SEEK_END);
-    long len = ftell(stderr_capture);
-    fseek(stderr_capture, 0, SEEK_SET);
+    fseek(stdout_capture, 0, SEEK_END);
+    long len = ftell(stdout_capture);
+    fseek(stdout_capture, 0, SEEK_SET);
 
     char *buf = malloc(len + 1);
     if (buf) {
-        fread(buf, 1, len, stderr_capture);
+        fread(buf, 1, len, stdout_capture);
         buf[len] = '\0';
     }
-    fclose(stderr_capture);
+    fclose(stdout_capture);
     return buf;
 }
 
 // print_value_layout tcase
-START_TEST(test_print_value_layout_outputs_to_stderr)
+START_TEST(test_print_value_layout_outputs_to_stdout)
 {
     int val = 0x12345678;
-    capture_stderr_start();
+    capture_stdout_start();
     w_debug_print_value_layout(&val, sizeof(val), "test_val");
-    char *output = capture_stderr_stop();
+    char *output = capture_stdout_stop();
     ck_assert_ptr_nonnull(output);
     ck_assert_int_gt(strlen(output), 0);
     free(output);
@@ -57,9 +57,9 @@ END_TEST
 START_TEST(test_print_value_layout_includes_name)
 {
     int val = 42;
-    capture_stderr_start();
+    capture_stdout_start();
     w_debug_print_value_layout(&val, sizeof(val), "my_variable");
-    char *output = capture_stderr_stop();
+    char *output = capture_stdout_stop();
     ck_assert_ptr_nonnull(output);
     ck_assert_ptr_nonnull(strstr(output, "my_variable"));
     free(output);
@@ -342,7 +342,7 @@ Suite *whisker_debug_suite(void)
     // print_value_layout tcase
     TCase *tc_print = tcase_create("print_value_layout");
     tcase_set_timeout(tc_print, 10);
-    tcase_add_test(tc_print, test_print_value_layout_outputs_to_stderr);
+    tcase_add_test(tc_print, test_print_value_layout_outputs_to_stdout);
     tcase_add_test(tc_print, test_print_value_layout_includes_name);
     suite_add_tcase(s, tc_print);
 
