@@ -224,14 +224,14 @@ bool w_deserialisation_parse_setid_(struct w_ecs_world *world, struct wm_seriali
 *  built-in hooks: primitives            *
 *****************************************/
 
-// id 10 = bool
+// bool
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(bool, {
     WM_SERIALISE_SIMPLE("%s", ((*value) ? "true" : "false"));
 }, {
 	value = (strcmp(params, "true") == 0);
 });
 
-// id 11 = char (serialised as integer to handle non-printable chars)
+// char (serialised as integer to handle non-printable chars)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(char, {
     WM_SERIALISE_SIMPLE("%d", (int)*value);
 }, {
@@ -240,7 +240,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(char, {
 	value = (char)tmp;
 });
 
-// id 0 = int8_t
+// int8_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(int8_t, {
     WM_SERIALISE_SIMPLE("%d", (int)*value);
 }, {
@@ -249,7 +249,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(int8_t, {
 	value = (int8_t)tmp;
 });
 
-// id 1 = int16_t
+// int16_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(int16_t, {
     WM_SERIALISE_SIMPLE("%d", (int)*value);
 }, {
@@ -258,21 +258,21 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(int16_t, {
 	value = (int16_t)tmp;
 });
 
-// id 2 = int32_t
+// int32_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(int32_t, {
     WM_SERIALISE_SIMPLE("%d", (int)*value);
 }, {
 	sscanf(params, "%d", &value);
 });
 
-// id 3 = int64_t
+// int64_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(int64_t, {
     WM_SERIALISE_SIMPLE("%" PRId64, *value);
 }, {
 	sscanf(params, "%" SCNd64, &value);
 });
 
-// id 4 = uint8_t
+// uint8_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint8_t, {
     WM_SERIALISE_SIMPLE("%u", (unsigned)*value);
 }, {
@@ -281,7 +281,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint8_t, {
 	value = (uint8_t)tmp;
 });
 
-// id 5 = uint16_t
+// uint16_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint16_t, {
     WM_SERIALISE_SIMPLE("%u", (unsigned)*value);
 }, {
@@ -290,28 +290,28 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint16_t, {
 	value = (uint16_t)tmp;
 });
 
-// id 6 = uint32_t
+// uint32_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint32_t, {
     WM_SERIALISE_SIMPLE("%u", *value);
 }, {
 	sscanf(params, "%u", &value);
 });
 
-// id 7 = uint64_t
+// uint64_t
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(uint64_t, {
     WM_SERIALISE_SIMPLE("%" PRIu64, *value);
 }, {
 	sscanf(params, "%" SCNu64, &value);
 });
 
-// id 8 = float
+// float
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(float, {
     WM_SERIALISE_SIMPLE("%.9g", (double)*value);
 }, {
 	sscanf(params, "%f", &value);
 });
 
-// id 9 = double
+// double
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(double, {
     WM_SERIALISE_SIMPLE("%.17g", *value);
 }, {
@@ -323,63 +323,63 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(double, {
 *  built-in hooks: vectors               *
 *****************************************/
 
-// id 20 = w_vec2 (float x, y)
+// w_vec2 (float x, y)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec2, {
     WM_SERIALISE_SIMPLE("%.9g %.9g", (double)value->x, (double)value->y);
 }, {
 	sscanf(params, "%f %f", &value.x, &value.y);
 });
 
-// id 21 = w_vec2i (int x, y)
+// w_vec2i (int x, y)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec2i, {
     WM_SERIALISE_SIMPLE("%d %d", value->x, value->y);
 }, {
 	sscanf(params, "%d %d", &value.x, &value.y);
 });
 
-// id 22 = w_vec2u (uint x, y)
+// w_vec2u (uint x, y)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec2u, {
     WM_SERIALISE_SIMPLE("%u %u", value->x, value->y);
 }, {
 	sscanf(params, "%u %u", &value.x, &value.y);
 });
 
-// id 23 = w_vec3 (float x, y, z)
+// w_vec3 (float x, y, z)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec3, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g", (double)value->x, (double)value->y, (double)value->z);
 }, {
 	sscanf(params, "%f %f %f", &value.x, &value.y, &value.z);
 });
 
-// id 24 = w_vec3i (int x, y, z)
+// w_vec3i (int x, y, z)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec3i, {
     WM_SERIALISE_SIMPLE("%d %d %d", value->x, value->y, value->z);
 }, {
 	sscanf(params, "%d %d %d", &value.x, &value.y, &value.z);
 });
 
-// id 25 = w_vec3u (uint x, y, z)
+// w_vec3u (uint x, y, z)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec3u, {
     WM_SERIALISE_SIMPLE("%u %u %u", value->x, value->y, value->z);
 }, {
 	sscanf(params, "%u %u %u", &value.x, &value.y, &value.z);
 });
 
-// id 26 = w_vec4 (float x, y, z, w)
+// w_vec4 (float x, y, z, w)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec4, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g", (double)value->x, (double)value->y, (double)value->z, (double)value->w);
 }, {
 	sscanf(params, "%f %f %f %f", &value.x, &value.y, &value.z, &value.w);
 });
 
-// id 27 = w_vec4i (int x, y, z, w)
+// w_vec4i (int x, y, z, w)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec4i, {
     WM_SERIALISE_SIMPLE("%d %d %d %d", value->x, value->y, value->z, value->w);
 }, {
 	sscanf(params, "%d %d %d %d", &value.x, &value.y, &value.z, &value.w);
 });
 
-// id 28 = w_vec4u (uint x, y, z, w)
+// w_vec4u (uint x, y, z, w)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec4u, {
     WM_SERIALISE_SIMPLE("%u %u %u %u", value->x, value->y, value->z, value->w);
 }, {
@@ -391,7 +391,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_vec4u, {
 *  built-in hooks: matrices              *
 *****************************************/
 
-// id 29 = w_mat2 (float m[4])
+// w_mat2 (float m[4])
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat2, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g",
         (double)value->m[0], (double)value->m[1],
@@ -401,7 +401,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat2, {
         &value.m[0], &value.m[1], &value.m[2], &value.m[3]);
 });
 
-// id 30 = w_mat3 (float m[9])
+// w_mat3 (float m[9])
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat3, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g",
         (double)value->m[0], (double)value->m[1], (double)value->m[2],
@@ -414,7 +414,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat3, {
         &value.m[6], &value.m[7], &value.m[8]);
 });
 
-// id 31 = w_mat4 (float m[16])
+// w_mat4 (float m[16])
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat4, {
     WM_SERIALISE_SIMPLE(
         "%.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g "
@@ -437,7 +437,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_mat4, {
 *  built-in hooks: color types           *
 *****************************************/
 
-// id 32 = w_color (float r, g, b, a)
+// w_color (float r, g, b, a)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_color, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g",
         (double)value->r, (double)value->g, (double)value->b, (double)value->a);
@@ -445,7 +445,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_color, {
 	sscanf(params, "%f %f %f %f", &value.r, &value.g, &value.b, &value.a);
 });
 
-// id 33 = w_color8 (uint8_t r, g, b, a)
+// w_color8 (uint8_t r, g, b, a)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_color8, {
     WM_SERIALISE_SIMPLE("%u %u %u %u",
         (unsigned)value->r, (unsigned)value->g, (unsigned)value->b, (unsigned)value->a);
@@ -460,7 +460,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_color8, {
 *  built-in hooks: geometry types        *
 *****************************************/
 
-// id 34 = w_rect (float x, y, width, height)
+// w_rect (float x, y, width, height)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_rect, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g",
         (double)value->x, (double)value->y, (double)value->width, (double)value->height);
@@ -468,14 +468,14 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_rect, {
 	sscanf(params, "%f %f %f %f", &value.x, &value.y, &value.width, &value.height);
 });
 
-// id 35 = w_recti (uint x, y, width, height)
+// w_recti (uint x, y, width, height)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_recti, {
     WM_SERIALISE_SIMPLE("%u %u %u %u", value->x, value->y, value->width, value->height);
 }, {
 	sscanf(params, "%u %u %u %u", &value.x, &value.y, &value.width, &value.height);
 });
 
-// id 36 = w_aabb2 (w_vec2 min, max)
+// w_aabb2 (w_vec2 min, max)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_aabb2, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g",
         (double)value->min.x, (double)value->min.y,
@@ -485,7 +485,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_aabb2, {
         &value.min.x, &value.min.y, &value.max.x, &value.max.y);
 });
 
-// id 37 = w_aabb3 (w_vec3 min, max)
+// w_aabb3 (w_vec3 min, max)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_aabb3, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g %.9g %.9g",
         (double)value->min.x, (double)value->min.y, (double)value->min.z,
@@ -496,7 +496,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_aabb3, {
         &value.max.x, &value.max.y, &value.max.z);
 });
 
-// id 38 = w_ray2 (w_vec2 origin, direction_norm)
+// w_ray2 (w_vec2 origin, direction_norm)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_ray2, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g",
         (double)value->origin.x, (double)value->origin.y,
@@ -507,7 +507,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_ray2, {
         &value.direction_norm.x, &value.direction_norm.y);
 });
 
-// id 39 = w_ray3 (w_vec3 origin, direction_norm)
+// w_ray3 (w_vec3 origin, direction_norm)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_ray3, {
     WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g %.9g %.9g",
         (double)value->origin.x, (double)value->origin.y, (double)value->origin.z,
@@ -523,7 +523,7 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_ray3, {
 *  built-in hooks: ECS types             *
 *****************************************/
 
-// id 40 = w_entity_id (uint32_t)
+// w_entity_id (uint32_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_entity_id, {
     WM_SERIALISE_SIMPLE("%u", *value);
 }, {
@@ -535,39 +535,65 @@ WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_entity_id, {
 *  built-in hooks: pack unions           *
 *****************************************/
 
-// id 41 = w_pack16x2 (packed uint32_t)
+// w_pack16x2 (packed uint32_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_pack16x2, {
     WM_SERIALISE_SIMPLE("%u", value->packed);
 }, {
 	sscanf(params, "%u", &value.packed);
 });
 
-// id 42 = w_pack16x4 (packed uint64_t)
+// w_pack16x4 (packed uint64_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_pack16x4, {
     WM_SERIALISE_SIMPLE("%" PRIu64, value->packed);
 }, {
 	sscanf(params, "%" SCNu64, &value.packed);
 });
 
-// id 43 = w_pack8x4 (packed uint32_t)
+// w_pack8x4 (packed uint32_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_pack8x4, {
     WM_SERIALISE_SIMPLE("%u", value->packed);
 }, {
 	sscanf(params, "%u", &value.packed);
 });
 
-// id 44 = w_pack8x8 (packed uint64_t)
+// w_pack8x8 (packed uint64_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_pack8x8, {
     WM_SERIALISE_SIMPLE("%" PRIu64, value->packed);
 }, {
 	sscanf(params, "%" SCNu64, &value.packed);
 });
 
-// id 45 = w_pack32x2 (packed uint64_t)
+// w_pack32x2 (packed uint64_t)
 WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_pack32x2, {
     WM_SERIALISE_SIMPLE("%" PRIu64, value->packed);
 }, {
 	sscanf(params, "%" SCNu64, &value.packed);
+});
+
+
+/*****************************************
+*  built-in hooks: quaternions           *
+*****************************************/
+
+// w_quat (float x, y, z, w)
+WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_quat, {
+    WM_SERIALISE_SIMPLE("%.9g %.9g %.9g %.9g", (double)value->x, (double)value->y, (double)value->z, (double)value->w);
+}, {
+	sscanf(params, "%f %f %f %f", &value.x, &value.y, &value.z, &value.w);
+});
+
+// w_quati (int x, y, z, w)
+WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_quati, {
+    WM_SERIALISE_SIMPLE("%d %d %d %d", value->x, value->y, value->z, value->w);
+}, {
+	sscanf(params, "%d %d %d %d", &value.x, &value.y, &value.z, &value.w);
+});
+
+// w_quatu (uint x, y, z, w)
+WM_SERIALISE_DEFINE_SERIALISE_HOOK(w_quatu, {
+    WM_SERIALISE_SIMPLE("%u %u %u %u", value->x, value->y, value->z, value->w);
+}, {
+	sscanf(params, "%u %u %u %u", &value.x, &value.y, &value.z, &value.w);
 });
 
 #endif /* WHISKER_SERIALISATION_H */

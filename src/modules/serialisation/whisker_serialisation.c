@@ -55,6 +55,9 @@ void wm_serialisation_init(struct w_ecs_world *world)
 	wm_serialise_register_hooks_w_pack8x4_(world);
 	wm_serialise_register_hooks_w_pack8x8_(world);
 	wm_serialise_register_hooks_w_pack32x2_(world);
+	wm_serialise_register_hooks_w_quat_(world);
+	wm_serialise_register_hooks_w_quati_(world);
+	wm_serialise_register_hooks_w_quatu_(world);
 }
 
 void wm_serialisation_free(struct w_ecs_world *world)
