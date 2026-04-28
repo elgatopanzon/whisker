@@ -6,6 +6,7 @@
  */
 
 #include "whisker_component_events.h"
+#include "whisker_component_events_hooks.h"
 
 
 /*****************************

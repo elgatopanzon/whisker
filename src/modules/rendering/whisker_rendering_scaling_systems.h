@@ -5,12 +5,7 @@
  */
 
 #include "whisker_std.h"
-
 #include "whisker_rendering.h"
-
-/*********************
-*  scaling systems  *
-*********************/
 
 // prepare the source and destination rendering rects
 w_ecs_simple_system(whisker_rendering_scaling_rect_init, WM_RENDER_PHASE_PRE_SCALE, {

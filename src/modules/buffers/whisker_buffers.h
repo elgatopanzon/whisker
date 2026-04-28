@@ -9,7 +9,6 @@
 #define WHISKER_BUFFERS_H
 
 #include "whisker.h"
-#include "whisker_serialisation.h"
 
 /* component name for buffer metadata stored on the buffer entity */
 #define W_BUFFER_META_COMPONENT_NAME "w_buffer_meta"

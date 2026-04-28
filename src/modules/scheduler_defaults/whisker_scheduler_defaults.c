@@ -6,8 +6,7 @@
  */
 
 #include "whisker_scheduler_defaults.h"
-#include "systems/system_disable_startup_phase.h"
-#include "systems/system_enable_restart_shutdown_phases.h"
+#include "whisker_scheduler_defaults_systems.h"
 
 void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_rate)
 {

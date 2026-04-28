@@ -7,7 +7,6 @@
 
 #include "whisker_relationships.h"
 
-
 /*****************************
 *  internal helpers          *
 *****************************/

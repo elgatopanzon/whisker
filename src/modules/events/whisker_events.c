@@ -6,6 +6,7 @@
  */
 
 #include "whisker_events.h"
+#include "whisker_events_hooks.h"
 
 void wm_events_init(struct w_ecs_world *world)
 {

@@ -10,9 +10,6 @@
 
 #include "whisker.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
-#include "whisker_utilities_timer.h"
-#include "whisker_utilities_oscillator.h"
-#include "whisker_utilities_random.h"
 
 // initialize the utilities module
 void wm_utils_init(struct w_ecs_world *world);

@@ -116,26 +116,4 @@ struct wm_component_events_registry *wm_component_events_get_registry(struct w_e
 	w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, _te, e, (t*)d, sizeof(t)); \
 } while(0)
 
-
-/***********
-*  hooks  *
-***********/
-
-w_ecs_update_hook(component_events_cleanup, BEGIN, {
-	struct wm_component_events_registry *reg = wm_component_events_get_registry(world);
-	if (!reg) return;
-
-	// index-based loop: length can grow during iteration
-	for (size_t i = 0; i < reg->removal_buffer_length; i++)
-	{
-		w_pack32x2 pair = reg->removal_buffer[i];
-		w_entity_id owner = pair.left;
-		w_entity_id tag_id = pair.right;
-		w_component_remove(&world->components, tag_id, owner);
-	}
-
-	reg->removal_buffer_length = 0;
-});
-
-
 #endif /* WHISKER_COMPONENT_EVENTS_H */

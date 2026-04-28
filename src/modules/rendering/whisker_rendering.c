@@ -6,10 +6,9 @@
  */
 
 #include "whisker_rendering.h"
-#include "whisker_rendering_camera.h"
-#include "whisker_rendering_camera.c"
 
-#include "whisker_rendering_scaling.c"
+#include "whisker_rendering_camera_systems.h"
+#include "whisker_rendering_scaling_systems.h"
 
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {

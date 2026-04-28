@@ -1,17 +1,15 @@
 /**
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
- * @file        : whisker_rendering_camera
- * @created     : Monday Apr 06, 2026 18:24:15 CST
+ * @file        : whisker_rendering_camera_systems
+ * @created     : Tuesday Apr 28, 2026 14:42:31 CST
+ * @description : 
  */
 
-#include "whisker_std.h"
 #include "whisker_rendering.h"
 #include "whisker_rendering_camera.h"
 
-
-/*************
-*  systems  *
-*************/
+#ifndef WHISKER_RENDERING_CAMERA_SYSTEMS_H
+#define WHISKER_RENDERING_CAMERA_SYSTEMS_H
 
 w_ecs_system(
 	camera_request_active_camera,
@@ -53,3 +51,6 @@ w_ecs_simple_system(
 	camera_state->camera_fov_deg = camera_fov_deg;
 	camera_state->camera_projection = camera_projection;
 });
+
+#endif /* WHISKER_RENDERING_CAMERA_SYSTEMS_H */
+

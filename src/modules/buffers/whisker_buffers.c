@@ -6,6 +6,7 @@
  */
 
 #include "whisker_buffers.h"
+#include "whisker_serialisation.h"
 
 void w_buffers_init(struct w_ecs_world *world)
 {
