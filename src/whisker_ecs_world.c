@@ -35,7 +35,7 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 		world->module_resources[i] = NULL;
 
 	world->scheduler_jobs_dirty = true;
-	world->update_result = W_WORLD_UPDATE_RESULT_CONTINUE;
+	world->update_result = W_WORLD_UPDATE_RESULT_INIT;
 
 	// register command buffer flush hook
 	w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_UPDATE_PHASE_END, w_ecs_update_hook_flush_command_buffer_);
@@ -110,6 +110,13 @@ static inline void w_ecs_update_hook_flush_command_buffer_(void *world_, void *a
 
 enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 {
+	// run startup hooks on first update
+	if (world->update_result == W_WORLD_UPDATE_RESULT_INIT)
+	{
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_STARTUP, world, NULL);
+		world->update_result = W_WORLD_UPDATE_RESULT_CONTINUE;
+	}
+
 	// check if jobs need rebuilding
 	if (world->scheduler_jobs_dirty)
 	{
@@ -217,6 +224,12 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 				break;
 		}
 	}
+
+	// run restart/shutdown hooks based on update_result
+	if (world->update_result == W_WORLD_UPDATE_RESULT_RESTART)
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_RESTART, world, NULL);
+	else if (world->update_result == W_WORLD_UPDATE_RESULT_SHUTDOWN)
+		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_SHUTDOWN, world, NULL);
 
 	return world->update_result;
 }
@@ -667,5 +680,38 @@ size_t w_ecs_register_component_id_pre_remove_hook(struct w_ecs_world *world, w_
 void w_ecs_unregister_component_id_pre_remove_hook(struct w_ecs_world *world, w_entity_id comp_id, size_t hook_id)
 {
 	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_COMPONENT_ID_PRE_REMOVE], comp_id, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_startup_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_STARTUP, hook_fn);
+}
+
+void w_ecs_unregister_startup_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_STARTUP, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_restart_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_RESTART, hook_fn);
+}
+
+void w_ecs_unregister_restart_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_RESTART, hook_id);
+	if (entry) entry->enabled = false;
+}
+
+size_t w_ecs_register_shutdown_hook(struct w_ecs_world *world, w_hook_fn hook_fn)
+{
+	return w_hook_registry_register_hook(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_SHUTDOWN, hook_fn);
+}
+
+void w_ecs_unregister_shutdown_hook(struct w_ecs_world *world, size_t hook_id)
+{
+	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_SHUTDOWN, hook_id);
 	if (entry) entry->enabled = false;
 }

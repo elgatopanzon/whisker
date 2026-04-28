@@ -38,9 +38,10 @@ struct w_component_action_payload
 
 enum W_WORLD_UPDATE_RESULT
 {
-	W_WORLD_UPDATE_RESULT_CONTINUE = 0,
-	W_WORLD_UPDATE_RESULT_RESTART = 1,
-	W_WORLD_UPDATE_RESULT_SHUTDOWN = 2,
+	W_WORLD_UPDATE_RESULT_INIT = 0,
+	W_WORLD_UPDATE_RESULT_CONTINUE = 1,
+	W_WORLD_UPDATE_RESULT_RESTART = 2,
+	W_WORLD_UPDATE_RESULT_SHUTDOWN = 3,
 };
 
 enum W_WORLD_HOOK_TYPE
@@ -65,6 +66,9 @@ enum W_WORLD_HOOK
 	W_WORLD_HOOK_UPDATE_TIMESTEP_END,
 	W_WORLD_HOOK_UPDATE_PHASE_BEGIN,
 	W_WORLD_HOOK_UPDATE_PHASE_END,
+	W_WORLD_HOOK_STARTUP,
+	W_WORLD_HOOK_RESTART,
+	W_WORLD_HOOK_SHUTDOWN,
 	W_WORLD_HOOK_ENTITY_CREATE,
 	W_WORLD_HOOK_ENTITY_DESTROY,
 };
@@ -443,6 +447,21 @@ size_t w_ecs_register_update_hook(struct w_ecs_world *world, uint update_type, w
 // unregister a world update lifecycle hook by type and hook ID
 void w_ecs_unregister_update_hook(struct w_ecs_world *world, uint update_type, size_t hook_id);
 
+// register a hook to fire on first update (returns hook ID)
+size_t w_ecs_register_startup_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a startup hook by ID
+void w_ecs_unregister_startup_hook(struct w_ecs_world *world, size_t hook_id);
+
+// register a hook to fire when update_result is RESTART (returns hook ID)
+size_t w_ecs_register_restart_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a restart hook by ID
+void w_ecs_unregister_restart_hook(struct w_ecs_world *world, size_t hook_id);
+
+// register a hook to fire when update_result is SHUTDOWN (returns hook ID)
+size_t w_ecs_register_shutdown_hook(struct w_ecs_world *world, w_hook_fn hook_fn);
+// unregister a shutdown hook by ID
+void w_ecs_unregister_shutdown_hook(struct w_ecs_world *world, size_t hook_id);
+
 // register a hook to fire when a component of the given type is set (returns hook ID)
 size_t w_ecs_register_component_set_hook(struct w_ecs_world *world, uint type_id, w_hook_fn hook_fn);
 // unregister a component set hook by type and hook ID
@@ -500,6 +519,48 @@ void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook
 		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
 		struct w_scheduler_action *action = (struct w_scheduler_action *)data; \
 		(void)world; (void)action; \
+		work; \
+	} \
+
+// define a startup hook function and its register function
+// fires on first update (when update_result is INIT)
+// inside work: world (struct w_ecs_world *) is pre-cast
+#define w_ecs_startup_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_startup_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		(void)world; (void)data; \
+		work; \
+	} \
+
+// define a restart hook function and its register function
+// fires when update_result is RESTART
+// inside work: world (struct w_ecs_world *) is pre-cast
+#define w_ecs_restart_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_restart_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		(void)world; (void)data; \
+		work; \
+	} \
+
+// define a shutdown hook function and its register function
+// fires when update_result is SHUTDOWN
+// inside work: world (struct w_ecs_world *) is pre-cast
+#define w_ecs_shutdown_hook(name, work) \
+	static void name(void *ctx, void *data); \
+	static inline void name##_register(struct w_ecs_world *world) { \
+		w_ecs_register_shutdown_hook(world, name); \
+	} \
+	static void name(void *ctx, void *data) { \
+		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
+		(void)world; (void)data; \
 		work; \
 	} \
 

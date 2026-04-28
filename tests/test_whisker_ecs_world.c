@@ -103,9 +103,9 @@ START_TEST(test_init_scheduler_jobs_dirty)
 }
 END_TEST
 
-START_TEST(test_init_update_result_continue)
+START_TEST(test_init_update_result_init)
 {
-	ck_assert_int_eq(g_world.update_result, W_WORLD_UPDATE_RESULT_CONTINUE);
+	ck_assert_int_eq(g_world.update_result, W_WORLD_UPDATE_RESULT_INIT);
 }
 END_TEST
 
@@ -1694,6 +1694,111 @@ END_TEST
 
 
 /*****************************
+*  lifecycle hooks           *
+*****************************/
+
+static int g_startup_hook_counter;
+static int g_restart_hook_counter;
+static int g_shutdown_hook_counter;
+
+w_ecs_startup_hook(test_startup_hook, {
+	g_startup_hook_counter++;
+})
+
+w_ecs_restart_hook(test_restart_hook, {
+	g_restart_hook_counter++;
+})
+
+w_ecs_shutdown_hook(test_shutdown_hook, {
+	g_shutdown_hook_counter++;
+})
+
+START_TEST(test_startup_hook_fires_on_first_update)
+{
+	g_startup_hook_counter = 0;
+	test_startup_hook_register(&g_world);
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
+	};
+	w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	ck_assert_int_eq(g_world.update_result, W_WORLD_UPDATE_RESULT_INIT);
+	w_ecs_update(&g_world);
+
+	ck_assert_int_eq(g_startup_hook_counter, 1);
+	ck_assert_int_eq(g_world.update_result, W_WORLD_UPDATE_RESULT_CONTINUE);
+}
+END_TEST
+
+START_TEST(test_startup_hook_fires_only_once)
+{
+	g_startup_hook_counter = 0;
+	test_startup_hook_register(&g_world);
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
+	};
+	w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	w_ecs_update(&g_world);
+	w_ecs_update(&g_world);
+	w_ecs_update(&g_world);
+
+	ck_assert_int_eq(g_startup_hook_counter, 1);
+}
+END_TEST
+
+START_TEST(test_shutdown_hook_fires_on_shutdown)
+{
+	g_shutdown_hook_counter = 0;
+	test_shutdown_hook_register(&g_world);
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
+	};
+	w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	// first update transitions from INIT to CONTINUE
+	w_ecs_update(&g_world);
+	ck_assert_int_eq(g_shutdown_hook_counter, 0);
+
+	// set shutdown and update
+	g_world.update_result = W_WORLD_UPDATE_RESULT_SHUTDOWN;
+	w_ecs_update(&g_world);
+
+	ck_assert_int_eq(g_shutdown_hook_counter, 1);
+}
+END_TEST
+
+START_TEST(test_restart_hook_fires_on_restart)
+{
+	g_restart_hook_counter = 0;
+	test_restart_hook_register(&g_world);
+
+	struct w_scheduler_time_step ts = {
+		.enabled = true,
+		.time_step = w_time_step_create(0, 1, true, true, true, true, true, true)
+	};
+	w_scheduler_register_time_step(&g_world.scheduler, &ts);
+
+	// first update transitions from INIT to CONTINUE
+	w_ecs_update(&g_world);
+	ck_assert_int_eq(g_restart_hook_counter, 0);
+
+	// set restart and update
+	g_world.update_result = W_WORLD_UPDATE_RESULT_RESTART;
+	w_ecs_update(&g_world);
+
+	ck_assert_int_eq(g_restart_hook_counter, 1);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1707,7 +1812,7 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_init, test_init_scheduler_empty);
 	tcase_add_test(tc_init, test_init_systems_empty);
 	tcase_add_test(tc_init, test_init_scheduler_jobs_dirty);
-	tcase_add_test(tc_init, test_init_update_result_continue);
+	tcase_add_test(tc_init, test_init_update_result_init);
 	suite_add_tcase(s, tc_init);
 
 	TCase *tc_timestep = tcase_create("timestep_registration");
@@ -1852,6 +1957,15 @@ Suite *whisker_ecs_world_suite(void)
 	tcase_add_test(tc_hook_macros, test_hook_macro_entity_create_fires);
 	tcase_add_test(tc_hook_macros, test_hook_macro_entity_destroy_fires);
 	suite_add_tcase(s, tc_hook_macros);
+
+	TCase *tc_lifecycle = tcase_create("lifecycle_hooks");
+	tcase_add_checked_fixture(tc_lifecycle, world_setup, world_teardown);
+	tcase_set_timeout(tc_lifecycle, 10);
+	tcase_add_test(tc_lifecycle, test_startup_hook_fires_on_first_update);
+	tcase_add_test(tc_lifecycle, test_startup_hook_fires_only_once);
+	tcase_add_test(tc_lifecycle, test_shutdown_hook_fires_on_shutdown);
+	tcase_add_test(tc_lifecycle, test_restart_hook_fires_on_restart);
+	suite_add_tcase(s, tc_lifecycle);
 
 	return s;
 }
