@@ -61,6 +61,7 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_double = 9,
 
 	W_COMPONENT_TYPE_bool = 10,
+	W_COMPONENT_TYPE__Bool = 10,
 	W_COMPONENT_TYPE_char = 11,
 
 	// engine types
