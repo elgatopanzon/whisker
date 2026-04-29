@@ -117,7 +117,7 @@ void wm_scheduler_defaults_init(struct w_ecs_world *world, double fixed_update_r
 	struct w_scheduler_phase p_post_update      = {.enabled = true, .time_step_id = ts_default_post_id, .name = "POST_UPDATE"};
 	struct w_scheduler_phase p_pre_fixed_update  = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "PRE_FIXED_UPDATE"};
 	struct w_scheduler_phase p_on_fixed_update   = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "ON_FIXED_UPDATE"};
-	struct w_scheduler_phase p_post_fixed_update = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "POST_FIXED_UPDATED"};
+	struct w_scheduler_phase p_post_fixed_update = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "POST_FIXED_UPDATE"};
 	struct w_scheduler_phase p_final_fixed      = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "FINAL_FIXED"};
 	struct w_scheduler_phase p_post_fixed       = {.enabled = true, .time_step_id = ts_default_fixed_id, .name = "POST_FIXED"};
 	struct w_scheduler_phase p_final            = {.enabled = true, .time_step_id = ts_default_post_id, .name = "FINAL"};
