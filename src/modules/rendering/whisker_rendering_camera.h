@@ -21,6 +21,7 @@
 
 /* index 3: camera state (rendering/camera sub-module) */
 #define WM_RENDERING_CAMERA_STATE_RESOURCE_ID WM_MODULE_RESOURCE_ID(RENDERING, 3)
+#define w_rendering_get_camera_state(w) w_ecs_get_module_resource(w, WM_RENDERING_CAMERA_STATE_RESOURCE_ID)
 
 enum W_RENDERING_CAMERA_PROJECTION
 {
@@ -36,6 +37,8 @@ struct w_rendering_camera_state
 	w_vec3 camera_position;
 	w_vec3 camera_target;
 	w_vec3 camera_up;
+	float camera_near_clip;
+	float camera_far_clip;
 	float camera_fov_deg;
 	enum W_RENDERING_CAMERA_PROJECTION camera_projection;
 };

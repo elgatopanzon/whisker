@@ -31,8 +31,18 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	struct w_scheduler_phase phase_on_draw = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_DRAW"};
 	struct w_scheduler_phase phase_post_draw = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_DRAW"};
 	struct w_scheduler_phase phase_pre_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_WORLD"};
+	struct w_scheduler_phase phase_begin_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_BEGIN_WORLD"};
+	struct w_scheduler_phase phase_world_background = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_WORLD_BACKGROUND"};
 	struct w_scheduler_phase phase_on_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_WORLD"};
+	struct w_scheduler_phase phase_world_foreground = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_WORLD_FOREGROUND"};
+	struct w_scheduler_phase phase_end_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_END_WORLD"};
 	struct w_scheduler_phase phase_post_world = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_WORLD"};
+	struct w_scheduler_phase phase_pre_sync = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_SYNC"};
+	struct w_scheduler_phase phase_on_sync = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_SYNC"};
+	struct w_scheduler_phase phase_post_sync = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_SYNC"};
+	struct w_scheduler_phase phase_pre_overlay = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_OVERLAY"};
+	struct w_scheduler_phase phase_on_overlay = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_ON_OVERLAY"};
+	struct w_scheduler_phase phase_post_overlay = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_POST_OVERLAY"};
 
 	w_ecs_register_system_phase_at(world, &phase_pre_scale, WM_RENDER_PHASE_PRE_SCALE);
 	w_ecs_register_system_phase_at(world, &phase_on_scale, WM_RENDER_PHASE_ON_SCALE);
@@ -44,17 +54,48 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_ecs_register_system_phase_at(world, &phase_on_draw, WM_RENDER_PHASE_ON_DRAW);
 	w_ecs_register_system_phase_at(world, &phase_post_draw, WM_RENDER_PHASE_POST_DRAW);
 	w_ecs_register_system_phase_at(world, &phase_pre_world, WM_RENDER_PHASE_PRE_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_begin_world, WM_RENDER_PHASE_BEGIN_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_world_background, WM_RENDER_PHASE_WORLD_BACKGROUND);
 	w_ecs_register_system_phase_at(world, &phase_on_world, WM_RENDER_PHASE_ON_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_world_foreground, WM_RENDER_PHASE_WORLD_FOREGROUND);
+	w_ecs_register_system_phase_at(world, &phase_end_world, WM_RENDER_PHASE_END_WORLD);
 	w_ecs_register_system_phase_at(world, &phase_post_world, WM_RENDER_PHASE_POST_WORLD);
+	w_ecs_register_system_phase_at(world, &phase_pre_sync, WM_RENDER_PHASE_PRE_SYNC);
+	w_ecs_register_system_phase_at(world, &phase_on_sync, WM_RENDER_PHASE_ON_SYNC);
+	w_ecs_register_system_phase_at(world, &phase_post_sync, WM_RENDER_PHASE_POST_SYNC);
+	w_ecs_register_system_phase_at(world, &phase_pre_overlay, WM_RENDER_PHASE_PRE_OVERLAY);
+	w_ecs_register_system_phase_at(world, &phase_on_overlay, WM_RENDER_PHASE_ON_OVERLAY);
+	w_ecs_register_system_phase_at(world, &phase_post_overlay, WM_RENDER_PHASE_POST_OVERLAY);
 
 	// assign phases order
-	// world draw phases
+	// pre-sync: PRE_RENDER -> pre/on/post sync
+	w_ecs_set_phase_chain(world,
+		WM_PHASE_PRE_RENDER,
+		WM_RENDER_PHASE_PRE_SYNC,
+		WM_RENDER_PHASE_ON_SYNC,
+		WM_RENDER_PHASE_POST_SYNC
+	);
+
+	// world render phases: ON_RENDER -> world pre/on/post
 	w_ecs_set_phase_chain(world,
 		WM_PHASE_ON_RENDER,
 		WM_RENDER_PHASE_PRE_WORLD,
+		WM_RENDER_PHASE_BEGIN_WORLD,
+		WM_RENDER_PHASE_WORLD_BACKGROUND,
 		WM_RENDER_PHASE_ON_WORLD,
+		WM_RENDER_PHASE_WORLD_FOREGROUND,
+		WM_RENDER_PHASE_END_WORLD,
 		WM_RENDER_PHASE_POST_WORLD
 	);
+
+	// overlay render phases: POST_WORLD -> overlay pre/on/post
+	w_ecs_set_phase_chain(world,
+		WM_RENDER_PHASE_POST_WORLD,
+		WM_RENDER_PHASE_PRE_OVERLAY,
+		WM_RENDER_PHASE_ON_OVERLAY,
+		WM_RENDER_PHASE_POST_OVERLAY
+	);
+
 	// final draw phases: POST_RENDER -> scale -> filter -> draw
 	w_ecs_set_phase_chain(world,
 		WM_PHASE_POST_RENDER,
@@ -89,6 +130,8 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
     camera_state->camera_target = ((w_vec3){ 0.0f, 0.0f, 0.0f });
     camera_state->camera_up = ((w_vec3){ 0.0f, 1.0f, 0.0f });
     camera_state->camera_fov_deg = 45.0f;
+    camera_state->camera_near_clip = 0.01f;
+    camera_state->camera_far_clip = 1000.0f;
     camera_state->camera_projection = W_RENDERING_CAMERA_PROJECTION_PERSPECTIVE;
 
 	w_ecs_set_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID, camera_state);
