@@ -742,5 +742,13 @@ void w_ecs_cmd_remove_component(void *world, void *payload);
 	{ dispose_code }; \
 	w_ecs_world_free_full(world_name); \
 
+
+/***********
+*  DEBUG  *
+***********/
+
+// print schedule with system names resolved from world->systems
+void w_ecs_world_debug_print_schedule(struct w_ecs_world *world);
+
 #endif /* WHISKER_ECS_WORLD_H */
 

@@ -135,4 +135,24 @@ void w_scheduler_set_time_step_runs_before(struct w_scheduler *scheduler, size_t
 // timestep management: set timestep runs after
 void w_scheduler_set_time_step_runs_after(struct w_scheduler *scheduler, size_t time_step_id, size_t runs_after_time_step_id);
 
+/***********
+*  DEBUG  *
+***********/
+
+// print all registered phases with their name, ID, enabled state, and timestep ID
+void w_scheduler_debug_print_phases(struct w_scheduler *scheduler);
+
+// print all registered timesteps with their name, ID, and enabled state
+void w_scheduler_debug_print_timesteps(struct w_scheduler *scheduler);
+
+// print a job array with job_id and phase_id
+void w_scheduler_debug_print_jobs(struct w_scheduler_job *jobs, size_t jobs_count);
+
+// print the current schedule actions with action type, phase_id, job_idx
+// job_names: optional array of names indexed by job_idx (can be NULL)
+void w_scheduler_debug_print_schedule(struct w_scheduler *scheduler, char **job_names);
+
+// print full scheduler state (timesteps, phases, schedule)
+void w_scheduler_debug_print_all(struct w_scheduler *scheduler);
+
 #endif /* WHISKER_SCHEDULER_H */

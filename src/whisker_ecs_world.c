@@ -715,3 +715,38 @@ void w_ecs_unregister_shutdown_hook(struct w_ecs_world *world, size_t hook_id)
 	struct w_hook_entry *entry = w_hook_registry_get_hook_entry(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_SHUTDOWN, hook_id);
 	if (entry) entry->enabled = false;
 }
+
+
+/***********
+*  DEBUG  *
+***********/
+
+void w_ecs_world_debug_print_schedule(struct w_ecs_world *world)
+{
+	size_t sys_count = world->systems.systems_length;
+	if (sys_count == 0)
+	{
+		w_scheduler_debug_print_schedule(&world->scheduler, NULL);
+		return;
+	}
+
+	// build system names array indexed by system id
+	char **names = calloc(sys_count, sizeof(char *));
+
+	// iterate hashmap buckets to build reverse map (id -> name)
+	struct w_system_name_map *map = &world->systems.system_names;
+	for (size_t bi = 0; bi < map->buckets_length; bi++)
+	{
+		for (size_t ei = 0; ei < map->buckets[bi].entries_length; ei++)
+		{
+			char *name = map->buckets[bi].entries[ei].key;
+			size_t id = map->buckets[bi].entries[ei].value;
+			if (id < sys_count)
+				names[id] = name;
+		}
+	}
+
+	w_scheduler_debug_print_schedule(&world->scheduler, names);
+
+	free(names);
+}

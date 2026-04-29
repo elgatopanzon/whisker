@@ -7,6 +7,7 @@
 #include "whisker_std.h"
 
 #include "whisker_scheduler.h"
+#include "whisker_debug.h"
 
 void w_scheduler_init(struct w_scheduler *scheduler)
 {
@@ -445,4 +446,149 @@ void w_scheduler_set_time_step_runs_before(struct w_scheduler *scheduler, size_t
 void w_scheduler_set_time_step_runs_after(struct w_scheduler *scheduler, size_t time_step_id, size_t runs_after_time_step_id)
 {
 	w_scheduler_move_time_step_(scheduler, time_step_id, runs_after_time_step_id, false);
+}
+
+/***********
+*  DEBUG  *
+***********/
+
+static const char *w_scheduler_action_name_(enum W_SCHEDULER_ACTIONS action)
+{
+	switch (action)
+	{
+		case W_SCHEDULER_ACTIONS_NOOP:           return "NOOP";
+		case W_SCHEDULER_ACTIONS_SCHEDULE_BEGIN: return "SCHEDULE_BEGIN";
+		case W_SCHEDULER_ACTIONS_SCHEDULE_END:   return "SCHEDULE_END";
+		case W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN: return "TIMESTEP_BEGIN";
+		case W_SCHEDULER_ACTIONS_TIMESTEP_END:   return "TIMESTEP_END";
+		case W_SCHEDULER_ACTIONS_PHASE_BEGIN:    return "PHASE_BEGIN";
+		case W_SCHEDULER_ACTIONS_PHASE_END:      return "PHASE_END";
+		case W_SCHEDULER_ACTIONS_DISPATCH:       return "DISPATCH";
+		default:                                 return "UNKNOWN";
+	}
+}
+
+void w_scheduler_debug_print_phases(struct w_scheduler *scheduler)
+{
+	debug_log(DEBUG, scheduler, "phases (%zu registered, %zu in order):",
+		scheduler->phases_length, scheduler->phases_order_length);
+
+	for (size_t i = 0; i < scheduler->phases_length; i++)
+	{
+		struct w_scheduler_phase *phase = &scheduler->phases[i];
+		debug_log(DEBUG, scheduler, "  [%zu] id=%zu name=\"%s\" enabled=%d timestep_id=%zu",
+			i, phase->id, phase->name ? phase->name : "(null)",
+			phase->enabled, phase->time_step_id);
+	}
+
+	// build order string
+	char order_buf[1024] = "  order: ";
+	size_t pos = strlen(order_buf);
+	for (size_t i = 0; i < scheduler->phases_order_length && pos < sizeof(order_buf) - 20; i++)
+	{
+		if (i > 0) pos += snprintf(order_buf + pos, sizeof(order_buf) - pos, " -> ");
+		pos += snprintf(order_buf + pos, sizeof(order_buf) - pos, "%zu", scheduler->phases_order[i]);
+	}
+	debug_log(DEBUG, scheduler, "%s", order_buf);
+}
+
+void w_scheduler_debug_print_timesteps(struct w_scheduler *scheduler)
+{
+	debug_log(DEBUG, scheduler, "timesteps (%zu registered, %zu in order):",
+		scheduler->time_steps_length, scheduler->time_steps_order_length);
+
+	for (size_t i = 0; i < scheduler->time_steps_length; i++)
+	{
+		struct w_scheduler_time_step *ts = &scheduler->time_steps[i];
+		debug_log(DEBUG, scheduler, "  [%zu] id=%zu name=\"%s\" enabled=%d",
+			i, ts->id, ts->name ? ts->name : "(null)", ts->enabled);
+	}
+
+	// build order string
+	char order_buf[1024] = "  order: ";
+	size_t pos = strlen(order_buf);
+	for (size_t i = 0; i < scheduler->time_steps_order_length && pos < sizeof(order_buf) - 20; i++)
+	{
+		if (i > 0) pos += snprintf(order_buf + pos, sizeof(order_buf) - pos, " -> ");
+		pos += snprintf(order_buf + pos, sizeof(order_buf) - pos, "%zu", scheduler->time_steps_order[i]);
+	}
+	debug_log(DEBUG, scheduler, "%s", order_buf);
+}
+
+void w_scheduler_debug_print_jobs(struct w_scheduler_job *jobs, size_t jobs_count)
+{
+	debug_log(DEBUG, scheduler, "jobs (%zu):", jobs_count);
+
+	for (size_t i = 0; i < jobs_count; i++)
+	{
+		debug_log(DEBUG, scheduler, "  [%zu] job_id=%zu phase_id=%zu",
+			i, jobs[i].job_id, jobs[i].phase_id);
+	}
+}
+
+void w_scheduler_debug_print_schedule(struct w_scheduler *scheduler, char **job_names)
+{
+	struct w_scheduler_schedule *sched = &scheduler->schedule;
+
+	debug_log(DEBUG, scheduler, "schedule (dirty=%d, rebuild_count=%lu, actions=%zu):",
+		sched->schedule_dirty, (unsigned long)sched->rebuild_count,
+		sched->items_length);
+
+	for (size_t i = 0; i < sched->items_length; i++)
+	{
+		struct w_scheduler_action *action = &sched->items[i];
+
+		if (action->action == W_SCHEDULER_ACTIONS_PHASE_BEGIN ||
+		    action->action == W_SCHEDULER_ACTIONS_PHASE_END)
+		{
+			if (action->action == W_SCHEDULER_ACTIONS_PHASE_BEGIN) debug_log(DEBUG, scheduler, "  ---");
+
+			struct w_scheduler_phase *phase = w_scheduler_get_phase(scheduler, action->phase_id);
+			const char *name = (phase && phase->name) ? phase->name : "(null)";
+			debug_log(DEBUG, scheduler, "  [%zu] %s phase_id=%zu name=\"%s\"",
+				i, w_scheduler_action_name_(action->action), action->phase_id, name);
+
+			if (action->action == W_SCHEDULER_ACTIONS_PHASE_END) debug_log(DEBUG, scheduler, "  ---");
+		}
+		else if (action->action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN ||
+		         action->action == W_SCHEDULER_ACTIONS_TIMESTEP_END)
+		{
+			if (action->action == W_SCHEDULER_ACTIONS_TIMESTEP_BEGIN) debug_log(DEBUG, scheduler, "    ---");
+
+			// find timestep by matching time_step pointer
+			const char *name = "(null)";
+			for (size_t ti = 0; ti < scheduler->time_steps_length; ti++)
+			{
+				if (&scheduler->time_steps[ti].time_step == action->time_step)
+				{
+					name = scheduler->time_steps[ti].name ? scheduler->time_steps[ti].name : "(null)";
+					break;
+				}
+			}
+			debug_log(DEBUG, scheduler, "[%zu] %s name=\"%s\"",
+				i, w_scheduler_action_name_(action->action), name);
+
+			if (action->action == W_SCHEDULER_ACTIONS_TIMESTEP_END) debug_log(DEBUG, scheduler, "    ---");
+		}
+		else if (action->action == W_SCHEDULER_ACTIONS_DISPATCH)
+		{
+			const char *name = (job_names && job_names[action->job_idx])
+				? job_names[action->job_idx] : "(no name)";
+			debug_log(DEBUG, scheduler, "    [%zu] %s job_idx=%zu name=\"%s\"",
+				i, w_scheduler_action_name_(action->action), action->job_idx, name);
+		}
+		else
+		{
+			debug_log(DEBUG, scheduler, "[%zu] %s", i, w_scheduler_action_name_(action->action));
+		}
+	}
+}
+
+void w_scheduler_debug_print_all(struct w_scheduler *scheduler)
+{
+	debug_log(DEBUG, scheduler, "=== DEBUG DUMP ===");
+	w_scheduler_debug_print_timesteps(scheduler);
+	w_scheduler_debug_print_phases(scheduler);
+	w_scheduler_debug_print_schedule(scheduler, NULL);
+	debug_log(DEBUG, scheduler, "=== END DUMP ===");
 }
