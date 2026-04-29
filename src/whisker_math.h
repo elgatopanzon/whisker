@@ -89,5 +89,47 @@
 	_m;                                                           \
 })
 
+#define w_mat4_look_at(eye, target, up) ({                            \
+    w_mat4 _m;                                                        \
+    /* forward = normalize(eye - target) */                           \
+    float _fx = (eye).x - (target).x;                                 \
+    float _fy = (eye).y - (target).y;                                 \
+    float _fz = (eye).z - (target).z;                                 \
+    float _flen = sqrtf(_fx*_fx + _fy*_fy + _fz*_fz);                 \
+    if (_flen > 0.0f) {                                               \
+        _fx /= _flen; _fy /= _flen; _fz /= _flen;                     \
+    }                                                                 \
+    /* right = normalize(up × forward) */                             \
+    float _rx = (up).y * _fz - (up).z * _fy;                          \
+    float _ry = (up).z * _fx - (up).x * _fz;                          \
+    float _rz = (up).x * _fy - (up).y * _fx;                          \
+    float _rlen = sqrtf(_rx*_rx + _ry*_ry + _rz*_rz);                 \
+    if (_rlen > 0.0f) {                                               \
+        _rx /= _rlen; _ry /= _rlen; _rz /= _rlen;                     \
+    }                                                                 \
+    /* up = forward × right (orthonormalize) */                       \
+    float _ux = _fy * _rz - _fz * _ry;                                \
+    float _uy = _fz * _rx - _fx * _rz;                                \
+    float _uz = _fx * _ry - _fy * _rx;                                \
+    /* column-major view matrix */                                    \
+    _m.m[0]  = _rx;                                                   \
+    _m.m[1]  = _ux;                                                   \
+    _m.m[2]  = _fx;                                                   \
+    _m.m[3]  = 0.0f;                                                  \
+    _m.m[4]  = _ry;                                                   \
+    _m.m[5]  = _uy;                                                   \
+    _m.m[6]  = _fy;                                                   \
+    _m.m[7]  = 0.0f;                                                  \
+    _m.m[8]  = _rz;                                                   \
+    _m.m[9]  = _uz;                                                   \
+    _m.m[10] = _fz;                                                   \
+    _m.m[11] = 0.0f;                                                  \
+    _m.m[12] = -(_rx*(eye).x + _ry*(eye).y + _rz*(eye).z);            \
+    _m.m[13] = -(_ux*(eye).x + _uy*(eye).y + _uz*(eye).z);            \
+    _m.m[14] = -(_fx*(eye).x + _fy*(eye).y + _fz*(eye).z);            \
+    _m.m[15] = 1.0f;                                                  \
+    _m;                                                               \
+})
+
 #endif /* WHISKER_MATH_H */
 
