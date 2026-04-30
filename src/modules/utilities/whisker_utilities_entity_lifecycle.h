@@ -19,19 +19,17 @@
  */
 
 // destruction timing tags
-#define W_ENTITY_LIFECYCLE_DESTROY_TAG "destroy_t"
-#define W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG "destroy_end_of_frame_t"
-#define W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG "destroy_end_of_fixed_frame_t"
-#define W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG "destroy_end_of_phase_t"
+w_ecs_define_tag(req_destroy);
+w_ecs_define_tag(req_destroy_end_of_frame);
+w_ecs_define_tag(req_destroy_end_of_fixed_frame);
+w_ecs_define_tag(req_destroy_end_of_phase);
 
 // entity state tags
-#define W_ENTITY_LIFECYCLE_DISABLED_TAG "disabled_t"
-#define W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG "created_this_frame_t"
+w_ecs_define_tag(disabled)
+w_ecs_define_tag(created_this_frame)
 
-// lifetime timer name and finished tag
-#define W_ENTITY_LIFECYCLE_LIFETIME_TIMER_NAME "entity_lifetime"
-#define W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG W_ENTITY_LIFECYCLE_LIFETIME_TIMER_NAME W_TIMER_COMPONENT_FINISHED
-
+// timer tag added when lifecycle timer ends
+w_ecs_define_tag(entity_lifetime_timer_finished);
 
 /*****************************
  *  macros                   *
@@ -42,37 +40,37 @@
 
 // mark entity for destruction at end of frame
 #define w_entity_destroy_end_of_frame(w, e) { \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_TAG), e); \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG), e); \
+	req_destroy_set_tag_state(w, e, true); \
+	req_destroy_end_of_frame_set_tag_state(w, e, true); \
 } \
 
 // mark entity for destruction at end of fixed timestep
 #define w_entity_destroy_end_of_fixed_frame(w, e) { \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_TAG), e); \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG), e); \
+	req_destroy_set_tag_state(w, e, true); \
+	req_destroy_end_of_fixed_frame_set_tag_state(w, e, true); \
 } \
 
 // mark entity for destruction at end of phase
 #define w_entity_destroy_end_of_phase(w, e) { \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_TAG), e); \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG), e); \
+	req_destroy_set_tag_state(w, e, true); \
+	req_destroy_end_of_phase_set_tag_state(w, e, true); \
 } \
 
 // disable entity (skipped by most queries when filtered)
 #define w_entity_set_disabled(w, e) { \
-	w_ecs_set_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DISABLED_TAG), e); \
+	disabled_set_tag_state(w, e, true); \
 } \
 
 // re-enable a disabled entity
 #define w_entity_set_enabled(w, e) { \
-	w_ecs_remove_tag(w, w_ecs_get_component_by_name(w, W_ENTITY_LIFECYCLE_DISABLED_TAG), e); \
+	disabled_set_tag_state(w, e, false); \
 } \
 
 // set entity lifetime in seconds using timer utility
 // when timer finishes, entity_lifetime_finished_tag is set on the entity
 // the lifetime hook then destroys the entity
 #define w_entity_set_lifetime(w, e, duration) { \
-	wm_utils_timer_create(w, e, W_ENTITY_LIFECYCLE_LIFETIME_TIMER_NAME, duration, false, true); \
+	wm_utils_timer_create(w, e, "entity_lifetime", duration, false, true); \
 } \
 
 #endif /* WHISKER_UTILITIES_ENTITY_LIFECYCLE_H */

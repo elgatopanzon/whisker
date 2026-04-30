@@ -14,11 +14,13 @@
 w_ecs_system(
 	wm_utils_timer_update_system,
 	WM_PHASE_POST,
-		w_query_write(W_TIMER_COMPONENT_ELAPSED)
-		w_query_write(W_TIMER_COMPONENT_FLAGS)
-		w_query_read(W_TIMER_COMPONENT_DURATION)
-		w_query_read(W_TIMER_COMPONENT_OWNER_ENTITY)
-		w_query_read(W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID)
+		w_query(
+			w_query_w(timer_elapsed),
+			w_query_w(timer_flags),
+			w_query_r(timer_duration),
+			w_query_r(timer_owner_entity),
+			w_query_r(timer_finished_comp_id),
+		)
 	,
 {
 	double *elapsed = w_itor_get_write(double);

@@ -94,6 +94,7 @@ struct w_query
 
 	// parts making up the full query
 	w_array_declare(struct w_query_term, terms);
+	w_array_declare(w_entity_id, component_id_to_terms);
 
 	// cache of entity IDs passing the bitset intersect + array of bitsets
 	struct w_sparse_bitset_intersect_cache bitset_cache;

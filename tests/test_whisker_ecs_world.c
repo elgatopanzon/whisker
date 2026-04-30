@@ -1554,12 +1554,12 @@ w_ecs_component_id_pre_remove_hook(hook_macro_comp_id_pre_remove, g_hook_macro_i
 
 w_ecs_entity_create_hook(hook_macro_entity_create, {
 	g_hook_macro_counter++;
-	g_hook_macro_entity_id = *entity;
+	g_hook_macro_entity_id = entity;
 })
 
 w_ecs_entity_destroy_hook(hook_macro_entity_destroy, {
 	g_hook_macro_counter++;
-	g_hook_macro_entity_id = *entity;
+	g_hook_macro_entity_id = entity;
 })
 
 START_TEST(test_hook_macro_update_begin_fires)

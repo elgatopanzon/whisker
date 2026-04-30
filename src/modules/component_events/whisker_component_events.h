@@ -29,9 +29,6 @@
 #define WM_COMPONENT_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE 128
 #endif
 
-// flag bit in w_component_entry.flags to indicate event tracking is enabled
-#define WM_COMPONENT_EVENTS_TRACKING_FLAG (1ULL << 0)
-
 /*****************************
 *  component names           *
 *****************************/
@@ -41,6 +38,13 @@
 #define WM_COMPONENT_EVENTS_CHANGED_SUFFIX "_changed"
 #define WM_COMPONENT_EVENTS_REMOVED_SUFFIX "_removed"
 
+// query macros for changed/added/removed generics
+#define w_query_changed(name) w_query_part_generic_(read, name, changed)
+#define w_query_added(name) w_query_part_generic_(read, name, added)
+#define w_query_removed(name) w_query_part_generic_(read, name, removed)
+#define w_query_not_changed(name) w_query_part_generic_(not, name, changed)
+#define w_query_not_added(name) w_query_part_generic_(not, name, added)
+#define w_query_not_removed(name) w_query_part_generic_(not, name, removed)
 
 /*****************************
 *  data structures           *
@@ -104,8 +108,15 @@ struct wm_component_events_registry *wm_component_events_get_registry(struct w_e
 *  convenience macros        *
 *****************************/
 
+#define w_ecs_enable_tracking(world, component) \
+	({ \
+	 	(void)sizeof(name); \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+		wm_component_events_register(world, name##_component_id_); \
+	}) \
+
 // register component for event tracking then set its value
-#define w_ecs_set_tracked(w, t, te, e, d) do { \
+#define w_ecs_set_tracked_id(w, t, te, e, d) do { \
 	wm_component_events_register(w, te); \
 	w_ecs_set_component_(w, W_COMPONENT_TYPE##_##t, te, e, (t*)d, sizeof(t)); \
 } while(0)

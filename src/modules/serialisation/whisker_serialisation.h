@@ -10,9 +10,14 @@
 
 #include "whisker.h"
 
+/****************
+*  components  *
+****************/
+
+w_ecs_define_tag(wm_serialisation_as_id)
+w_ecs_define_tag(wm_serialisation_exclude)
+
 #define WM_SERIALISATION_REGISTRY_NAME "wm_serialisation_registry"
-#define WM_SERIALISATION_NO_SERIALISE_TAG_NAME "wm_serialisation_exclude_"
-#define WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME "wm_serialisation_as_id_"
 
 #define WM_SERIALISATION_PARAMS_BUFFER_SIZE 1024
 #define WM_SERIALISATION_BUFFER_BLOCK_SIZE 16384 

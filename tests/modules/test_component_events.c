@@ -295,7 +295,7 @@ START_TEST(test_set_tracked_registers_and_fires)
 	// use a fresh component that hasn't been registered yet
 	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "tracked_test");
 	float val = 1.0f;
-	w_ecs_set_tracked(&g_world, float, comp, e, &val);
+	w_ecs_set_tracked_id(&g_world, float, comp, e, &val);
 
 	// should have _added tag
 	w_entity_id added_tag = w_ecs_get_component_by_name(&g_world, "tracked_test" WM_COMPONENT_EVENTS_ADDED_SUFFIX);

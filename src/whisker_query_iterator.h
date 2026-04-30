@@ -20,6 +20,8 @@
 		{ \
 			itor.entity_id = slice.start_id + s; \
 			itor.get_cursor = 0; \
+			w_entity_id entity = itor.entity_id; \
+			(void)entity; \
 			block; \
 		} \
 	} \
@@ -66,11 +68,73 @@
 #define w_itor_get_read(T)  *w_itor_get_read_ptr(T)
 #define w_itor_get_write(T) w_itor_get(T)
 
-#define w_query(op, name) #op " " name ", "
+/*******************************************
+*  old: legacy string-based query macros  *
+*******************************************/
 #define w_query_read(name) "read " name ", "
 #define w_query_write(name) "write " name ", "
 #define w_query_optional(name) "optional " name ", "
 #define w_query_not(name) "not " name ", "
+
+
+/*********************************
+*  new: type-safe query macros  *
+*********************************/
+#define w_query_part_(access, comp) \
+	((void)sizeof(comp), #access " " #comp)
+
+#define w_query_r(comp) \
+	w_query_part_(read, comp)
+#define w_query_w(comp) \
+	w_query_part_(write, comp)
+#define w_query_o(comp) \
+	w_query_part_(optional, comp)
+#define w_query_n(comp) \
+	w_query_part_(not, comp)
+#define w_query_h(comp) \
+	w_query_part_(read, comp) // has doesnt exist yet
+							  //
+#define w_query_part_generic_(access, comp, gname) \
+	((void)sizeof(comp), #access " " #comp "_" #gname)
+
+#define w_query_r_g(comp, gname) \
+	w_query_part_generic_(read, comp, gname)
+#define w_query_w_g(comp, gname) \
+	w_query_part_generic_(write, comp, gname)
+#define w_query_o_g(comp, gname) \
+	w_query_part_generic_(optional, comp, gname)
+#define w_query_n_g(comp, gname) \
+	w_query_part_generic_(not, comp, gname)
+#define w_query_h_g(comp, gname) \
+	w_query_part_generic_(read, comp, gname) // has doesnt exist yet
+
+#define w_query(...) \
+    ({ \
+        static char _cached[1024] = {0}; \
+        static bool _init = false; \
+        if (!_init) { \
+            const char* _parts[] = {__VA_ARGS__}; \
+            size_t _count = sizeof(_parts) / sizeof(_parts[0]); \
+            _cached[0] = 0; \
+            for (size_t _i = 0; _i < _count; ++_i) { \
+                if (_i > 0) strcat(_cached, ", "); \
+                strcat(_cached, _parts[_i]); \
+            } \
+            _init = true; \
+        } \
+        (char*)_cached; \
+    })
+
+#define w_query_get(T) \
+	({ \
+		(void)sizeof(T); \
+		struct w_component_entry *_ent_ = itor.query->terms[itor.query->component_id_to_terms[T##_component_id_]].component_entry; \
+		(T *)((_ent_)->data + (itor.entity_id * (_ent_)->type_size)); \
+	})
+
+#define w_query_get_opt(T) ((void)sizeof(T), w_itor_get_optional(T)
+
+
 
 struct w_query_iterator 
 {

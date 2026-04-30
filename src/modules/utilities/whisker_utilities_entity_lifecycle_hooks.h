@@ -39,53 +39,59 @@
 W_ENTITY_LIFECYCLE_HOOK(
 	destroy_end_of_frame,
 	BEGIN,
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG),
+	w_query(
+		w_query_r(req_destroy),
+		w_query_r(req_destroy_end_of_frame),
+	),
 {
-	w_ecs_return_entity(world, itor.entity_id);
+	w_return(entity);
 });
 
 // destroy entities marked for end-of-phase destruction
 W_ENTITY_LIFECYCLE_HOOK(
 	destroy_end_of_phase,
 	PHASE_BEGIN,
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG),
+	w_query(
+		w_query_r(req_destroy),
+		w_query_r(req_destroy_end_of_phase),
+	),
 {
-	w_ecs_return_entity(world, itor.entity_id);
+	w_return(entity);
 });
 
 // destroy entities marked for end-of-fixed-frame destruction
 W_ENTITY_LIFECYCLE_HOOK(
 	destroy_end_of_fixed_frame,
 	TIMESTEP_BEGIN,
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG),
+	w_query(
+		w_query_r(req_destroy),
+		w_query_r(req_destroy_end_of_fixed_frame),
+	),
 {
-	w_ecs_return_entity(world, itor.entity_id);
+	w_return(entity);
 });
 
 // remove created_this_frame_t tag from all entities that have it
 W_ENTITY_LIFECYCLE_HOOK(
 	cleanup_created_this_frame_tag,
 	BEGIN,
-	w_query_read(W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG),
+	w_query(w_query_r(created_this_frame)),
 {
-	w_ecs_remove_str(world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, itor.entity_id);
+	w_set_tag(entity, created_this_frame, false);
 });
 
 // destroy entities whose lifetime timer has finished
 W_ENTITY_LIFECYCLE_HOOK(
 	destroy_lifetime_expired,
 	BEGIN,
-	w_query_read(W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG),
+	w_query(w_query_r(entity_lifetime_timer_finished)),
 {
-	w_ecs_return_entity(world, itor.entity_id);
+	w_return(entity);
 });
 
 // entity create hook: sets created_this_frame_t tag on newly created entities
 w_ecs_entity_create_hook(set_created_this_frame_hook, {
-	w_ecs_set_tag(world, w_ecs_get_component_by_name(world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG), *entity);
+	w_set_tag(entity, created_this_frame, true);
 });
 
 #endif /* WHISKER_UTILITIES_ENTITY_LIFECYCLE_HOOKS_H */

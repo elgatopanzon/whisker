@@ -15,35 +15,30 @@
 
 // oscillator components
 // period in seconds for one cycle
-#define W_OSCILLATOR_COMPONENT_PERIOD "oscillator_period"
-// current phase [0..1)
-#define W_OSCILLATOR_COMPONENT_PHASE "oscillator_phase"
+w_ecs_define_component(float, oscillator_period, 0.0f);
+// current phase [0..1) - double for accumulation precision
+w_ecs_define_component(double, oscillator_phase, 0.0);
 // output scale factor
-#define W_OSCILLATOR_COMPONENT_AMPLITUDE "oscillator_amplitude"
+w_ecs_define_component(float, oscillator_amplitude, 0.0f);
 // baseline offset
-#define W_OSCILLATOR_COMPONENT_OFFSET "oscillator_offset"
+w_ecs_define_component(float, oscillator_offset, 0.0f);
 // static phase offset [0..1)
-#define W_OSCILLATOR_COMPONENT_PHASE_SHIFT "oscillator_phase_shift"
+w_ecs_define_component(float, oscillator_phase_shift, 0.0f);
 // waveform type enum
-#define W_OSCILLATOR_COMPONENT_TYPE "oscillator_type"
+w_ecs_define_component(int, oscillator_type, 0);
 // points to the owner entity
-#define W_OSCILLATOR_COMPONENT_OWNER_ENTITY "oscillator_owner_entity"
-
-// owner oscillator component suffixes
-// stores computed value on the owner
-#define W_OSCILLATOR_COMPONENT_VALUE "_oscillator_value"
-// points to oscillator entity
-#define W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY "_oscillator_entity"
+w_ecs_define_component(w_entity_id, oscillator_owner_entity, W_ENTITY_INVALID);
 // pre-registered component ID for value component on owner
-#define W_OSCILLATOR_COMPONENT_VALUE_COMP_ID "oscillator_value_comp_id"
+w_ecs_define_component(w_entity_id, oscillator_value_comp_id, W_ENTITY_INVALID);
 // extra parameter for special waveform types (duty_cycle, step_count, exponent)
-#define W_OSCILLATOR_COMPONENT_EXTRA_PARAM "oscillator_extra_param"
+w_ecs_define_component(float, oscillator_extra_param, 0.0f);
+// computed oscillator value (stored on both oscillator entity and owner with prefix)
+w_ecs_define_component(float, oscillator_value, 0.0f);
+// points to oscillator entity (stored on owner with prefix)
+w_ecs_define_component(w_entity_id, oscillator_entity, W_ENTITY_INVALID);
 
 // helper macro to build waveform enum from short name
 #define W_OSCILLATOR_TYPE(type) W_WAVEFORM_##type
-
-// create full oscillator component name
-#define W_OSCILLATOR_QUERY(name, component) name component
 
 w_entity_id wm_utils_oscillator_create(struct w_ecs_world *world, w_entity_id owner, const char *name, w_waveform_type type, float period, float amplitude, float offset, float phase_shift, float extra_param);
 

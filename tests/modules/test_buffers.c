@@ -96,11 +96,11 @@ END_TEST
 START_TEST(test_create_has_meta)
 {
 	w_buffer_create_typed(&g_world, "buf_meta", float, 5);
-	struct w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_meta");
+	w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_meta");
 
 	ck_assert_ptr_nonnull(meta);
-	ck_assert_uint_eq(meta->type_id, W_COMPONENT_TYPE_float);
-	ck_assert_uint_eq(meta->type_size, sizeof(float));
+	ck_assert_uint_eq(W_BUFFER_META_TYPE_ID(*meta), W_COMPONENT_TYPE_float);
+	ck_assert_uint_eq(W_BUFFER_META_TYPE_SIZE(*meta), sizeof(float));
 }
 END_TEST
 
@@ -129,21 +129,21 @@ END_TEST
 START_TEST(test_create_typed_macro)
 {
 	w_buffer_create_typed(&g_world, "buf_dbl", double, 3);
-	struct w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_dbl");
+	w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_dbl");
 
 	ck_assert_ptr_nonnull(meta);
-	ck_assert_uint_eq(meta->type_id, W_COMPONENT_TYPE_double);
-	ck_assert_uint_eq(meta->type_size, sizeof(double));
+	ck_assert_uint_eq(W_BUFFER_META_TYPE_ID(*meta), W_COMPONENT_TYPE_double);
+	ck_assert_uint_eq(W_BUFFER_META_TYPE_SIZE(*meta), sizeof(double));
 }
 END_TEST
 
 START_TEST(test_create_custom_struct)
 {
 	w_buffer_create(&g_world, "buf_vtx", 0, sizeof(test_vertex), 8);
-	struct w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_vtx");
+	w_buffer_meta *meta = w_buffer_get_meta(&g_world, "buf_vtx");
 
 	ck_assert_ptr_nonnull(meta);
-	ck_assert_uint_eq(meta->type_size, sizeof(test_vertex));
+	ck_assert_uint_eq(W_BUFFER_META_TYPE_SIZE(*meta), sizeof(test_vertex));
 }
 END_TEST
 
@@ -484,7 +484,7 @@ START_TEST(test_buffer_has_setid_tag)
 {
 	w_buffer_create_typed(&g_world, "tag_buf", uint32_t, 5);
 	w_entity_id buf_id = w_ecs_get_component_by_name(&g_world, "tag_buf");
-	ck_assert(w_ecs_has_tag_str(&g_world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, buf_id));
+	ck_assert(w_ecs_has_tag_str(&g_world, w_ecs_component_name(wm_serialisation_as_id), buf_id));
 }
 END_TEST
 

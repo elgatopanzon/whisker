@@ -2168,7 +2168,7 @@ START_TEST(test_dump_setid_emitted_when_marker_present)
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, ent, &val, sizeof(val));
 
 	// tag the component with serialise-as-id marker
-	w_ecs_set_tag_str(&g_world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, comp);
+	w_ecs_set_tag_str(&g_world, w_ecs_component_name(wm_serialisation_as_id), comp);
 
 	struct wm_serialisation_ctx sctx = {0};
 	bool ok = w_serialisation_dump_to_buffer(&g_world, &sctx);
@@ -2307,7 +2307,7 @@ START_TEST(test_e2e_setid_round_trip)
 	w_entity_id comp = w_ecs_get_component_by_name(&g_world, "slot_val");
 	float val = 3.14f;
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float, comp, ent, &val, sizeof(val));
-	w_ecs_set_tag_str(&g_world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, comp);
+	w_ecs_set_tag_str(&g_world, w_ecs_component_name(wm_serialisation_as_id), comp);
 
 	// dump
 	struct wm_serialisation_ctx sctx = {0};
@@ -2349,7 +2349,7 @@ START_TEST(test_component_type_exclude_tag_skips_component)
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, entity, &val, sizeof(val));
 
 	// tag the component TYPE entity with the exclude tag
-	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(wm_serialisation_exclude));
 	w_ecs_set_tag(&g_world, excl, comp);
 
 	struct wm_serialisation_ctx ctx = {0};
@@ -2376,7 +2376,7 @@ START_TEST(test_entity_exclude_tag_skips_entity)
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, comp, keep_ent, &val, sizeof(val));
 
 	// tag excl_ent with the exclude tag
-	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(wm_serialisation_exclude));
 	w_ecs_set_tag(&g_world, excl, excl_ent);
 
 	struct wm_serialisation_ctx ctx = {0};
@@ -2408,7 +2408,7 @@ START_TEST(test_exclude_tag_other_entities_and_components_still_serialise)
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, saved_comp, skipped_ent, &val, sizeof(val));
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, skipped_comp, saved_ent, &val, sizeof(val));
 
-	w_entity_id excl = w_ecs_get_component_by_name(&g_world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_entity_id excl = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(wm_serialisation_exclude));
 	// exclude skipped_ent by entity tag
 	w_ecs_set_tag(&g_world, excl, skipped_ent);
 	// exclude skipped_comp by component type tag

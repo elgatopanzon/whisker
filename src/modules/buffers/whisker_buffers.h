@@ -10,27 +10,33 @@
 
 #include "whisker.h"
 
-/* component name for buffer metadata stored on the buffer entity */
-#define W_BUFFER_META_COMPONENT_NAME "w_buffer_meta"
+/****************
+*  components  *
+****************/
 
-/* buffer metadata: stored as a component on the buffer's own entity */
-struct w_buffer_meta
-{
-	uint type_id;       /* W_COMPONENT_TYPE enum (or 0 for custom) */
-	uint64_t type_size; /* element size in bytes */
-};
+// component name for buffer metadata stored on the buffer entity
+/* buffer metadata: packed as w_pack32x2 for serialization support
+ * left  = type_id (W_COMPONENT_TYPE enum)
+ * right = type_size (element size in bytes, capped to 32 bits) */
+w_ecs_define_component(w_pack32x2, w_buffer_meta, 0);
 
-/* init the buffers module (registers meta component type) */
+// pack/unpack macros for buffer metadata
+#define W_BUFFER_META_PACK(type_id, type_size) \
+	((w_buffer_meta){ .left = (type_id), .right = (uint32_t)(type_size) })
+#define W_BUFFER_META_TYPE_ID(meta)   ((meta).left)
+#define W_BUFFER_META_TYPE_SIZE(meta) ((meta).right)
+
+// init the buffers module (registers meta component type)
 void w_buffers_init(struct w_ecs_world *world);
 
-/* free the buffers module */
+// free the buffers module
 void w_buffers_free(struct w_ecs_world *world);
 
 /*****************************
 *  handle layout             *
 *****************************/
 
-/* handle packs offset (left) and length (right) */
+// handle packs offset (left) and length (right)
 #define W_BUFFER_HANDLE_OFFSET(h) ((h).left)
 #define W_BUFFER_HANDLE_LENGTH(h) ((h).right)
 #define W_BUFFER_HANDLE_INVALID (w_pack32x2){ .left = UINT32_MAX, .right = 0 }
@@ -46,14 +52,14 @@ void w_buffers_free(struct w_ecs_world *world);
 w_pack32x2 w_buffer_create(struct w_ecs_world *world, char *name,
 	uint type_id, size_t type_size, uint32_t count);
 
-/* typed create: derives type_id and type_size from the C type name */
+// typed create: derives type_id and type_size from the C type name
 #define w_buffer_create_typed(world, name, type, count) \
 	w_buffer_create(world, name, W_COMPONENT_TYPE_##type, sizeof(type), count)
 
-/* return a rented range, clearing its bits for reuse */
+// return a rented range, clearing its bits for reuse
 void w_buffer_return(struct w_ecs_world *world, char *name, w_pack32x2 handle);
 
-/* destroy an entire named buffer: frees all data and clears the component entry */
+// destroy an entire named buffer: frees all data and clears the component entry
 void w_buffer_destroy(struct w_ecs_world *world, char *name);
 
 /*****************************
@@ -64,14 +70,14 @@ void w_buffer_destroy(struct w_ecs_world *world, char *name);
  * user indexes from 0 relative to this pointer: ((T*)ptr)[i] */
 void *w_buffer_get_ptr(struct w_ecs_world *world, char *name, w_pack32x2 handle);
 
-/* get length from handle (count of elements in the rented range) */
+// get length from handle (count of elements in the rented range)
 uint32_t w_buffer_get_length(w_pack32x2 handle);
 
-/* get the underlying component entry for direct/fast access (NULL if buffer not created) */
+// get the underlying component entry for direct/fast access (NULL if buffer not created)
 struct w_component_entry *w_buffer_get_entry(struct w_ecs_world *world, char *name);
 
-/* get buffer metadata (NULL if not a buffer) */
-struct w_buffer_meta *w_buffer_get_meta(struct w_ecs_world *world, char *name);
+// get buffer metadata (NULL if not a buffer)
+w_buffer_meta *w_buffer_get_meta(struct w_ecs_world *world, char *name);
 
 /*****************************
 *  iteration                 *
@@ -86,4 +92,4 @@ struct w_buffer_meta *w_buffer_get_meta(struct w_ecs_world *world, char *name);
 	} \
 } while(0)
 
-#endif /* WHISKER_BUFFERS_H */
+#endif // WHISKER_BUFFERS_H

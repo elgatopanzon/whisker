@@ -11,7 +11,7 @@
 void w_buffers_init(struct w_ecs_world *world)
 {
 	/* ensure meta component type exists */
-	w_ecs_get_component_by_name(world, W_BUFFER_META_COMPONENT_NAME);
+	w_ecs_get_component_by_name(world, w_buffer_meta_name_);
 }
 
 void w_buffers_free(struct w_ecs_world *world)
@@ -28,18 +28,13 @@ w_pack32x2 w_buffer_create(struct w_ecs_world *world, char *name,
 	w_entity_id buffer_id = w_ecs_get_component_by_name(world, name);
 
 	/* set metadata if first time */
-	w_entity_id meta_comp = w_ecs_get_component_by_name(world, W_BUFFER_META_COMPONENT_NAME);
+	w_entity_id meta_comp = w_ecs_get_component_by_name(world, w_buffer_meta_name_);
 	if (!w_ecs_get_component_(world, meta_comp, buffer_id))
 	{
-		struct w_buffer_meta meta = {
-			.type_id = type_id,
-			.type_size = type_size,
-		};
-		w_ecs_set_component_(world, 0, meta_comp, buffer_id,
-			(void *)&meta, sizeof(struct w_buffer_meta));
+		w_buffer_meta_set_value(world, buffer_id, W_BUFFER_META_PACK(type_id, type_size));
 
 		/* tag this component for ID-based serialisation */
-		w_ecs_set_tag_str(world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME, buffer_id);
+		w_ecs_set_tag_str(world, w_ecs_component_name(wm_serialisation_as_id), buffer_id);
 	}
 
 	/* ensure the component entry exists */
@@ -98,7 +93,7 @@ void w_buffer_destroy(struct w_ecs_world *world, char *name)
 	w_entity_id buffer_id = w_ecs_get_component_by_name(world, name);
 
 	/* remove metadata component */
-	w_entity_id meta_comp = w_ecs_get_component_by_name(world, W_BUFFER_META_COMPONENT_NAME);
+	w_entity_id meta_comp = w_ecs_get_component_by_name(world, w_buffer_meta_name_);
 	w_ecs_remove_component_(world, meta_comp, buffer_id);
 
 	/* free the component entry (data array + bitset) */
@@ -137,9 +132,9 @@ struct w_component_entry *w_buffer_get_entry(struct w_ecs_world *world, char *na
 	return w_component_registry_get_entry(&world->components, buffer_id);
 }
 
-struct w_buffer_meta *w_buffer_get_meta(struct w_ecs_world *world, char *name)
+w_buffer_meta *w_buffer_get_meta(struct w_ecs_world *world, char *name)
 {
 	w_entity_id buffer_id = w_ecs_get_component_by_name(world, name);
-	w_entity_id meta_comp = w_ecs_get_component_by_name(world, W_BUFFER_META_COMPONENT_NAME);
-	return (struct w_buffer_meta *)w_ecs_get_component_(world, meta_comp, buffer_id);
+	w_entity_id meta_comp = w_ecs_get_component_by_name(world, w_buffer_meta_name_);
+	return (w_buffer_meta *)w_ecs_get_component_(world, meta_comp, buffer_id);
 }

@@ -17,36 +17,34 @@ w_entity_id wm_utils_oscillator_create(struct w_ecs_world *world, w_entity_id ow
 	w_entity_id oscillator = w_ecs_request_entity_with_name(world, oscillator_name);
 
 	// oscillator components
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_PERIOD, oscillator, &period);
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_PHASE, oscillator, &(float){0});
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, oscillator, &amplitude);
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_OFFSET, oscillator, &offset);
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, oscillator, &phase_shift);
+	double phase = 0.0;
 	int type_int = (int)type;
-	w_ecs_set_str(world, int, W_OSCILLATOR_COMPONENT_TYPE, oscillator, &type_int);
-	w_ecs_set_str(world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, oscillator, &owner);
-	w_ecs_set_str(world, float, W_OSCILLATOR_COMPONENT_EXTRA_PARAM, oscillator, &extra_param);
+
+	w_set(oscillator, oscillator_period, &period);
+	w_set(oscillator, oscillator_phase, &phase);
+	w_set(oscillator, oscillator_amplitude, &amplitude);
+	w_set(oscillator, oscillator_offset, &offset);
+	w_set(oscillator, oscillator_phase_shift, &phase_shift);
+	w_set(oscillator, oscillator_type, &type_int);
+	w_set(oscillator, oscillator_owner_entity, &owner);
+	w_set(oscillator, oscillator_extra_param, &extra_param);
 
 	// owner reference: "{name}_oscillator_entity"
-	char oscillator_entity_name[128];
-	snprintf(oscillator_entity_name, sizeof(oscillator_entity_name), "%s" W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY, name);
-	w_ecs_set_str(world, w_entity_id, oscillator_entity_name, owner, &oscillator);
+	w_set_g(owner, oscillator_entity, name, &oscillator);
 
-	// build "{name}_oscillator_value" and get its component ID for fast path
-	char value_name[128];
-	snprintf(value_name, sizeof(value_name), "%s" W_OSCILLATOR_COMPONENT_VALUE, name);
-	w_entity_id value_comp_id = w_ecs_get_component_by_name(world, value_name);
-	w_ecs_set_str(world, w_entity_id, W_OSCILLATOR_COMPONENT_VALUE_COMP_ID, oscillator, &value_comp_id);
+	// build "{name}_oscillator_value" component ID for fast path
+	w_set_value(oscillator, oscillator_value_comp_id, w_gid(oscillator_value, name));
 
 	// owner value component: "{name}_oscillator_value" (initialized to offset)
-	w_ecs_set_str(world, float, value_name, owner, &offset);
+	w_set_g(owner, oscillator_value, name, &offset);
+
+	// oscillator entity also stores current value (initialized to offset)
+	w_set(oscillator, oscillator_value, &offset);
 
 	return oscillator;
 }
 
 float wm_utils_oscillator_get_value(struct w_ecs_world *world, w_entity_id owner, const char *name) {
-	char value_name[128];
-	snprintf(value_name, sizeof(value_name), "%s" W_OSCILLATOR_COMPONENT_VALUE, name);
-	float *value = w_ecs_get_str(world, float, value_name, owner);
+	float *value = w_get_g(owner, oscillator_value, name);
 	return value ? *value : 0.0f;
 }

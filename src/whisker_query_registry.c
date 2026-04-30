@@ -28,6 +28,7 @@ void w_query_registry_free(struct w_query_registry *registry)
 		if (q->terms_length > 0)
 		{
 			free_null(q->terms);
+			free_null(q->component_id_to_terms);
 		}
 
 		free_null(q->archetype_slices_dense);
@@ -200,6 +201,15 @@ static inline void w_query_registry_parse_query_term_components(struct w_query *
 				term->component_id = component_id;
 				term->component_entry = w_component_registry_get_entry(component_registry, component_id);
 				parsed_count++;
+
+				// set the sparse component ID to local term index
+				w_array_ensure_alloc_block_size(
+					query->component_id_to_terms,
+					term->component_id + 1,
+					W_QUERY_REGISTRY_QUERIES_REALLOC_BLOCK_SIZE
+				);
+
+				query->component_id_to_terms[term->component_id] = i;
 			}
 		}
 	}
@@ -238,6 +248,7 @@ struct w_query *w_query_registry_get_query(struct w_query_registry *registry, ch
 		query->query_parse_state = W_QUERY_PARSE_STATE_UNPARSED;
 
 		w_array_init_t(query->terms, W_QUERY_REGISTRY_QUERY_TERMS_REALLOC_BLOCK_SIZE);
+		w_array_init_t(query->component_id_to_terms, W_QUERY_REGISTRY_QUERY_TERMS_REALLOC_BLOCK_SIZE);
 		w_array_init_t(query->archetype_slices_dense, W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE);
 		w_array_init_t(query->archetype_slices_sparse, W_QUERY_REGISTRY_QUERY_SLICES_REALLOC_BLOCK_SIZE);
 		query->archetype_slices_dense_length = 0;

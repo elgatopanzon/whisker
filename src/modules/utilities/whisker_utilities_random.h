@@ -16,42 +16,34 @@
 
 // random components
 // PCG state
-#define W_RANDOM_COMPONENT_STATE "random_state"
+w_ecs_define_component(uint64_t, random_state, 0);
 // PCG increment
-#define W_RANDOM_COMPONENT_INCREMENT "random_increment"
+w_ecs_define_component(uint64_t, random_increment, 0);
 // min value for int64 output
-#define W_RANDOM_COMPONENT_RANGE_MIN "random_range_min"
+w_ecs_define_component(int64_t, random_range_min, 0);
 // max value for int64 output
-#define W_RANDOM_COMPONENT_RANGE_MAX "random_range_max"
+w_ecs_define_component(int64_t, random_range_max, 0);
 // last generated int64 value
-#define W_RANDOM_COMPONENT_OUTPUT_LONG "random_output_long"
+w_ecs_define_component(int64_t, random_output_long, 0);
 // last generated double value [0.0, 1.0)
-#define W_RANDOM_COMPONENT_OUTPUT_DOUBLE "random_output_double"
+w_ecs_define_component(double, random_output_double, 0.0f);
 // points to the owner entity
-#define W_RANDOM_COMPONENT_OWNER_ENTITY "random_owner_entity"
-
-// owner random component suffixes
-// stores int64 value on the owner
-#define W_RANDOM_COMPONENT_VALUE_LONG "_random_value_long"
-// stores double value on the owner
-#define W_RANDOM_COMPONENT_VALUE_DOUBLE "_random_value_double"
-// points to random entity
-#define W_RANDOM_COMPONENT_RANDOM_ENTITY "_random_entity"
+w_ecs_define_component(w_entity_id, random_owner_entity, W_ENTITY_INVALID);
 // pre-registered component ID for long value on owner
-#define W_RANDOM_COMPONENT_VALUE_LONG_COMP_ID "random_value_long_comp_id"
+w_ecs_define_component(w_entity_id, random_output_long_comp_id, W_ENTITY_INVALID);
 // pre-registered component ID for double value on owner
-#define W_RANDOM_COMPONENT_VALUE_DOUBLE_COMP_ID "random_value_double_comp_id"
+w_ecs_define_component(w_entity_id, random_output_double_comp_id, W_ENTITY_INVALID);
+w_ecs_define_component(w_entity_id, random_entity, W_ENTITY_INVALID);
+#define W_RANDOM_COMPONENT_RANDOM_ENTITY "_random_entity"
 
-// create full random component name
-#define W_RANDOM_QUERY(name, component) name component
-
+// create a random generator entity
 w_entity_id wm_utils_random_create(struct w_ecs_world *world, w_entity_id owner, const char *name, int64_t range_min, int64_t range_max);
 
 // get current random int64 value for an owner by name
-int64_t wm_utils_random_get_long(struct w_ecs_world *world, w_entity_id owner, const char *name);
+inline int64_t wm_utils_random_get_long(struct w_ecs_world *world, w_entity_id owner, const char *name);
 
 // get current random double value for an owner by name
-double wm_utils_random_get_double(struct w_ecs_world *world, w_entity_id owner, const char *name);
+inline double wm_utils_random_get_double(struct w_ecs_world *world, w_entity_id owner, const char *name);
 
 
 #endif /* WHISKER_UTILITIES_RANDOM_H */

@@ -21,6 +21,43 @@
 #ifndef WHISKER_ECS_WORLD_H
 #define WHISKER_ECS_WORLD_H
 
+/***************
+*  macro API  *
+***************/
+// short macros with implicit world in scope
+
+#define w_return(entity) w_ecs_return_entity(world, entity);
+#define w_request() w_ecs_request_entity(world);
+#define w_request_named(name) w_ecs_request_entity_with_name(world, name);
+
+// component short forms for type-safe components only
+#define w_set(entity, name, ptr) ((void)sizeof(name), name##_set(world, entity, ptr))
+#define w_set_default(entity, name) ((void)sizeof(name), name##_set_default(world, entity))
+#define w_set_value(entity, name, ...) ((void)sizeof(name), name##_set_value(world, entity, ((name){__VA_ARGS__})))
+#define w_set_tag(entity, name, state) ((void)sizeof(name), name##_set_tag_state(world, entity, state))
+#define w_exists(entity, name) ((void)sizeof(name), name##_exists(world, entity))
+#define w_remove(entity, name) ((void)sizeof(name), name##_remove(world, entity))
+#define w_get(entity, name) ((void)sizeof(name), name##_get(world, entity))
+
+#define w_set_g(entity, name, gname, ptr) ((void)sizeof(name), name##_set_generic(world, entity, gname, ptr))
+#define w_set_default_g(entity, name, gname) ((void)sizeof(name), name##_set_default_generic(world, entity, gname))
+#define w_set_value_g(entity, name, gname, ...) ((void)sizeof(name), name##_set_value_generic(world, entity, gname, ((name){__VA_ARGS__})))
+#define w_set_tag_g(entity, name, gname, state) ((void)sizeof(name), name##_set_tag_state_generic(world, entity, gname, state))
+#define w_exists_g(entity, name, gname) ((void)sizeof(name), name##_exists_generic(world, entity, gname))
+#define w_remove_g(entity, name, gname) ((void)sizeof(name), name##_remove_generic(world, entity, gname))
+#define w_get_g(entity, name, gname) ((void)sizeof(name), name##_get_generic(world, entity, gname))
+
+#define w_set_id(entity, name, id, ptr) ((void)sizeof(name), w_ecs_set_component_(world, name##_type_id_, id, entity, (name*)ptr, sizeof(name)))
+#define w_get_id(entity, name, id) ((void)sizeof(name), w_ecs_get_component_(world, name##_type_id_, id, entity))
+#define w_has_id(entity, name, id) ((void)sizeof(name), w_ecs_has_component_(world, name##_type_id_, id, entity))
+#define w_remove_id(entity, name, id) ((void)sizeof(name), w_ecs_remove_component_(world, name##_type_id_, id, entity))
+
+#define w_name(name) ((void)sizeof(name), name##_name_)
+#define w_gname(name, gname) ((void)sizeof(name), #name##_gname)
+#define w_id(name) ((void)sizeof(name), name##_get_id(world))
+#define w_gid(name, gname) ((void)sizeof(name), name##_get_generic_id(world, gname))
+
+
 enum W_COMPONENT_ACTION
 {
 	W_COMPONENT_ACTION_SET = 0,
@@ -160,6 +197,117 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name);
 /*******************
 *  component API  *
 *******************/
+
+#define W_ECS_PASTE(a, b) a##b
+
+// component typedef
+#define w_ecs_define_component_typedef(type, name, suffix) \
+	typedef type name; \
+	__attribute__((unused)) static char *name##_name_ = #name; \
+	__attribute__((unused)) static uint64_t name##suffix##_type_id_ = W_COMPONENT_TYPE##_##type; \
+	__attribute__((unused)) static uint64_t name##suffix##_type_size_ = sizeof(type); \
+	__attribute__((unused)) static w_entity_id name##suffix##_component_id_ = W_ENTITY_INVALID; \
+
+#define w_ecs_component_name(name) ((void)sizeof(name), name##_name_)
+
+#define W_ECS_SET_COMP_ID_CACHE(name) if (W_ECS_PASTE(name, _component_id_) == W_ENTITY_INVALID) { W_ECS_PASTE(name, _component_id_) = w_ecs_get_component_by_name(world, #name); }
+#define W_ECS_COMP_ID(name) W_ECS_PASTE(name, _component_id_)
+
+#define w_ecs_declare_shared_component_functions(type, name, ...) \
+	__attribute__((unused)) static inline w_entity_id name##_get_id(struct w_ecs_world *world) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+		return name##_component_id_; \
+	} \
+	__attribute__((unused)) static inline w_entity_id name##_get_generic_id(struct w_ecs_world *world, const char *generic_name) { \
+		char _name[strlen(name##_name_) + strlen(generic_name) + 2]; \
+		snprintf(_name, sizeof(_name), "%s_%s", generic_name, name##_name_); \
+		return w_ecs_get_component_by_name(world, _name); \
+	} \
+
+#define w_ecs_define_component_impl_(type, name, ...) \
+	w_ecs_declare_shared_component_functions(type, name); \
+	__attribute__((unused)) static inline void name##_set_default(struct w_ecs_world *world, w_entity_id entity) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_component_id_, entity, (type*)&(type){__VA_ARGS__}, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline void name##_set_value(struct w_ecs_world *world, w_entity_id entity, type value) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_component_id_, entity, (type*)&value, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline void name##_set(struct w_ecs_world *world, w_entity_id entity, type *value) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_component_id_, entity, (type*)value, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline bool name##_exists(struct w_ecs_world *world, w_entity_id entity) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	return w_ecs_has_component_(world, name##_component_id_, entity); \
+	} \
+	__attribute__((unused)) static inline type *name##_get(struct w_ecs_world *world, w_entity_id entity) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	return w_ecs_get_component_(world, name##_component_id_, entity); \
+	} \
+	__attribute__((unused)) static inline void name##_remove(struct w_ecs_world *world, w_entity_id entity) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	w_ecs_remove_component_(world, name##_component_id_, entity); \
+	} \
+	\
+	__attribute__((unused)) static inline void name##_set_generic_default(struct w_ecs_world *world, w_entity_id entity, const char *generic_name) { \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_get_generic_id(world, generic_name), entity, (type*)&(type){__VA_ARGS__}, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline void name##_set_generic_value(struct w_ecs_world *world, w_entity_id entity, const char *generic_name, type value) { \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_get_generic_id(world, generic_name), entity, (type*)&value, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline void name##_set_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name, type *value) { \
+    	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_get_generic_id(world, generic_name), entity, (type*)value, sizeof(type)); \
+	} \
+	__attribute__((unused)) static inline bool name##_exists_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name) { \
+    	return w_ecs_has_component_(world, name##_get_generic_id(world, generic_name), entity); \
+	} \
+	__attribute__((unused)) static inline type *name##_get_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name) { \
+    	return w_ecs_get_component_(world, name##_get_generic_id(world, generic_name), entity); \
+	} \
+	__attribute__((unused)) static inline void name##_remove_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name) { \
+    	w_ecs_remove_component_(world, name##_get_generic_id(world, generic_name), entity); \
+	} \
+
+#define w_ecs_define_tag_impl_(name) \
+	w_ecs_declare_shared_component_functions(bool, name); \
+	__attribute__((unused)) static inline bool name##_tag_exists(struct w_ecs_world *world, w_entity_id entity) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+    	return w_ecs_has_component_(world, name##_component_id_, entity); \
+	} \
+	__attribute__((unused)) static inline void name##_set_tag_state(struct w_ecs_world *world, w_entity_id entity, bool state) { \
+		W_ECS_SET_COMP_ID_CACHE(name); \
+		if (state && !name##_tag_exists(world, entity)) { \
+    		w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, name##_component_id_, entity, (bool*)&(bool){false}, sizeof(bool)); \
+    	} \
+    	else if (!state) \
+		{ \
+    		w_ecs_remove_component_(world, name##_component_id_, entity); \
+		} \
+	} \
+	\
+	__attribute__((unused)) static inline bool name##_tag_exists_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name) { \
+    	return w_ecs_has_component_(world, name##_get_generic_id(world, generic_name), entity); \
+	} \
+	__attribute__((unused)) static inline void name##_set_tag_state_generic(struct w_ecs_world *world, w_entity_id entity, const char *generic_name, bool state) { \
+		if (state && !name##_tag_exists_generic(world, entity, generic_name)) { \
+    		w_ecs_set_component_(world, W_COMPONENT_TYPE_bool, name##_get_generic_id(world, generic_name), entity, (bool*)&(bool){false}, sizeof(bool)); \
+    	} \
+    	else if (!state) \
+		{ \
+    		w_ecs_remove_component_(world, name##_get_generic_id(world, generic_name), entity); \
+		} \
+	} \
+
+#define w_ecs_define_component(type, name, ...) \
+	w_ecs_define_component_typedef(type, name, ); \
+	w_ecs_define_component_impl_(type, name, __VA_ARGS__) \
+
+#define w_ecs_define_tag(name) \
+	w_ecs_define_component_typedef(bool, name, ); \
+	w_ecs_define_tag_impl_(name) \
+
 
 // use the macros for set/get/remove/has
 // entity ID + component ID (base macros)
@@ -664,7 +812,7 @@ void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook
 	} \
 	static void name(void *ctx, void *data) { \
 		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
-		w_entity_id *entity = (w_entity_id *)data; \
+		w_entity_id entity = *(w_entity_id *)data; \
 		(void)world; (void)entity; \
 		work; \
 	} \
@@ -679,7 +827,7 @@ void w_ecs_unregister_entity_destroy_hook(struct w_ecs_world *world, size_t hook
 	} \
 	static void name(void *ctx, void *data) { \
 		struct w_ecs_world *world = (struct w_ecs_world *)ctx; \
-		w_entity_id *entity = (w_entity_id *)data; \
+		w_entity_id entity = *(w_entity_id *)data; \
 		(void)world; (void)entity; \
 		work; \
 	} \

@@ -51,11 +51,11 @@ static void timer_teardown(void)
 
 // timer system query string (must match the w_ecs_system definition exactly)
 #define TIMER_QUERY_STRING \
-	w_query_write(W_TIMER_COMPONENT_ELAPSED) \
-	w_query_write(W_TIMER_COMPONENT_FLAGS) \
-	w_query_read(W_TIMER_COMPONENT_DURATION) \
-	w_query_read(W_TIMER_COMPONENT_OWNER_ENTITY) \
-	w_query_read(W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID)
+	w_query_write("timer_elapsed") \
+	w_query_write("timer_flags") \
+	w_query_read("timer_duration") \
+	w_query_read("timer_owner_entity") \
+	w_query_read("timer_finished_comp_id")
 
 // advance world by a specific delta time (simulated, no blocking)
 // reimplements timer logic to avoid static query pointer issue in w_query_for_each
@@ -74,11 +74,11 @@ static void advance_time(double delta_seconds)
 			w_entity_id timer = slice.start_id + s;
 
 			// get component data
-			double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
-			double *duration = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
-			w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
-			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
-			w_entity_id *finished_comp_id = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
+			double *elapsed = timer_elapsed_get(&g_world, timer);
+			double *duration = timer_duration_get(&g_world, timer);
+			w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
+			w_entity_id *owner = timer_owner_entity_get(&g_world, timer);
+			w_entity_id *finished_comp_id = timer_finished_comp_id_get(&g_world, timer);
 
 			if (!elapsed || !duration || !flags || !owner || !finished_comp_id) continue;
 
@@ -141,11 +141,11 @@ static void advance_time(double delta_seconds)
 		{
 			w_entity_id timer = slice.start_id + s;
 
-			double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
-			double *duration = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
-			w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
-			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
-			w_entity_id *finished_comp_id = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
+			double *elapsed = timer_elapsed_get(&g_world, timer);
+			double *duration = timer_duration_get(&g_world, timer);
+			w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
+			w_entity_id *owner = timer_owner_entity_get(&g_world, timer);
+			w_entity_id *finished_comp_id = timer_finished_comp_id_get(&g_world, timer);
 
 			if (!elapsed || !duration || !flags || !owner || !finished_comp_id) continue;
 
@@ -242,12 +242,12 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id timer = wm_utils_timer_create(&g_world, owner, "loop_test", 0.5f, true, false);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "loop_test_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "loop_test_timer_finished");
 
 	// verify timer components are set up correctly
-	double *dur = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_DURATION, timer);
-	w_entity_id *own = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_OWNER_ENTITY, timer);
-	w_entity_id *fcid = w_ecs_get_str(&g_world, w_entity_id, W_TIMER_COMPONENT_TIMER_FINISHED_COMP_ID, timer);
+	double *dur = timer_duration_get(&g_world, timer);
+	w_entity_id *own = timer_owner_entity_get(&g_world, timer);
+	w_entity_id *fcid = timer_finished_comp_id_get(&g_world, timer);
 	ck_assert_ptr_nonnull(dur);
 	ck_assert_ptr_nonnull(own);
 	ck_assert_ptr_nonnull(fcid);
@@ -259,7 +259,7 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	advance_time(0.6);
 
 	// verify elapsed was updated
-	double *el = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *el = timer_elapsed_get(&g_world, timer);
 	ck_assert_ptr_nonnull(el);
 	ck_assert_double_ge(*el, 0.5);
 
@@ -272,7 +272,7 @@ START_TEST(test_loop_timer_fires_repeatedly)
 	// tag should be removed, elapsed reset
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
 
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	// elapsed should be small (0.1s from last advance after reset)
 	ck_assert_double_lt(*elapsed, 0.2);
 
@@ -295,7 +295,7 @@ START_TEST(test_loop_timer_resets_elapsed)
 	advance_time(0.1);
 	// second frame: tag removed, elapsed reset
 
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	// elapsed should include the 0.1s from last frame
 	ck_assert_double_lt(*elapsed, 0.2);
 }
@@ -311,7 +311,7 @@ START_TEST(test_oneshot_timer_fires_once)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id timer = wm_utils_timer_create(&g_world, owner, "oneshot_test", 0.5f, false, true);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "oneshot_test_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "oneshot_test_timer_finished");
 
 	// advance past duration
 	advance_time(0.6);
@@ -326,7 +326,7 @@ START_TEST(test_oneshot_timer_fires_once)
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
 
 	// timer entity should no longer exist (returned to pool)
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	ck_assert_ptr_null(elapsed);
 }
 END_TEST
@@ -341,8 +341,8 @@ START_TEST(test_oneshot_timer_destroyed_after_completion)
 	advance_time(0.1);  // tag removed, timer destroyed
 
 	// verify timer components are gone
-	ck_assert(!w_ecs_has_str(&g_world, W_TIMER_COMPONENT_ELAPSED, timer));
-	ck_assert(!w_ecs_has_str(&g_world, W_TIMER_COMPONENT_DURATION, timer));
+	ck_assert(!timer_elapsed_exists(&g_world, timer));
+	ck_assert(!timer_duration_exists(&g_world, timer));
 }
 END_TEST
 
@@ -356,7 +356,7 @@ START_TEST(test_finished_tag_stays_one_frame)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	wm_utils_timer_create(&g_world, owner, "tag_test", 0.5f, true, false);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "tag_test_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "tag_test_timer_finished");
 
 	// frame 0: not yet complete
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
@@ -380,7 +380,7 @@ START_TEST(test_finished_tag_exactly_one_frame_total)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	wm_utils_timer_create(&g_world, owner, "exact_frame", 1.0f, true, false);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "exact_frame_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "exact_frame_timer_finished");
 
 	int tag_present_count = 0;
 
@@ -416,11 +416,11 @@ START_TEST(test_pause_stops_timer)
 	// advance a bit
 	advance_time(0.3);
 
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	double before_pause = *elapsed;
 
 	// pause the timer via flags
-	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	w_timer_pause(flags);
 
 	// verify pause flag was set
@@ -430,11 +430,11 @@ START_TEST(test_pause_stops_timer)
 	advance_time(0.5);
 
 	// verify pause flag is still set
-	flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	ck_assert(w_timer_is_paused(*flags));
 
 	// elapsed should not have changed
-	elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	elapsed = timer_elapsed_get(&g_world, timer);
 	ck_assert_double_eq(*elapsed, before_pause);
 }
 END_TEST
@@ -448,20 +448,20 @@ START_TEST(test_unpause_resumes_timer)
 	advance_time(0.3);
 
 	// pause via flags
-	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	w_timer_pause(flags);
 	advance_time(0.5);
 
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	double paused_elapsed = *elapsed;
 
 	// unpause via flags
-	flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	w_timer_unpause(flags);
 	advance_time(0.2);
 
 	// elapsed should have increased
-	elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	elapsed = timer_elapsed_get(&g_world, timer);
 	ck_assert_double_gt(*elapsed, paused_elapsed);
 }
 END_TEST
@@ -477,7 +477,7 @@ START_TEST(test_inert_timer_auto_pauses)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id timer = wm_utils_timer_create(&g_world, owner, "inert_test", 0.5, false, false);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_test_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_test_timer_finished");
 
 	// advance past duration
 	advance_time(0.6);
@@ -490,11 +490,11 @@ START_TEST(test_inert_timer_auto_pauses)
 
 	// tag removed, timer should be paused via flags
 	ck_assert(!w_ecs_has_tag(&g_world, finished_tag, owner));
-	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	ck_assert(w_timer_is_paused(*flags));
 
 	// timer should still exist (not destroyed like oneshot)
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	ck_assert_ptr_nonnull(elapsed);
 }
 END_TEST
@@ -504,18 +504,18 @@ START_TEST(test_inert_timer_can_restart)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id timer = wm_utils_timer_create(&g_world, owner, "inert_restart", 0.5, false, false);
 
-	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_restart_finished_tag");
+	w_entity_id finished_tag = w_ecs_get_component_by_name(&g_world, "inert_restart_timer_finished");
 
 	// complete timer
 	advance_time(0.6);
 	advance_time(0.1);
 
 	// should be paused via flags
-	w_timer_flags *flags = (w_timer_flags *)w_ecs_get_str(&g_world, int, W_TIMER_COMPONENT_FLAGS, timer);
+	w_timer_flags *flags = (w_timer_flags *)timer_flags_get(&g_world, timer);
 	ck_assert(w_timer_is_paused(*flags));
 
 	// reset timer using standalone function and unpause
-	double *elapsed = w_ecs_get_str(&g_world, double, W_TIMER_COMPONENT_ELAPSED, timer);
+	double *elapsed = timer_elapsed_get(&g_world, timer);
 	w_timer_reset(elapsed, flags);
 	w_timer_unpause(flags);
 
@@ -539,8 +539,8 @@ START_TEST(test_multiple_timers_independent)
 	w_entity_id timer1 = wm_utils_timer_create(&g_world, owner, "multi1", 0.3f, true, false);
 	w_entity_id timer2 = wm_utils_timer_create(&g_world, owner, "multi2", 0.5f, true, false);
 
-	w_entity_id tag1 = w_ecs_get_component_by_name(&g_world, "multi1_finished_tag");
-	w_entity_id tag2 = w_ecs_get_component_by_name(&g_world, "multi2_finished_tag");
+	w_entity_id tag1 = w_ecs_get_component_by_name(&g_world, "multi1_timer_finished");
+	w_entity_id tag2 = w_ecs_get_component_by_name(&g_world, "multi2_timer_finished");
 
 	// advance 0.35s - timer1 should complete, timer2 should not
 	advance_time(0.35);
@@ -554,8 +554,8 @@ START_TEST(test_multiple_timers_independent)
 	ck_assert(w_ecs_has_tag(&g_world, tag2, owner));
 
 	// verify both timers still exist
-	ck_assert(w_ecs_has_str(&g_world, W_TIMER_COMPONENT_ELAPSED, timer1));
-	ck_assert(w_ecs_has_str(&g_world, W_TIMER_COMPONENT_ELAPSED, timer2));
+	ck_assert(timer_elapsed_exists(&g_world, timer1));
+	ck_assert(timer_elapsed_exists(&g_world, timer2));
 }
 END_TEST
 
@@ -567,8 +567,8 @@ START_TEST(test_multiple_owners_different_timers)
 	wm_utils_timer_create(&g_world, owner1, "owner1_timer", 0.3f, true, false);
 	wm_utils_timer_create(&g_world, owner2, "owner2_timer", 0.5f, true, false);
 
-	w_entity_id tag1 = w_ecs_get_component_by_name(&g_world, "owner1_timer_finished_tag");
-	w_entity_id tag2 = w_ecs_get_component_by_name(&g_world, "owner2_timer_finished_tag");
+	w_entity_id tag1 = w_ecs_get_component_by_name(&g_world, "owner1_timer_timer_finished");
+	w_entity_id tag2 = w_ecs_get_component_by_name(&g_world, "owner2_timer_timer_finished");
 
 	advance_time(0.35);
 
@@ -612,7 +612,7 @@ START_TEST(test_timer_stress_many_timers)
 	// all timers should still exist and be functional
 	for (int i = 0; i < num_timers; i++)
 	{
-		ck_assert(w_ecs_has_str(&g_world, W_TIMER_COMPONENT_ELAPSED, timers[i]));
+		ck_assert(timer_elapsed_exists(&g_world, timers[i]));
 	}
 
 	free(owners);
@@ -668,13 +668,51 @@ static void oscillator_teardown(void)
 
 // oscillator system query string
 #define OSCILLATOR_QUERY_STRING \
-	w_query_write(W_OSCILLATOR_COMPONENT_PHASE) \
-	w_query_read(W_OSCILLATOR_COMPONENT_PERIOD) \
-	w_query_read(W_OSCILLATOR_COMPONENT_AMPLITUDE) \
-	w_query_read(W_OSCILLATOR_COMPONENT_OFFSET) \
-	w_query_read(W_OSCILLATOR_COMPONENT_PHASE_SHIFT) \
-	w_query_read(W_OSCILLATOR_COMPONENT_TYPE) \
-	w_query_read(W_OSCILLATOR_COMPONENT_OWNER_ENTITY)
+	w_query( \
+		w_query_w(oscillator_phase), \
+		w_query_w(oscillator_value), \
+		w_query_r(oscillator_period), \
+		w_query_r(oscillator_amplitude), \
+		w_query_r(oscillator_offset), \
+		w_query_r(oscillator_phase_shift), \
+		w_query_r(oscillator_type), \
+		w_query_r(oscillator_owner_entity), \
+		w_query_r(oscillator_value_comp_id), \
+	)
+
+// process a single oscillator entity
+static void process_oscillator_entity(w_entity_id osc, double delta_seconds)
+{
+	double *phase = oscillator_phase_get(&g_world, osc);
+	float *period = oscillator_period_get(&g_world, osc);
+	float *amplitude = oscillator_amplitude_get(&g_world, osc);
+	float *offset = oscillator_offset_get(&g_world, osc);
+	float *phase_shift = oscillator_phase_shift_get(&g_world, osc);
+	int *type = oscillator_type_get(&g_world, osc);
+	w_entity_id *owner = oscillator_owner_entity_get(&g_world, osc);
+	w_entity_id *value_comp_id = oscillator_value_comp_id_get(&g_world, osc);
+
+	if (!phase || !period || !amplitude || !offset || !phase_shift || !type || !owner) return;
+	if (*period <= 0.0f) return;
+
+	*phase += delta_seconds / (double)*period;
+	*phase = fmod(*phase, 1.0);
+	if (*phase < 0.0) *phase += 1.0;
+
+	float effective_phase = (float)fmod(*phase + (double)*phase_shift, 1.0);
+	if (effective_phase < 0.0f) effective_phase += 1.0f;
+
+	float value = w_oscillator_compute((w_waveform_type)*type, effective_phase, *amplitude, *offset);
+
+	// update oscillator entity value
+	float *osc_value = oscillator_value_get(&g_world, osc);
+	if (osc_value) *osc_value = value;
+
+	// update owner value component using pre-registered component ID
+	if (value_comp_id && w_entity_is_valid(*value_comp_id) && w_entity_is_valid(*owner)) {
+		w_ecs_set(&g_world, float, *value_comp_id, *owner, &value);
+	}
+}
 
 // advance oscillators by delta time
 static void advance_oscillators(double delta_seconds)
@@ -687,38 +725,7 @@ static void advance_oscillators(double delta_seconds)
 		struct w_query_archetype_slice slice = q->archetype_slices_dense[i];
 		for (size_t s = 0; s < slice.slice_length; ++s)
 		{
-			w_entity_id osc = slice.start_id + s;
-
-			float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
-			float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
-			float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
-			float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
-			float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
-			int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
-			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
-
-			if (!phase || !period || !amplitude || !offset || !phase_shift || !type || !owner) continue;
-			if (*period <= 0.0f) continue;
-
-			*phase += delta_seconds / *period;
-			*phase = fmodf(*phase, 1.0f);
-			if (*phase < 0.0f) *phase += 1.0f;
-
-			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
-			if (effective_phase < 0.0f) effective_phase += 1.0f;
-
-			float value = w_oscillator_compute((w_waveform_type)*type, effective_phase, *amplitude, *offset);
-
-			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
-			if (osc_name && w_entity_is_valid(*owner)) {
-				char *last_underscore = strrchr(osc_name, '_');
-				if (last_underscore) {
-					size_t prefix_len = last_underscore - osc_name;
-					char value_name[128];
-					snprintf(value_name, sizeof(value_name), "%.*s" W_OSCILLATOR_COMPONENT_VALUE, (int)prefix_len, osc_name);
-					w_ecs_set_str(&g_world, float, value_name, *owner, &value);
-				}
-			}
+			process_oscillator_entity(slice.start_id + s, delta_seconds);
 		}
 	}
 
@@ -727,38 +734,7 @@ static void advance_oscillators(double delta_seconds)
 		struct w_query_archetype_slice slice = q->archetype_slices_sparse[i];
 		for (size_t s = 0; s < slice.slice_length; ++s)
 		{
-			w_entity_id osc = slice.start_id + s;
-
-			float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
-			float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
-			float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
-			float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
-			float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
-			int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
-			w_entity_id *owner = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
-
-			if (!phase || !period || !amplitude || !offset || !phase_shift || !type || !owner) continue;
-			if (*period <= 0.0f) continue;
-
-			*phase += delta_seconds / *period;
-			*phase = fmodf(*phase, 1.0f);
-			if (*phase < 0.0f) *phase += 1.0f;
-
-			float effective_phase = fmodf(*phase + *phase_shift, 1.0f);
-			if (effective_phase < 0.0f) effective_phase += 1.0f;
-
-			float value = w_oscillator_compute((w_waveform_type)*type, effective_phase, *amplitude, *offset);
-
-			char *osc_name = w_ecs_get_entity_name(&g_world, osc);
-			if (osc_name && w_entity_is_valid(*owner)) {
-				char *last_underscore = strrchr(osc_name, '_');
-				if (last_underscore) {
-					size_t prefix_len = last_underscore - osc_name;
-					char value_name[128];
-					snprintf(value_name, sizeof(value_name), "%.*s" W_OSCILLATOR_COMPONENT_VALUE, (int)prefix_len, osc_name);
-					w_ecs_set_str(&g_world, float, value_name, *owner, &value);
-				}
-			}
+			process_oscillator_entity(slice.start_id + s, delta_seconds);
 		}
 	}
 }
@@ -804,13 +780,13 @@ START_TEST(test_oscillator_components_set)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "comp_test", W_OSCILLATOR_TYPE(TRIANGLE), 2.0f, 0.5f, 1.0f, 0.25f, 0.0f);
 
-	float *period = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PERIOD, osc);
-	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
-	float *amplitude = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_AMPLITUDE, osc);
-	float *offset = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_OFFSET, osc);
-	float *phase_shift = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE_SHIFT, osc);
-	int *type = w_ecs_get_str(&g_world, int, W_OSCILLATOR_COMPONENT_TYPE, osc);
-	w_entity_id *owner_ref = w_ecs_get_str(&g_world, w_entity_id, W_OSCILLATOR_COMPONENT_OWNER_ENTITY, osc);
+	float *period = oscillator_period_get(&g_world, osc);
+	double *phase = oscillator_phase_get(&g_world, osc);
+	float *amplitude = oscillator_amplitude_get(&g_world, osc);
+	float *offset = oscillator_offset_get(&g_world, osc);
+	float *phase_shift = oscillator_phase_shift_get(&g_world, osc);
+	int *type = oscillator_type_get(&g_world, osc);
+	w_entity_id *owner_ref = oscillator_owner_entity_get(&g_world, osc);
 
 	ck_assert_ptr_nonnull(period);
 	ck_assert_ptr_nonnull(phase);
@@ -821,7 +797,7 @@ START_TEST(test_oscillator_components_set)
 	ck_assert_ptr_nonnull(owner_ref);
 
 	ck_assert_float_eq(*period, 2.0f);
-	ck_assert_float_eq(*phase, 0.0f);
+	ck_assert_double_eq(*phase, 0.0);
 	ck_assert_float_eq(*amplitude, 0.5f);
 	ck_assert_float_eq(*offset, 1.0f);
 	ck_assert_float_eq(*phase_shift, 0.25f);
@@ -835,7 +811,7 @@ START_TEST(test_oscillator_owner_entity_ref)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "owner_ref", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
-	w_entity_id *owner_osc = w_ecs_get_str(&g_world, w_entity_id, "owner_ref" W_OSCILLATOR_COMPONENT_OSCILLATOR_ENTITY, owner);
+	w_entity_id *owner_osc = oscillator_entity_get_generic(&g_world, owner, "owner_ref");
 	ck_assert_ptr_nonnull(owner_osc);
 	ck_assert_int_eq(*owner_osc, osc);
 }
@@ -1051,10 +1027,10 @@ START_TEST(test_phase_wraps_at_one)
 	// advance 1.5 periods
 	advance_oscillators(1.5);
 
-	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	double *phase = oscillator_phase_get(&g_world, osc);
 	ck_assert_ptr_nonnull(phase);
 	// phase should wrap to 0.5
-	ck_assert_float_eq_tol(*phase, 0.5f, 0.001f);
+	ck_assert_double_eq_tol(*phase, 0.5, 0.001);
 }
 END_TEST
 
@@ -1070,9 +1046,9 @@ START_TEST(test_oscillator_continues_forever)
 	}
 
 	// oscillator should still exist and function
-	float *phase = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	double *phase = oscillator_phase_get(&g_world, osc);
 	ck_assert_ptr_nonnull(phase);
-	ck_assert(*phase >= 0.0f && *phase < 1.0f);
+	ck_assert(*phase >= 0.0 && *phase < 1.0);
 }
 END_TEST
 
@@ -1086,14 +1062,14 @@ START_TEST(test_zero_period_skipped)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "zero_period", W_OSCILLATOR_TYPE(SINE), 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
-	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
-	float initial_phase = *phase_before;
+	double *phase_before = oscillator_phase_get(&g_world, osc);
+	double initial_phase = *phase_before;
 
 	advance_oscillators(1.0);
 
-	float *phase_after = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	double *phase_after = oscillator_phase_get(&g_world, osc);
 	// phase should not change with zero period
-	ck_assert_float_eq(*phase_after, initial_phase);
+	ck_assert_double_eq(*phase_after, initial_phase);
 }
 END_TEST
 
@@ -1102,14 +1078,14 @@ START_TEST(test_negative_period_skipped)
 	w_entity_id owner = w_ecs_request_entity(&g_world);
 	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "neg_period", W_OSCILLATOR_TYPE(SINE), -1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
 
-	float *phase_before = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
-	float initial_phase = *phase_before;
+	double *phase_before = oscillator_phase_get(&g_world, osc);
+	double initial_phase = *phase_before;
 
 	advance_oscillators(1.0);
 
-	float *phase_after = w_ecs_get_str(&g_world, float, W_OSCILLATOR_COMPONENT_PHASE, osc);
+	double *phase_after = oscillator_phase_get(&g_world, osc);
 	// phase should not change with negative period
-	ck_assert_float_eq(*phase_after, initial_phase);
+	ck_assert_double_eq(*phase_after, initial_phase);
 }
 END_TEST
 
@@ -1398,6 +1374,68 @@ END_TEST
 
 
 /*****************************
+*  oscillator create/system  *
+*****************************/
+
+START_TEST(test_oscillator_create_returns_valid_entity)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+
+	ck_assert(w_entity_is_valid(osc));
+}
+END_TEST
+
+START_TEST(test_oscillator_entity_has_value_component)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 5.0f, 0.0f, 0.0f);
+
+	// oscillator entity should have oscillator_value component initialized to offset
+	float *value = oscillator_value_get(&g_world, osc);
+	ck_assert_ptr_nonnull(value);
+	ck_assert_float_eq(*value, 5.0f);
+}
+END_TEST
+
+START_TEST(test_oscillator_system_updates_entity_value)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "test_osc", W_OSCILLATOR_TYPE(SINE), 1.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+
+	// advance to quarter phase where sine = 1.0
+	advance_oscillators(0.25);
+
+	// check oscillator entity value
+	float *osc_value = oscillator_value_get(&g_world, osc);
+	ck_assert_ptr_nonnull(osc_value);
+	ck_assert_float_eq_tol(*osc_value, 1.0f, 0.001f);
+
+	// check owner value matches
+	float owner_value = wm_utils_oscillator_get_value(&g_world, owner, "test_osc");
+	ck_assert_float_eq_tol(owner_value, 1.0f, 0.001f);
+}
+END_TEST
+
+START_TEST(test_oscillator_system_syncs_owner_and_entity)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id osc = wm_utils_oscillator_create(&g_world, owner, "sync_test", W_OSCILLATOR_TYPE(TRIANGLE), 1.0f, 2.0f, 1.0f, 0.0f, 0.0f);
+
+	// advance to quarter phase where triangle peaks
+	advance_oscillators(0.25);
+
+	float *osc_value = oscillator_value_get(&g_world, osc);
+	float owner_value = wm_utils_oscillator_get_value(&g_world, owner, "sync_test");
+
+	// both should have same value
+	ck_assert_ptr_nonnull(osc_value);
+	ck_assert_float_eq_tol(*osc_value, owner_value, 0.001f);
+}
+END_TEST
+
+
+/*****************************
 *  tag operations            *
 *****************************/
 
@@ -1503,10 +1541,10 @@ END_TEST
 
 START_TEST(test_lifecycle_destroy_tags_registered)
 {
-	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
-	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
-	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
-	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy));
+	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_frame));
+	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_fixed_frame));
+	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_phase));
 
 	ck_assert(w_ecs_is_valid_entity(destroy_tag));
 	ck_assert(w_ecs_is_valid_entity(eof_tag));
@@ -1518,8 +1556,8 @@ END_TEST
 START_TEST(test_lifecycle_destroy_end_of_frame_sets_tags)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
-	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
-	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy));
+	w_entity_id eof_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_frame));
 
 	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
 	ck_assert(!w_ecs_has_tag(&g_world, eof_tag, entity));
@@ -1534,8 +1572,8 @@ END_TEST
 START_TEST(test_lifecycle_destroy_end_of_fixed_frame_sets_tags)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
-	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
-	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy));
+	w_entity_id eoff_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_fixed_frame));
 
 	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
 	ck_assert(!w_ecs_has_tag(&g_world, eoff_tag, entity));
@@ -1550,8 +1588,8 @@ END_TEST
 START_TEST(test_lifecycle_destroy_end_of_phase_sets_tags)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
-	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_TAG);
-	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+	w_entity_id destroy_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy));
+	w_entity_id eop_tag = w_ecs_get_component_by_name(&g_world, w_ecs_component_name(req_destroy_end_of_phase));
 
 	ck_assert(!w_ecs_has_tag(&g_world, destroy_tag, entity));
 	ck_assert(!w_ecs_has_tag(&g_world, eop_tag, entity));
@@ -1566,8 +1604,7 @@ END_TEST
 // helper to rebuild query cache and call lifecycle hook
 static void call_lifecycle_hook_end_of_frame(void)
 {
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FRAME_TAG);
+	char *query_str = w_query(w_query_r(req_destroy), w_query_r(req_destroy_end_of_frame));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	destroy_end_of_frame_lifecycle_hook(&g_world, NULL);
@@ -1575,8 +1612,7 @@ static void call_lifecycle_hook_end_of_frame(void)
 
 static void call_lifecycle_hook_end_of_fixed_frame(void)
 {
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_FIXED_FRAME_TAG);
+	char *query_str = w_query(w_query_r(req_destroy), w_query_r(req_destroy_end_of_fixed_frame));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	destroy_end_of_fixed_frame_lifecycle_hook(&g_world, NULL);
@@ -1584,8 +1620,7 @@ static void call_lifecycle_hook_end_of_fixed_frame(void)
 
 static void call_lifecycle_hook_end_of_phase(void)
 {
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_DESTROY_TAG)
-	                  w_query_read(W_ENTITY_LIFECYCLE_DESTROY_END_OF_PHASE_TAG);
+	char *query_str = w_query(w_query_r(req_destroy), w_query_r(req_destroy_end_of_phase));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	destroy_end_of_phase_lifecycle_hook(&g_world, NULL);
@@ -1712,11 +1747,11 @@ START_TEST(test_disabled_tag_can_be_set)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+	ck_assert(!disabled_tag_exists(&g_world, entity));
 
 	w_entity_set_disabled(&g_world, entity);
 
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+	ck_assert(disabled_tag_exists(&g_world, entity));
 }
 END_TEST
 
@@ -1725,10 +1760,10 @@ START_TEST(test_disabled_tag_can_be_removed)
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 
 	w_entity_set_disabled(&g_world, entity);
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+	ck_assert(disabled_tag_exists(&g_world, entity));
 
 	w_entity_set_enabled(&g_world, entity);
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_DISABLED_TAG, entity));
+	ck_assert(!disabled_tag_exists(&g_world, entity));
 }
 END_TEST
 
@@ -1743,7 +1778,7 @@ START_TEST(test_disabled_entity_excluded_from_query)
 	w_entity_set_disabled(&g_world, e1);
 
 	// rebuild cache before query
-	char *query_str = w_query_read("test_comp") w_query_not(W_ENTITY_LIFECYCLE_DISABLED_TAG);
+	char *query_str = w_query_read("test_comp") w_query_not("disabled");
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 
@@ -1790,7 +1825,7 @@ START_TEST(test_created_this_frame_tag_set_on_create)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+	ck_assert(created_this_frame_tag_exists(&g_world, entity));
 }
 END_TEST
 
@@ -1798,15 +1833,15 @@ START_TEST(test_created_this_frame_tag_cleared_by_hook)
 {
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+	ck_assert(created_this_frame_tag_exists(&g_world, entity));
 
 	// rebuild query cache and call cleanup hook
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG);
+	char *query_str = w_query(w_query_r(created_this_frame));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	cleanup_created_this_frame_tag_lifecycle_hook(&g_world, NULL);
 
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, entity));
+	ck_assert(!created_this_frame_tag_exists(&g_world, entity));
 }
 END_TEST
 
@@ -1816,18 +1851,18 @@ START_TEST(test_created_this_frame_multiple_entities)
 	w_entity_id e2 = w_ecs_request_entity(&g_world);
 	w_entity_id e3 = w_ecs_request_entity(&g_world);
 
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e1));
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e2));
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e3));
+	ck_assert(created_this_frame_tag_exists(&g_world, e1));
+	ck_assert(created_this_frame_tag_exists(&g_world, e2));
+	ck_assert(created_this_frame_tag_exists(&g_world, e3));
 
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG);
+	char *query_str = w_query(w_query_r(created_this_frame));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	cleanup_created_this_frame_tag_lifecycle_hook(&g_world, NULL);
 
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e1));
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e2));
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_CREATED_THIS_FRAME_TAG, e3));
+	ck_assert(!created_this_frame_tag_exists(&g_world, e1));
+	ck_assert(!created_this_frame_tag_exists(&g_world, e2));
+	ck_assert(!created_this_frame_tag_exists(&g_world, e3));
 }
 END_TEST
 
@@ -1839,7 +1874,7 @@ END_TEST
 // helper to call lifetime expired hook
 static void call_lifetime_expired_hook(void)
 {
-	char *query_str = w_query_read(W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG);
+	char *query_str = w_query(w_query_r(entity_lifetime_timer_finished));
 	struct w_query *q = w_ecs_get_query(&g_world, query_str);
 	w_query_rebuild_cache(&g_world.queries, q);
 	destroy_lifetime_expired_lifecycle_hook(&g_world, NULL);
@@ -1852,9 +1887,7 @@ START_TEST(test_lifetime_creates_timer)
 	w_entity_set_lifetime(&g_world, entity, 1.0);
 
 	// entity should have timer reference component
-	char timer_entity_name[128];
-	snprintf(timer_entity_name, sizeof(timer_entity_name), "%s" W_TIMER_COMPONENT_TIMER_ENTITY, W_ENTITY_LIFECYCLE_LIFETIME_TIMER_NAME);
-	ck_assert(w_ecs_has_str(&g_world, timer_entity_name, entity));
+	ck_assert(timer_entity_exists_generic(&g_world, entity, "entity_lifetime"));
 }
 END_TEST
 
@@ -1868,7 +1901,7 @@ START_TEST(test_lifetime_timer_finishes_sets_tag)
 	advance_time(0.6);
 
 	// finished tag should be set
-	ck_assert(w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG, entity));
+	ck_assert(entity_lifetime_timer_finished_tag_exists(&g_world, entity));
 }
 END_TEST
 
@@ -1900,7 +1933,7 @@ START_TEST(test_lifetime_not_expired_entity_survives)
 	// advance time but not past lifetime
 	advance_time(0.5);
 
-	ck_assert(!w_ecs_has_tag_str(&g_world, W_ENTITY_LIFECYCLE_LIFETIME_FINISHED_TAG, entity));
+	ck_assert(!entity_lifetime_timer_finished_tag_exists(&g_world, entity));
 
 	call_lifetime_expired_hook();
 
@@ -1980,6 +2013,237 @@ START_TEST(test_entity_create_hook_existing_named_entity_no_fire)
 
 	ck_assert(first == second);
 	ck_assert_int_eq(g_create_hook_call_count, count_before);
+}
+END_TEST
+
+
+/*****************************
+*  random system tests       *
+*****************************/
+
+// random system query string
+#define RANDOM_QUERY_STRING \
+	w_query_write("random_state") \
+	w_query_write("random_increment") \
+	w_query_write("random_output_long") \
+	w_query_write("random_output_double") \
+	w_query_read("random_range_min") \
+	w_query_read("random_range_max") \
+	w_query_read("random_owner_entity") \
+	w_query_read("random_output_long_comp_id") \
+	w_query_read("random_output_double_comp_id")
+
+// process a single random entity
+static void process_random_entity(w_entity_id entity)
+{
+	uint64_t *state = random_state_get(&g_world, entity);
+	uint64_t *increment = random_increment_get(&g_world, entity);
+	int64_t *range_min = random_range_min_get(&g_world, entity);
+	int64_t *range_max = random_range_max_get(&g_world, entity);
+	int64_t *output_long = random_output_long_get(&g_world, entity);
+	double *output_double = random_output_double_get(&g_world, entity);
+
+	if (!state || !increment || !range_min || !range_max || !output_long || !output_double) return;
+
+	// auto-init if state == 0
+	if (*state == 0) {
+		uint64_t seed = (uint64_t)entity ^ w_time_precise();
+		uint64_t stream = (uint64_t)entity;
+		w_pcg_init(state, increment, seed, stream);
+	}
+
+	// generate new values
+	*output_long = w_pcg_next_int64(state, *increment, *range_min, *range_max);
+	*output_double = w_pcg_next_double(state, *increment);
+}
+
+// run random update system manually
+static void run_random_system(void)
+{
+	struct w_query *q = w_ecs_get_query(&g_world, RANDOM_QUERY_STRING);
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	// iterate dense slices
+	for (size_t i = 0; i < q->archetype_slices_dense_length; ++i)
+	{
+		struct w_query_archetype_slice slice = q->archetype_slices_dense[i];
+		for (size_t s = 0; s < slice.slice_length; ++s)
+		{
+			process_random_entity(slice.start_id + s);
+		}
+	}
+
+	// iterate sparse slices
+	for (size_t i = 0; i < q->archetype_slices_sparse_length; ++i)
+	{
+		struct w_query_archetype_slice slice = q->archetype_slices_sparse[i];
+		for (size_t s = 0; s < slice.slice_length; ++s)
+		{
+			process_random_entity(slice.start_id + s);
+		}
+	}
+}
+
+
+START_TEST(test_random_create_returns_valid_entity)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 0, 100);
+
+	ck_assert(w_entity_is_valid(random));
+}
+END_TEST
+
+START_TEST(test_random_entity_has_components)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 10, 50);
+
+	// verify random entity has all required components
+	ck_assert(random_state_get(&g_world, random) != NULL);
+	ck_assert(random_increment_get(&g_world, random) != NULL);
+	ck_assert(random_range_min_get(&g_world, random) != NULL);
+	ck_assert(random_range_max_get(&g_world, random) != NULL);
+	ck_assert(random_output_long_get(&g_world, random) != NULL);
+	ck_assert(random_output_double_get(&g_world, random) != NULL);
+	ck_assert(random_owner_entity_get(&g_world, random) != NULL);
+
+	// verify range values set correctly
+	ck_assert_int_eq(*random_range_min_get(&g_world, random), 10);
+	ck_assert_int_eq(*random_range_max_get(&g_world, random), 50);
+}
+END_TEST
+
+START_TEST(test_random_owner_reference_set)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 0, 100);
+
+	// verify owner entity reference
+	w_entity_id *stored_owner = random_owner_entity_get(&g_world, random);
+	ck_assert(stored_owner != NULL);
+	ck_assert_int_eq(*stored_owner, owner);
+}
+END_TEST
+
+START_TEST(test_random_system_generates_long_value)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 0, 1000);
+
+	// run random system to generate values
+	run_random_system();
+
+	// get value directly from random entity
+	int64_t *value = random_output_long_get(&g_world, random);
+	ck_assert(value != NULL);
+
+	// value should be in range [0, 1000]
+	ck_assert_int_ge(*value, 0);
+	ck_assert_int_le(*value, 1000);
+}
+END_TEST
+
+START_TEST(test_random_system_generates_double_value)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 0, 100);
+
+	// run random system
+	run_random_system();
+
+	// get double value directly from random entity
+	double *value = random_output_double_get(&g_world, random);
+	ck_assert(value != NULL);
+
+	// double should be in range [0.0, 1.0)
+	ck_assert(*value >= 0.0);
+	ck_assert(*value < 1.0);
+}
+END_TEST
+
+START_TEST(test_random_values_change_on_each_update)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 0, 1000000);
+
+	// run system and get first values
+	run_random_system();
+	int64_t long1 = *random_output_long_get(&g_world, random);
+	double double1 = *random_output_double_get(&g_world, random);
+
+	// run system again
+	run_random_system();
+	int64_t long2 = *random_output_long_get(&g_world, random);
+	double double2 = *random_output_double_get(&g_world, random);
+
+	// values should change (statistically very unlikely to be same with large range)
+	ck_assert_int_ne(long1, long2);
+	ck_assert(double1 != double2);
+}
+END_TEST
+
+START_TEST(test_random_multiple_generators_independent)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id rng_a = wm_utils_random_create(&g_world, owner, "rng_a", 0, 1000000);
+	w_entity_id rng_b = wm_utils_random_create(&g_world, owner, "rng_b", 0, 1000000);
+
+	// run system multiple times and collect values
+	run_random_system();
+	int64_t a1 = *random_output_long_get(&g_world, rng_a);
+	int64_t b1 = *random_output_long_get(&g_world, rng_b);
+
+	run_random_system();
+	int64_t a2 = *random_output_long_get(&g_world, rng_a);
+	int64_t b2 = *random_output_long_get(&g_world, rng_b);
+
+	// each generator should produce different sequences
+	// (values should change independently)
+	ck_assert_int_ne(a1, a2);
+	ck_assert_int_ne(b1, b2);
+}
+END_TEST
+
+START_TEST(test_random_respects_range_bounds)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 50, 60);
+
+	// run system many times and verify range
+	for (int i = 0; i < 100; ++i) {
+		run_random_system();
+		int64_t value = *random_output_long_get(&g_world, random);
+		ck_assert_int_ge(value, 50);
+		ck_assert_int_le(value, 60);
+	}
+}
+END_TEST
+
+START_TEST(test_random_negative_range)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", -100, -50);
+
+	run_random_system();
+	int64_t value = *random_output_long_get(&g_world, random);
+
+	ck_assert_int_ge(value, -100);
+	ck_assert_int_le(value, -50);
+}
+END_TEST
+
+START_TEST(test_random_get_returns_zero_before_update)
+{
+	w_entity_id owner = w_ecs_request_entity(&g_world);
+	w_entity_id random = wm_utils_random_create(&g_world, owner, "test_rng", 100, 200);
+
+	// before running system, values should be initialized to 0
+	int64_t long_val = *random_output_long_get(&g_world, random);
+	double double_val = *random_output_double_get(&g_world, random);
+
+	ck_assert_int_eq(long_val, 0);
+	ck_assert(double_val == 0.0);
 }
 END_TEST
 
@@ -2168,6 +2432,15 @@ Suite *utilities_suite(void)
 	tcase_add_test(tc_exp, test_fixed_exponential_curve_shape);
 	suite_add_tcase(s, tc_exp);
 
+	TCase *tc_osc_system = tcase_create("oscillator_create_system");
+	tcase_add_checked_fixture(tc_osc_system, oscillator_setup, oscillator_teardown);
+	tcase_set_timeout(tc_osc_system, 10);
+	tcase_add_test(tc_osc_system, test_oscillator_create_returns_valid_entity);
+	tcase_add_test(tc_osc_system, test_oscillator_entity_has_value_component);
+	tcase_add_test(tc_osc_system, test_oscillator_system_updates_entity_value);
+	tcase_add_test(tc_osc_system, test_oscillator_system_syncs_owner_and_entity);
+	suite_add_tcase(s, tc_osc_system);
+
 	// tag operation tests
 	TCase *tc_tags = tcase_create("tag_operations");
 	tcase_add_checked_fixture(tc_tags, timer_setup, timer_teardown);
@@ -2235,6 +2508,22 @@ Suite *utilities_suite(void)
 	tcase_add_test(tc_create_hook, test_entity_create_hook_named_entity);
 	tcase_add_test(tc_create_hook, test_entity_create_hook_existing_named_entity_no_fire);
 	suite_add_tcase(s, tc_create_hook);
+
+	// random system tests
+	TCase *tc_random = tcase_create("random_system");
+	tcase_add_checked_fixture(tc_random, timer_setup, timer_teardown);
+	tcase_set_timeout(tc_random, 10);
+	tcase_add_test(tc_random, test_random_create_returns_valid_entity);
+	tcase_add_test(tc_random, test_random_entity_has_components);
+	tcase_add_test(tc_random, test_random_owner_reference_set);
+	tcase_add_test(tc_random, test_random_system_generates_long_value);
+	tcase_add_test(tc_random, test_random_system_generates_double_value);
+	tcase_add_test(tc_random, test_random_values_change_on_each_update);
+	tcase_add_test(tc_random, test_random_multiple_generators_independent);
+	tcase_add_test(tc_random, test_random_respects_range_bounds);
+	tcase_add_test(tc_random, test_random_negative_range);
+	tcase_add_test(tc_random, test_random_get_returns_zero_before_update);
+	suite_add_tcase(s, tc_random);
 
 	return s;
 }

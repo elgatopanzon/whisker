@@ -56,53 +56,49 @@ struct wm_events_state *wm_events_get_state(struct w_ecs_world *world);
  *  macros                   *
  *****************************/
 
+#define w_ecs_define_event(name) \
+	w_ecs_define_component_typedef(bool, name, ); \
+	w_ecs_define_tag_impl_(name) \
+
 // fire an event: creates entity, sets component 'name', marks for destroy_end_of_frame
 // returns: w_entity_id of the event entity
 #define w_event_fire(w, name) \
 ({ \
+	(void)sizeof(name); \
 	w_entity_id _e = w_ecs_request_entity(w); \
-	w_ecs_set_tag_str(w, name, _e); \
+	name##_set_tag_state(w, _e, true); \
 	w_entity_destroy_end_of_frame(w, _e); \
 	_e; \
 })
 
 // set data component on event entity with combined name (name_data_name)
-#define w_event_set_data(w, e, name, type, data_name, data) \
+#define w_event_set_data(w, e, name, data_name, data) \
 do { \
-	char _comp_name[256]; \
-	snprintf(_comp_name, sizeof(_comp_name), "%s_%s", name, data_name); \
-	w_ecs_set_str(w, type, _comp_name, e, data); \
+	(void)sizeof(name); \
+	(void)sizeof(data_name); \
+	data_name##_set_generic(w, e, name##_name_, &data); \
 } while(0)
 
 // fire event on existing entity: sets component 'name', queues for cleanup at end of frame
 #define w_event_fire_on(w, e, name) \
 do { \
-	w_entity_id _comp_id = w_ecs_get_component_by_name(w, name); \
-	w_ecs_set_tag(w, _comp_id, e); \
+	(void)sizeof(name); \
+	name##_set_tag_state(w, e, true); \
 	struct wm_events_state *_state = wm_events_get_state(w); \
 	w_array_ensure_alloc_block_size(_state->removal_buffer, _state->removal_buffer_length + 1, WM_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE); \
-	_state->removal_buffer[_state->removal_buffer_length++] = (w_pack32x2){ .left = (e), .right = (_comp_id) }; \
-} while(0)
-
-// fire event on existing named entity: looks up entity, sets component, queues for cleanup
-#define w_event_fire_on_str(w, entity_name, name) \
-do { \
-	w_entity_id _e = w_ecs_get_entity_by_name(w, entity_name); \
-	if (w_ecs_is_valid_entity(_e)) { \
-		w_event_fire_on(w, _e, name); \
-	} \
+	_state->removal_buffer[_state->removal_buffer_length++] = (w_pack32x2){ .left = (e), .right = (name##_component_id_) }; \
 } while(0)
 
 // set data on event fired on existing entity (queues data component for cleanup too)
-#define w_event_set_data_on(w, e, name, type, data_name, data) \
+#define w_event_set_data_on(w, e, name, data_name, data) \
 do { \
-	char _comp_name[256]; \
-	snprintf(_comp_name, sizeof(_comp_name), "%s_%s", name, data_name); \
-	w_entity_id _comp_id = w_ecs_get_component_by_name(w, _comp_name); \
-	w_ecs_set_str(w, type, _comp_name, e, data); \
+	(void)sizeof(name); \
+	(void)sizeof(data_name); \
+	data_name##_set_generic(w, e, name##_name_, &data); \
+	w_entity_id _evt_data_comp_id = data_name##_get_generic_id(w, name##_name_); \
 	struct wm_events_state *_state = wm_events_get_state(w); \
 	w_array_ensure_alloc_block_size(_state->removal_buffer, _state->removal_buffer_length + 1, WM_EVENTS_REMOVAL_BUFFER_BLOCK_SIZE); \
-	_state->removal_buffer[_state->removal_buffer_length++] = (w_pack32x2){ .left = (e), .right = (_comp_id) }; \
+	_state->removal_buffer[_state->removal_buffer_length++] = (w_pack32x2){ .left = (e), .right = (_evt_data_comp_id) }; \
 } while(0)
 
 

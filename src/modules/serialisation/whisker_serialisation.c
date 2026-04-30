@@ -129,7 +129,7 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 
 	// look up the exclude tag after building entity/component lists to avoid
 	// adding the tag entity itself to the lists
-	w_entity_id exclude_tag = w_ecs_get_component_by_name(world, WM_SERIALISATION_NO_SERIALISE_TAG_NAME);
+	w_entity_id exclude_tag = w_id(wm_serialisation_exclude);
 
 	// pre-compute array of entity IDs tagged with exclude
 	size_t excl_block_size = 64 * sizeof(w_entity_id);
@@ -213,7 +213,7 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 	comp_ctx.ctx = ctx;
 
 	// look up the serialise-as-id tag component once
-	w_entity_id as_id_tag = w_ecs_get_component_by_name(world, WM_SERIALISATION_SERIALISE_AS_ID_TAG_NAME);
+	w_entity_id as_id_tag = w_ecs_get_component_by_name(world, w_ecs_component_name(wm_serialisation_as_id));
 
 	// loop over component IDs, fetch entry, execute hooks
 	for (size_t ci = 0; ci < ctx->components_length; ++ci)

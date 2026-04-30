@@ -37,19 +37,19 @@ typedef enum w_waveform_type {
 #define W_WAVEFORM(x) W_WAVEFORM_##x
 
 // compute effective phase with phase shift, normalized to [0..1)
-static inline float w_oscillator_effective_phase(float phase, float phase_shift) {
-	float effective = fmodf(phase + phase_shift, 1.0f);
-	if (effective < 0.0f) effective += 1.0f;
-	return effective;
+static inline float w_oscillator_effective_phase(double phase, float phase_shift) {
+	double effective = fmod(phase + (double)phase_shift, 1.0);
+	if (effective < 0.0) effective += 1.0;
+	return (float)effective;
 }
 
 // update phase by delta_time / period, returns new phase normalized to [0..1)
 // phase is updated in place
-static inline void w_oscillator_update_phase(float *phase, float delta_time, float period) {
+static inline void w_oscillator_update_phase(double *phase, float delta_time, float period) {
 	if (period <= 0.0f) return;
-	*phase += delta_time / period;
-	*phase = fmodf(*phase, 1.0f);
-	if (*phase < 0.0f) *phase += 1.0f;
+	*phase += (double)delta_time / (double)period;
+	*phase = fmod(*phase, 1.0);
+	if (*phase < 0.0) *phase += 1.0;
 }
 
 // sine waveform: smooth periodic oscillation

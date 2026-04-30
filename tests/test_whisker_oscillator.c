@@ -17,35 +17,35 @@
 
 START_TEST(test_phase_update_advances)
 {
-	float phase = 0.0f;
+	double phase = 0.0;
 	w_oscillator_update_phase(&phase, 0.5f, 1.0f);
-	ck_assert_float_eq_tol(phase, 0.5f, 0.0001f);
+	ck_assert_double_eq_tol(phase, 0.5, 0.0001);
 }
 END_TEST
 
 START_TEST(test_phase_update_wraps)
 {
-	float phase = 0.9f;
+	double phase = 0.9;
 	w_oscillator_update_phase(&phase, 0.2f, 1.0f);
-	ck_assert_float_eq_tol(phase, 0.1f, 0.0001f);
+	ck_assert_double_eq_tol(phase, 0.1, 0.0001);
 }
 END_TEST
 
 START_TEST(test_phase_update_zero_period)
 {
-	float phase = 0.5f;
+	double phase = 0.5;
 	w_oscillator_update_phase(&phase, 0.1f, 0.0f);
 	// should not change with zero period
-	ck_assert_float_eq_tol(phase, 0.5f, 0.0001f);
+	ck_assert_double_eq_tol(phase, 0.5, 0.0001);
 }
 END_TEST
 
 START_TEST(test_phase_update_negative_period)
 {
-	float phase = 0.5f;
+	double phase = 0.5;
 	w_oscillator_update_phase(&phase, 0.1f, -1.0f);
 	// should not change with negative period
-	ck_assert_float_eq_tol(phase, 0.5f, 0.0001f);
+	ck_assert_double_eq_tol(phase, 0.5, 0.0001);
 }
 END_TEST
 
