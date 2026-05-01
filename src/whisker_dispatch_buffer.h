@@ -1,0 +1,58 @@
+/**
+ * @author      : ElGatoPanzon (contact@elgatopanzon.io)
+ * @file        : whisker_dispatch_buffer
+ * @created     : Friday May 01, 2026 00:27:23 CST
+ * @description : type-id based dispatch buffer for deferred processing
+ */
+
+#include "whisker_std.h"
+#include "whisker_array.h"
+
+#ifndef WHISKER_DISPATCH_BUFFER_H
+#define WHISKER_DISPATCH_BUFFER_H
+
+#ifndef W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE
+#define W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE 16384
+#endif /* ifndef W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE */
+
+// struct for each buffered dispatch entry
+struct w_dispatch_entry
+{
+	int type_id;
+	size_t payload_offset;
+	size_t payload_size;
+};
+
+struct w_dispatch_buffer
+{
+	w_array_declare(struct w_dispatch_entry, entries);
+	w_array_declare(uint8_t, payload_data);
+	size_t read_index; // current read position for pop
+};
+
+// init dispatch buffer
+void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer);
+// free dispatch buffer entries and payload data
+void w_dispatch_buffer_free(struct w_dispatch_buffer *buffer);
+
+// push a dispatch entry to the buffer
+void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, void *payload, size_t payload_size);
+
+// pop next entry from buffer, returns NULL if empty
+// payload pointer set to payload data location
+struct w_dispatch_entry* w_dispatch_buffer_pop(struct w_dispatch_buffer *buffer, void **payload);
+
+// peek at entry by index without advancing read position
+// returns NULL if index out of range
+struct w_dispatch_entry* w_dispatch_buffer_peek(struct w_dispatch_buffer *buffer, size_t index, void **payload);
+
+// check if buffer has entries to read
+bool w_dispatch_buffer_has_entries(struct w_dispatch_buffer *buffer);
+
+// get count of unread entries
+size_t w_dispatch_buffer_count(struct w_dispatch_buffer *buffer);
+
+// clear all entries and reset buffer
+void w_dispatch_buffer_clear(struct w_dispatch_buffer *buffer);
+
+#endif /* WHISKER_DISPATCH_BUFFER_H */
