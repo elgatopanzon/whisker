@@ -127,12 +127,12 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	camera_state->camera_entity_id = W_ENTITY_INVALID;
 
 	camera_state->camera_position = ((w_vec3){ -6.0f, 0.0f, 0.0f });
-    camera_state->camera_target = ((w_vec3){ 0.0f, 0.0f, 0.0f });
-    camera_state->camera_up = ((w_vec3){ 0.0f, 1.0f, 0.0f });
-    camera_state->camera_fov_deg = 45.0f;
-    camera_state->camera_near_clip = 0.01f;
-    camera_state->camera_far_clip = 1000.0f;
-    camera_state->camera_projection = W_RENDERING_CAMERA_PROJECTION_PERSPECTIVE;
+    camera_state->camera_target = camera_target_default();
+    camera_state->camera_up = camera_up_default();
+    camera_state->camera_fov_deg = camera_fov_deg_default();
+    camera_state->camera_near_clip = camera_near_clip_default();
+    camera_state->camera_far_clip = camera_far_clip_default();
+    camera_state->camera_projection = camera_projection_default();
 
 	w_ecs_set_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID, camera_state);
 

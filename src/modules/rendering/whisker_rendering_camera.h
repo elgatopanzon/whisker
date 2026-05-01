@@ -50,20 +50,20 @@ struct w_rendering_camera_state
 // the global camera state points to the camera entity to use
 
 // FOV Y in degrees
-#define W_RENDERING_CAMERA_COMPONENT_FOV "camera_fov_deg"
+w_ecs_define_component(float, camera_fov_deg, 45.0f);
 
 // up vector
-#define W_RENDERING_CAMERA_COMPONENT_UP "camera_up"
+w_ecs_define_component(w_vec3, camera_up, 0.0f, 1.0f, 0.0f);
 
 // target vector
-#define W_RENDERING_CAMERA_COMPONENT_TARGET "camera_target"
+w_ecs_define_component(w_vec3, camera_target, 0.0f, 1.0f, 0.0f);
 
 // near and far planes e.g. 0.1 / 1000
-#define W_RENDERING_CAMERA_COMPONENT_NEAR_CLIP "camera_near_clip"
-#define W_RENDERING_CAMERA_COMPONENT_FAR_CLIP "camera_far_clip"
+w_ecs_define_component(float, camera_near_clip, 0.01f);
+w_ecs_define_component(float, camera_far_clip, 1000.0f);
 
 // projection type 0 = perspective 1 = orthographic
-#define W_RENDERING_CAMERA_COMPONENT_PROJECTION "camera_projection"
+w_ecs_define_component(int, camera_projection, W_RENDERING_CAMERA_PROJECTION_PERSPECTIVE);
 
 
 /********************
@@ -72,7 +72,7 @@ struct w_rendering_camera_state
 // tag to mark an entity as a valid camera
 // entities must have this tag to be eligible as active camera
 
-#define W_RENDERING_CAMERA_TAG "camera_t"
+w_ecs_define_tag(camera);
 
 
 /*************************
@@ -81,7 +81,7 @@ struct w_rendering_camera_state
 // request tags to change active camera
 // the tags are added to the camera entities and processed
 
-#define W_RENDERING_CAMERA_REQUEST_ACTIVATE_CAMERA "request_active_camera_t"
+w_ecs_define_tag(req_active_camera);
 
 #endif /* WHISKER_RENDERING_CAMERA_H */
 

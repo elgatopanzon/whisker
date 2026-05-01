@@ -226,6 +226,9 @@ w_entity_id w_ecs_get_entity_by_name(struct w_ecs_world *world, char *name);
 
 #define w_ecs_define_component_impl_(type, name, ...) \
 	w_ecs_declare_shared_component_functions(type, name); \
+	__attribute__((unused)) static inline name name##_default() { \
+    	return (type){__VA_ARGS__}; \
+	} \
 	__attribute__((unused)) static inline void name##_set_default(struct w_ecs_world *world, w_entity_id entity) { \
 		W_ECS_SET_COMP_ID_CACHE(name); \
     	w_ecs_set_component_(world, W_COMPONENT_TYPE_##type, name##_component_id_, entity, (type*)&(type){__VA_ARGS__}, sizeof(type)); \
