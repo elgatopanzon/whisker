@@ -115,6 +115,7 @@ struct w_ecs_world
 	// general memory
 	struct w_arena *arena;
 	struct w_string_table *string_table;
+	struct w_arena frame_arena; // per-frame managed arena
 
 	// core ECS data
 	struct w_entity_registry entities;
@@ -159,6 +160,26 @@ void w_ecs_world_free(struct w_ecs_world *world);
 
 // update the world with 1 tick
 enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world);
+
+// allocate using the frame arena
+#define w_ecs_frame_malloc(world, size) \
+	w_arena_malloc(world->frame_arena, size)
+
+#define w_ecs_frame_copy(world, data, size) \
+	({ \
+		void *alloc = w_arena_malloc(&world->frame_arena, size); \
+		memcpy(alloc, data, size); \
+		alloc; \
+	})
+
+#define w_ecs_frame_copy_str(world, str) \
+	({ \
+		size_t len = strlen(str); \
+	 	char *alloc = w_ecs_frame_copy(world, str, len + 1); \
+	 	alloc[len] = '\0'; \
+	 	alloc; \
+	})
+
 
 /****************
 *  entity API  *

@@ -13,6 +13,8 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 	world->arena = arena;
 	world->string_table = string_table;
 
+	w_arena_init(&world->frame_arena, 4096);
+
 	w_entity_registry_init(&world->entities, string_table);
 	w_component_registry_init(&world->components, arena, &world->entities);
 	w_system_registry_init(&world->systems, arena);
@@ -43,6 +45,7 @@ void w_ecs_world_init(struct w_ecs_world *world, struct w_string_table *string_t
 
 void w_ecs_world_free(struct w_ecs_world *world)
 {
+	w_arena_free(&world->frame_arena);
 	w_entity_registry_free(&world->entities);
 	w_component_registry_free(&world->components);
 	w_system_registry_free(&world->systems);
@@ -230,6 +233,9 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world)
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_RESTART, world, NULL);
 	else if (world->update_result == W_WORLD_UPDATE_RESULT_SHUTDOWN)
 		w_hook_registry_run_hooks(&world->hooks[W_WORLD_HOOK_TYPE_UPDATE], W_WORLD_HOOK_SHUTDOWN, world, NULL);
+
+	// reset frame_arena
+	w_arena_clear(&world->frame_arena);
 
 	return world->update_result;
 }
