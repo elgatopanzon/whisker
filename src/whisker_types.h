@@ -74,6 +74,37 @@ typedef struct
 DEFINE_VEC4_STRUCT(w_color, float, r, g, b, a);
 DEFINE_VEC4_STRUCT(w_color8, uint8_t, r, g, b, a);
 
+// macros for w_color8 (0-255)
+#define W_COLOR8_RED        ((w_color8){255, 0, 0, 255})
+#define W_COLOR8_GREEN      ((w_color8){0, 255, 0, 255})
+#define W_COLOR8_BLUE       ((w_color8){0, 0, 255, 255})
+#define W_COLOR8_YELLOW     ((w_color8){255, 255, 0, 255})
+#define W_COLOR8_CYAN       ((w_color8){0, 255, 255, 255})
+#define W_COLOR8_MAGENTA    ((w_color8){255, 0, 255, 255})
+#define W_COLOR8_WHITE      ((w_color8){255, 255, 255, 255})
+#define W_COLOR8_BLACK      ((w_color8){0, 0, 0, 255})
+#define W_COLOR8_GRAY       ((w_color8){128, 128, 128, 255})
+#define W_COLOR8_ORANGE     ((w_color8){255, 165, 0, 255})
+#define W_COLOR8_PURPLE     ((w_color8){128, 0, 128, 255})
+#define W_COLOR8_BROWN      ((w_color8){165, 42, 42, 255})
+#define W_COLOR8_PINK       ((w_color8){255, 192, 203, 255})
+#define W_COLOR8_TRANSPARENT ((w_color8){0, 0, 0, 0})
+
+// macros for w_color (float 0.0-1.0)
+#define W_COLOR_RED        ((w_color){1.0f, 0.0f, 0.0f, 1.0f})
+#define W_COLOR_GREEN      ((w_color){0.0f, 1.0f, 0.0f, 1.0f})
+#define W_COLOR_BLUE       ((w_color){0.0f, 0.0f, 1.0f, 1.0f})
+#define W_COLOR_YELLOW     ((w_color){1.0f, 1.0f, 0.0f, 1.0f})
+#define W_COLOR_CYAN       ((w_color){0.0f, 1.0f, 1.0f, 1.0f})
+#define W_COLOR_MAGENTA    ((w_color){1.0f, 0.0f, 1.0f, 1.0f})
+#define W_COLOR_WHITE      ((w_color){1.0f, 1.0f, 1.0f, 1.0f})
+#define W_COLOR_BLACK      ((w_color){0.0f, 0.0f, 0.0f, 1.0f})
+#define W_COLOR_GRAY       ((w_color){0.502f, 0.502f, 0.502f, 1.0f})
+#define W_COLOR_ORANGE     ((w_color){1.0f, 0.647f, 0.0f, 1.0f})
+#define W_COLOR_PURPLE     ((w_color){0.502f, 0.0f, 0.502f, 1.0f})
+#define W_COLOR_BROWN      ((w_color){0.647f, 0.165f, 0.165f, 1.0f})
+#define W_COLOR_PINK       ((w_color){1.0f, 0.753f, 0.796f, 1.0f})
+#define W_COLOR_TRANSPARENT ((w_color){0.0f, 0.0f, 0.0f, 0.0f})
 
 /**************
 *  geometry  *
