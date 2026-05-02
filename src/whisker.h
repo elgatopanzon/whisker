@@ -32,6 +32,7 @@
 
 // ecs core tools
 #include "whisker_command_buffer.h"
+#include "whisker_dispatch_buffer.h"
 #include "whisker_hook_registry.h"
 #include "whisker_scheduler.h"
 
