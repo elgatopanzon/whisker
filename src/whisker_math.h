@@ -11,8 +11,11 @@
 #ifndef WHISKER_MATH_H
 #define WHISKER_MATH_H
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
+#ifndef W_PI
+#define W_PI 3.14159265358979323846
+#endif
+#ifndef W_DEG2RAD
+#define W_DEG2RAD (W_PI / 180.0f)
 #endif
 
 /************
