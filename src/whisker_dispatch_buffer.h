@@ -30,6 +30,9 @@ struct w_dispatch_buffer
 	size_t read_index; // current read position for pop
 };
 
+#define w_dispatch_buffer_push_value(buf, cmd, payload_type, ...) \
+	((void)sizeof(cmd), (void)sizeof(payload_type), w_dispatch_buffer_push(buf, cmd, &((payload_type){__VA_ARGS__}), sizeof(payload_type)));
+
 // init dispatch buffer
 void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer);
 // free dispatch buffer entries and payload data
