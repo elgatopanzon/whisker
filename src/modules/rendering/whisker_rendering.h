@@ -16,13 +16,16 @@
 /* index 0: display configuration */
 /* index 1: render configuration */
 /* index 2: render state */
-#define WM_RENDERING_DISPLAY_CONFIG_RESOURCE_ID WM_MODULE_RESOURCE_ID(RENDERING, 0)
-#define WM_RENDERING_RENDER_CONFIG_RESOURCE_ID  WM_MODULE_RESOURCE_ID(RENDERING, 1)
-#define WM_RENDERING_RENDER_STATE_RESOURCE_ID   WM_MODULE_RESOURCE_ID(RENDERING, 2)
+/* index 3: render dispatch buffer */
+#define WM_RENDERING_DISPLAY_CONFIG_RESOURCE_ID    WM_MODULE_RESOURCE_ID(RENDERING, 0)
+#define WM_RENDERING_RENDER_CONFIG_RESOURCE_ID     WM_MODULE_RESOURCE_ID(RENDERING, 1)
+#define WM_RENDERING_RENDER_STATE_RESOURCE_ID      WM_MODULE_RESOURCE_ID(RENDERING, 2)
+#define WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID   WM_MODULE_RESOURCE_ID(RENDERING, 3)
 
 #define w_rendering_get_display_config(w) w_ecs_get_module_resource(w, WM_RENDERING_DISPLAY_CONFIG_RESOURCE_ID)
 #define w_rendering_get_render_config(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_CONFIG_RESOURCE_ID)
 #define w_rendering_get_render_state(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_STATE_RESOURCE_ID)
+#define w_rendering_get_render_dispatch_buffer(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID)
 
 struct w_rendering_display_config 
 {

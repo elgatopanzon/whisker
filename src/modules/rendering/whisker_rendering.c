@@ -7,8 +7,12 @@
 
 #include "whisker_rendering.h"
 
-#include "whisker_rendering_camera_systems.h"
+#include "whisker_rendering_core_systems.h"
+#include "whisker_rendering_window_systems.h"
+#include "whisker_rendering_framebuffer_systems.h"
 #include "whisker_rendering_scaling_systems.h"
+#include "whisker_rendering_draw_systems.h"
+#include "whisker_rendering_camera_systems.h"
 
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {
@@ -19,6 +23,11 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	// init a render state resource
 	struct w_rendering_render_state *render_state = w_mem_xcalloc_t(1, struct w_rendering_render_state);
 	w_ecs_set_module_resource(world, WM_RENDERING_RENDER_STATE_RESOURCE_ID, render_state);
+
+	// init the render dispatch buffer
+	struct w_dispatch_buffer *render_buffer = w_mem_xcalloc_t(1, *render_buffer);
+	w_dispatch_buffer_init(render_buffer);
+	w_ecs_set_module_resource(world, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID, render_buffer);
 
 	// register custom rendering phases
 	struct w_scheduler_phase phase_pre_scale = {.enabled = true, .time_step_id = WM_TIMESTEP_DEFAULT_RENDER, .name = "RENDER_PRE_SCALE"};
@@ -110,16 +119,54 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 		WM_RENDER_PHASE_POST_DRAW,
 	);
 
-	// scaling systems
-	whisker_rendering_scaling_rect_init_register(world);
-	whisker_rendering_scaling_stretch_register(world);
-	whisker_rendering_scaling_fit_register(world);
-	whisker_rendering_scaling_integer_register(world);
+
+	/******************
+	*  core systems  *
+	******************/
+	w_rendering_core_flush_render_dispatch_buffer_dummy_register(world);
+	w_rendering_core_dispatch_render_state_sync_register(world);
+
+
+	/********************
+	*  window systems  *
+	********************/
+	w_rendering_window_dispatch_init_window_register(world);
+	w_rendering_window_dispatch_close_window_register(world);
+	w_rendering_window_dispatch_handle_window_close_register(world);
+
+
+	/*************************
+	*  framebuffer systems  *
+	*************************/
+	w_rendering_framebuffer_dispatch_init_main_framebuffer_register(world);
+	w_rendering_framebuffer_dispatch_activate_main_framebuffer_register(world);
+	w_rendering_framebuffer_dispatch_clear_color_register(world);
+	w_rendering_framebuffer_dispatch_deactivate_main_framebuffer_register(world);
+	w_rendering_framebuffer_dispatch_set_filter_register(world);
+
+
+	/*********************
+	*  scaling systems  *
+	*********************/
+	w_rendering_scaling_rect_init_register(world);
+	w_rendering_scaling_stretch_register(world);
+	w_rendering_scaling_fit_register(world);
+	w_rendering_scaling_integer_register(world);
+
+
+	/******************
+	*  draw systems  *
+	******************/
+	// order dependant
+	w_rendering_draw_dispatch_draw_begin_register(world);
+	w_rendering_draw_dispatch_draw_clear_color_register(world);
+	w_rendering_draw_dispatch_draw_main_framebuffer_register(world);
+	w_rendering_draw_dispatch_draw_end_register(world);
+	
 
 	/*******************
 	*  camera module  *
 	*******************/
-	
 	// init camera state resource
 	struct w_rendering_camera_state *camera_state = w_mem_xcalloc_t(1, struct w_rendering_camera_state);
 
@@ -137,8 +184,10 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_ecs_set_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID, camera_state);
 
 	// register camera systems
-	camera_request_active_camera_register(world);
-	camera_state_sync_register(world);
+	w_rendering_camera_request_active_camera_register(world);
+	w_rendering_camera_state_sync_register(world);
+	w_rendering_camera_dispatch_begin_camera_3d_register(world);
+	w_rendering_camera_dispatch_end_camera_3d_register(world);
 }
 
 void wm_rendering_free(struct w_ecs_world *world)
@@ -148,6 +197,11 @@ void wm_rendering_free(struct w_ecs_world *world)
 
 	free(w_ecs_get_module_resource(world, WM_RENDERING_RENDER_STATE_RESOURCE_ID));
 	w_ecs_clear_module_resource(world, WM_RENDERING_RENDER_STATE_RESOURCE_ID);
+
+	struct w_dispatch_buffer *render_buffer = w_ecs_get_module_resource(world, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID);
+	w_dispatch_buffer_free(render_buffer);
+	free_null(render_buffer);
+	w_ecs_clear_module_resource(world, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID);
 
 	free(w_ecs_get_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID));
 	w_ecs_clear_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID);

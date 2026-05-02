@@ -19,8 +19,8 @@
 
 #include "modules/whisker_module_ids.h"
 
-/* index 3: camera state (rendering/camera sub-module) */
-#define WM_RENDERING_CAMERA_STATE_RESOURCE_ID WM_MODULE_RESOURCE_ID(RENDERING, 3)
+/* index 4: camera state (rendering/camera sub-module) */
+#define WM_RENDERING_CAMERA_STATE_RESOURCE_ID WM_MODULE_RESOURCE_ID(RENDERING, 4)
 #define w_rendering_get_camera_state(w) w_ecs_get_module_resource(w, WM_RENDERING_CAMERA_STATE_RESOURCE_ID)
 
 enum W_RENDERING_CAMERA_PROJECTION

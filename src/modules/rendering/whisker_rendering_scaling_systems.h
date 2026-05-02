@@ -8,7 +8,7 @@
 #include "whisker_rendering.h"
 
 // prepare the source and destination rendering rects
-w_ecs_simple_system(whisker_rendering_scaling_rect_init, WM_RENDER_PHASE_PRE_SCALE, {
+w_ecs_simple_system(w_rendering_scaling_rect_init, WM_RENDER_PHASE_PRE_SCALE, {
 	struct w_rendering_render_config *render_config = w_rendering_get_render_config(world);
 	struct w_rendering_render_state *render_state = w_rendering_get_render_state(world);
 
@@ -29,7 +29,7 @@ w_ecs_simple_system(whisker_rendering_scaling_rect_init, WM_RENDER_PHASE_PRE_SCA
 });
 
 // stretch scaling: destination matches window
-w_ecs_simple_system(whisker_rendering_scaling_stretch, WM_RENDER_PHASE_ON_SCALE, {
+w_ecs_simple_system(w_rendering_scaling_stretch, WM_RENDER_PHASE_ON_SCALE, {
 	struct w_rendering_render_config *render_config = w_rendering_get_render_config(world);
 	if (render_config->scaling_mode != W_RENDERING_SCALING_STRETCH) return;
 
@@ -44,7 +44,7 @@ w_ecs_simple_system(whisker_rendering_scaling_stretch, WM_RENDER_PHASE_ON_SCALE,
 
 
 // fit scaling: maintain aspect ratio with letterbox/pillarbox
-w_ecs_simple_system(whisker_rendering_scaling_fit, WM_RENDER_PHASE_ON_SCALE, {
+w_ecs_simple_system(w_rendering_scaling_fit, WM_RENDER_PHASE_ON_SCALE, {
 	struct w_rendering_render_config *render_config = w_rendering_get_render_config(world);
 	if (render_config->scaling_mode != W_RENDERING_SCALING_FIT) return;
 
@@ -62,7 +62,7 @@ w_ecs_simple_system(whisker_rendering_scaling_fit, WM_RENDER_PHASE_ON_SCALE, {
 });
 
 // integer scaling: scale up in multiples
-w_ecs_simple_system(whisker_rendering_scaling_integer, WM_RENDER_PHASE_ON_SCALE, {
+w_ecs_simple_system(w_rendering_scaling_integer, WM_RENDER_PHASE_ON_SCALE, {
 	struct w_rendering_render_config *render_config = w_rendering_get_render_config(world);
 	if (render_config->scaling_mode != W_RENDERING_SCALING_INTEGER) return;
 
