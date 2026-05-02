@@ -23,8 +23,8 @@ w_ecs_define_tag(dirty);
 /***********************
 *  visual components  *
 ***********************/
-w_ecs_define_component(w_color, color, 1.0f, 1.0f, 1.0f, 1.0f);
-w_ecs_define_component(w_color8, color_rgb, 255, 255, 255, 255);
+w_ecs_define_component(w_color8, color, 255, 255, 255, 255);
+w_ecs_define_component(w_color, color_f, 1.0f, 1.0f, 1.0f, 1.0f);
 w_ecs_define_component(float, alpha, 1.0f);
 
 
