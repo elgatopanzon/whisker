@@ -59,6 +59,9 @@ void *w_arena_calloc(struct w_arena *a, size_t size)
 
 void w_arena_clear(struct w_arena *a)
 {
+	if (a->first->next == NULL && a->first->ptr == (unsigned char *)ALIGN_UP((uintptr_t)a->first->data, alignof(max_align_t)) && a->current == a->first)
+		return; // already clear
+
 	struct w_arena_block *b = a->first->next;
 
 	// recursive free all blocks, keep first
