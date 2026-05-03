@@ -76,6 +76,11 @@
 #define w_quat_rotation_z(angle) \
     ((w_quat){ 0.0f, 0.0f, sinf((angle) * 0.5f), cosf((angle) * 0.5f) })
 
+/* rotation quaternions around a single axis (angle in degrees) */
+#define w_quat_rotation_x_deg(deg) w_quat_rotation_x((deg) * W_DEG2RAD)
+#define w_quat_rotation_y_deg(deg) w_quat_rotation_y((deg) * W_DEG2RAD)
+#define w_quat_rotation_z_deg(deg) w_quat_rotation_z((deg) * W_DEG2RAD)
+
 /* Hamilton product: compose rotation a then b */
 #define w_quat_mul(a, b) ((w_quat){ \
     (a).w*(b).x + (a).x*(b).w + (a).y*(b).z - (a).z*(b).y, \
