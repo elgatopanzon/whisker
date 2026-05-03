@@ -83,10 +83,10 @@
 
 /* Hamilton product: compose rotation a then b */
 #define w_quat_mul(a, b) ((w_quat){ \
-    (a).w*(b).x + (a).x*(b).w + (a).y*(b).z - (a).z*(b).y, \
-    (a).w*(b).y - (a).x*(b).z + (a).y*(b).w + (a).z*(b).x, \
-    (a).w*(b).z + (a).x*(b).y - (a).y*(b).x + (a).z*(b).w, \
-    (a).w*(b).w - (a).x*(b).x - (a).y*(b).y - (a).z*(b).z  \
+    (b).w*(a).x + (b).x*(a).w + (b).y*(a).z - (b).z*(a).y, \
+    (b).w*(a).y - (b).x*(a).z + (b).y*(a).w + (b).z*(a).x, \
+    (b).w*(a).z + (b).x*(a).y - (b).y*(a).x + (b).z*(a).w, \
+    (b).w*(a).w - (b).x*(a).x - (b).y*(a).y - (b).z*(a).z  \
 })
 
 /* negate xyz component -- same rotation direction reversed */
