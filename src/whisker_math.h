@@ -39,6 +39,9 @@
 *  w_quat  *
 ************/
 
+// for screen-space/UI, rotate -90° around X
+#define W_QUAT_SCREEN_FACING ((w_quat){-0.7071f, 0, 0, 0.7071f})
+
 #define w_quat_from_euler(pitch, yaw, roll) ((w_quat){ \
     .x = sinf(roll * 0.5f) * cosf(pitch * 0.5f) * cosf(yaw * 0.5f) - cosf(roll * 0.5f) * sinf(pitch * 0.5f) * sinf(yaw * 0.5f), \
     .y = cosf(roll * 0.5f) * sinf(pitch * 0.5f) * cosf(yaw * 0.5f) + sinf(roll * 0.5f) * cosf(pitch * 0.5f) * sinf(yaw * 0.5f), \
@@ -51,6 +54,136 @@
     len > 0.0f ? \
         ((w_quat){ (q).x / len, (q).y / len, (q).z / len, (q).w / len }) : \
         ((w_quat){ 0.0f, 0.0f, 0.0f, 1.0f }); \
+})
+
+/* identity quaternion (no rotation) */
+#define w_quat_identity() ((w_quat){ 0.0f, 0.0f, 0.0f, 1.0f })
+
+/* quaternion from axis + angle (radians); axis need not be normalised */
+#define w_quat_from_axis_angle(axis, angle) ({ \
+    float _hs = sinf((angle) * 0.5f); \
+    float _ax = (axis).x, _ay = (axis).y, _az = (axis).z; \
+    float _len = sqrtf(_ax*_ax + _ay*_ay + _az*_az); \
+    if (_len > 0.0f) { _ax /= _len; _ay /= _len; _az /= _len; } \
+    (w_quat){ _ax * _hs, _ay * _hs, _az * _hs, cosf((angle) * 0.5f) }; \
+})
+
+/* rotation quaternions around a single axis (angle in radians) */
+#define w_quat_rotation_x(angle) \
+    ((w_quat){ sinf((angle) * 0.5f), 0.0f, 0.0f, cosf((angle) * 0.5f) })
+#define w_quat_rotation_y(angle) \
+    ((w_quat){ 0.0f, sinf((angle) * 0.5f), 0.0f, cosf((angle) * 0.5f) })
+#define w_quat_rotation_z(angle) \
+    ((w_quat){ 0.0f, 0.0f, sinf((angle) * 0.5f), cosf((angle) * 0.5f) })
+
+/* Hamilton product: compose rotation a then b */
+#define w_quat_mul(a, b) ((w_quat){ \
+    (a).w*(b).x + (a).x*(b).w + (a).y*(b).z - (a).z*(b).y, \
+    (a).w*(b).y - (a).x*(b).z + (a).y*(b).w + (a).z*(b).x, \
+    (a).w*(b).z + (a).x*(b).y - (a).y*(b).x + (a).z*(b).w, \
+    (a).w*(b).w - (a).x*(b).x - (a).y*(b).y - (a).z*(b).z  \
+})
+
+/* negate xyz component -- same rotation direction reversed */
+#define w_quat_conjugate(q) \
+    ((w_quat){ -(q).x, -(q).y, -(q).z, (q).w })
+
+/* multiplicative inverse; for unit quaternions this equals conjugate */
+#define w_quat_inverse(q) ({ \
+    float _d = (q).x*(q).x + (q).y*(q).y + (q).z*(q).z + (q).w*(q).w; \
+    _d > 0.0f ? \
+        ((w_quat){ -(q).x/_d, -(q).y/_d, -(q).z/_d, (q).w/_d }) : \
+        w_quat_identity(); \
+})
+
+/* American-spelling alias */
+#define w_quat_normalize(q) w_quat_normalise(q)
+
+/* scalar dot product of two quaternions */
+#define w_quat_dot(a, b) \
+    ((a).x*(b).x + (a).y*(b).y + (a).z*(b).z + (a).w*(b).w)
+
+/* spherical linear interpolation; t in [0,1] */
+#define w_quat_slerp(a, b, t) ({ \
+    float _dot = (a).x*(b).x + (a).y*(b).y + (a).z*(b).z + (a).w*(b).w; \
+    w_quat _qb = (b); \
+    if (_dot < 0.0f) { \
+        _qb.x = -(b).x; _qb.y = -(b).y; _qb.z = -(b).z; _qb.w = -(b).w; \
+        _dot = -_dot; \
+    } \
+    w_quat _r; \
+    if (_dot > 0.9995f) { \
+        /* quaternions nearly parallel: lerp + normalise */ \
+        _r = (w_quat){ \
+            (a).x + (t) * (_qb.x - (a).x), \
+            (a).y + (t) * (_qb.y - (a).y), \
+            (a).z + (t) * (_qb.z - (a).z), \
+            (a).w + (t) * (_qb.w - (a).w) \
+        }; \
+        _r = w_quat_normalise(_r); \
+    } else { \
+        float _theta_0 = acosf(_dot); \
+        float _theta   = _theta_0 * (t); \
+        float _st0     = sinf(_theta_0); \
+        float _s0      = cosf(_theta) - _dot * sinf(_theta) / _st0; \
+        float _s1      = sinf(_theta) / _st0; \
+        _r = (w_quat){ \
+            _s0*(a).x + _s1*_qb.x, \
+            _s0*(a).y + _s1*_qb.y, \
+            _s0*(a).z + _s1*_qb.z, \
+            _s0*(a).w + _s1*_qb.w \
+        }; \
+    } \
+    _r; \
+})
+
+/* decompose unit quaternion to axis (w_vec3 *) and angle (float *, radians) */
+#define w_quat_to_axis_angle(q, axis_ptr, angle_ptr) do { \
+    float _cw = (q).w; \
+    if (_cw >  1.0f) _cw =  1.0f; \
+    if (_cw < -1.0f) _cw = -1.0f; \
+    *(angle_ptr) = 2.0f * acosf(_cw); \
+    float _s = sqrtf(1.0f - _cw * _cw); \
+    if (_s < 0.0001f) { \
+        (axis_ptr)->x = 1.0f; (axis_ptr)->y = 0.0f; (axis_ptr)->z = 0.0f; \
+    } else { \
+        (axis_ptr)->x = (q).x / _s; \
+        (axis_ptr)->y = (q).y / _s; \
+        (axis_ptr)->z = (q).z / _s; \
+    } \
+} while (0)
+
+/* convert to Euler angles (radians) returned as w_vec3{pitch, yaw, roll} */
+#define w_quat_to_euler(q) ({ \
+    float _sr = 2.0f * ((q).w*(q).x + (q).y*(q).z); \
+    float _cr = 1.0f - 2.0f * ((q).x*(q).x + (q).y*(q).y); \
+    float _pitch = atan2f(_sr, _cr); \
+    float _sp = 2.0f * ((q).w*(q).y - (q).z*(q).x); \
+    float _yaw; \
+    if      (_sp >=  1.0f) _yaw =  (float)W_PI * 0.5f; \
+    else if (_sp <= -1.0f) _yaw = -(float)W_PI * 0.5f; \
+    else                   _yaw =  asinf(_sp); \
+    float _sy = 2.0f * ((q).w*(q).z + (q).x*(q).y); \
+    float _cy = 1.0f - 2.0f * ((q).y*(q).y + (q).z*(q).z); \
+    float _roll = atan2f(_sy, _cy); \
+    (w_vec3){ _pitch, _yaw, _roll }; \
+})
+
+/* rotate a w_vec3 by a unit quaternion */
+#define w_quat_rotate_vec3(q, v) ({ \
+    float _ux = (q).x, _uy = (q).y, _uz = (q).z; \
+    float _vx = (v).x, _vy = (v).y, _vz = (v).z; \
+    float _s  = (q).w; \
+    float _udotv = _ux*_vx + _uy*_vy + _uz*_vz; \
+    float _udotu = _ux*_ux + _uy*_uy + _uz*_uz; \
+    float _cx = _uy*_vz - _uz*_vy; \
+    float _cy = _uz*_vx - _ux*_vz; \
+    float _cz = _ux*_vy - _uy*_vx; \
+    (w_vec3){ \
+        2.0f*_udotv*_ux + (_s*_s - _udotu)*_vx + 2.0f*_s*_cx, \
+        2.0f*_udotv*_uy + (_s*_s - _udotu)*_vy + 2.0f*_s*_cy, \
+        2.0f*_udotv*_uz + (_s*_s - _udotu)*_vz + 2.0f*_s*_cz  \
+    }; \
 })
 
 
