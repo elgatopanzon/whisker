@@ -163,7 +163,7 @@ enum W_WORLD_UPDATE_RESULT w_ecs_update(struct w_ecs_world *world);
 
 // allocate using the frame arena
 #define w_ecs_frame_malloc(world, size) \
-	w_arena_malloc(world->frame_arena, size)
+	w_arena_malloc(&world->frame_arena, size)
 
 #define w_ecs_frame_copy(world, data, size) \
 	({ \
