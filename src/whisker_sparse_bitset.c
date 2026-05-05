@@ -216,6 +216,17 @@ uint64_t w_sparse_bitset_intersect(struct w_sparse_bitset_intersect_cache *inter
 	// if bitsets is invalid or 0 then early out
 	if (!intersect_cache->bitsets || intersect_cache->bitsets_length == 0) return 0;
 
+	// if any input bitset is NULL, clear result and return 0
+	for (uint64_t i = 0; i < intersect_cache->bitsets_length; i++)
+	{
+		if (!intersect_cache->bitsets[i])
+		{
+			intersect_cache->indexes_length = 0;
+			intersect_cache->cache_generation = 0;
+			return 0;
+		}
+	}
+
 	// compute cached generation from bitsets
 	uint64_t bitsets_generation = w_sparse_bitset_intersect_cache_stale(intersect_cache);
 	if (bitsets_generation == UINT64_MAX) return intersect_cache->indexes_length;

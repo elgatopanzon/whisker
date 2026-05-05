@@ -46,8 +46,7 @@
             itor.get_cursor++; \
         } \
         struct w_query_term *term = &itor.query->terms[itor.get_cursor]; \
-        struct w_sparse_bitset *bitset = itor.query->bitset_cache.bitsets[itor.get_cursor]; \
-        void *result = (term->access_type == W_QUERY_ACCESS_OPTIONAL && (!bitset || !w_sparse_bitset_get(bitset, itor.entity_id))) \
+        void *result = (term->access_type == W_QUERY_ACCESS_OPTIONAL && (!term->component_entry || !w_sparse_bitset_get(&term->component_entry->data_bitset, itor.entity_id))) \
             ? NULL \
             : w_component_get_entry(term->component_entry, itor.entity_id, T); \
         itor.get_cursor++; \
@@ -132,11 +131,25 @@
 		(T *)((_ent_)->data + (itor.entity_id * (_ent_)->type_size)); \
 	})
 
-#define w_query_get_opt(T) ( \
-    { \
-		(void)sizeof(T); \
-		w_query_get(T); \
-    }) \
+#define w_query_get_opt(T) \
+	({ \
+		W_ECS_SET_COMP_ID_CACHE(T); \
+		w_entity_id _qgo_comp_id_ = T##_component_id_; \
+		T *_qgo_result_ = NULL; \
+		if (_qgo_comp_id_ != W_ENTITY_INVALID && \
+			_qgo_comp_id_ < itor.query->component_id_to_terms_size / sizeof(itor.query->component_id_to_terms[0])) { \
+			w_entity_id _qgo_term_idx_ = itor.query->component_id_to_terms[_qgo_comp_id_]; \
+			if (_qgo_term_idx_ < itor.query->terms_length) { \
+				struct w_query_term *_qgo_term_ = &itor.query->terms[_qgo_term_idx_]; \
+				if (_qgo_term_->component_entry != NULL && _qgo_term_->component_id == _qgo_comp_id_) { \
+					if (w_sparse_bitset_get(&_qgo_term_->component_entry->data_bitset, itor.entity_id)) { \
+						_qgo_result_ = (T *)((_qgo_term_->component_entry)->data + (itor.entity_id * (_qgo_term_->component_entry)->type_size)); \
+					} \
+				} \
+			} \
+		} \
+		_qgo_result_; \
+	})
 
 
 

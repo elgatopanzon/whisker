@@ -1060,6 +1060,106 @@ END_TEST
 
 
 /*****************************
+*  limbo components          *
+*****************************/
+
+// "phantom" is never registered as a component - it only has an entity ID (limbo)
+typedef struct {
+	int value;
+} Phantom;
+
+START_TEST(test_optional_limbo_returns_null)
+{
+	// create entities with position only - "phantom" is never registered
+	for (int i = 0; i < 4; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+	}
+
+	// query with optional limbo component should fully parse and iterate
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, optional phantom");
+	ck_assert_msg(q->query_parse_state == W_QUERY_PARSE_STATE_COMPONENTS_PARSED,
+		"query with optional limbo component should fully parse");
+
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	int null_count = 0;
+	w_query_for_each(&g_world, "read position, optional phantom", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		Phantom *ph = w_itor_get_optional(Phantom);
+		if (!ph) null_count++;
+		count++;
+	});
+
+	ck_assert_int_eq(count, 4);
+	ck_assert_int_eq(null_count, 4);
+}
+END_TEST
+
+START_TEST(test_not_limbo_matches_all)
+{
+	// create entities with position only - "phantom" is never registered
+	for (int i = 0; i < 5; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+	}
+
+	// NOT limbo component: since no entity has it, all should match
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, not phantom");
+	ck_assert_msg(q->query_parse_state == W_QUERY_PARSE_STATE_COMPONENTS_PARSED,
+		"query with not limbo component should fully parse");
+
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	w_query_for_each(&g_world, "read position, not phantom", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		count++;
+	});
+
+	ck_assert_int_eq(count, 5);
+}
+END_TEST
+
+START_TEST(test_optional_limbo_with_query_get_opt)
+{
+	// test the type-safe w_query_get_opt macro with limbo component
+	struct w_ecs_world *world = &g_world;
+	static w_entity_id Phantom_component_id_ = W_ENTITY_INVALID;
+
+	for (int i = 0; i < 3; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, optional phantom");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	int null_count = 0;
+	w_query_for_each(&g_world, "read position, optional phantom", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		Phantom *ph = w_query_get_opt(Phantom);
+		if (!ph) null_count++;
+		count++;
+	});
+
+	(void)world;
+	(void)Phantom_component_id_;
+	ck_assert_int_eq(count, 3);
+	ck_assert_int_eq(null_count, 3);
+}
+END_TEST
+
+
+/*****************************
 *  suite + runner            *
 *****************************/
 
@@ -1156,6 +1256,14 @@ Suite *whisker_query_iterator_suite(void)
 	tcase_add_test(tc_trailing, test_trailing_comma_optional);
 	tcase_add_test(tc_trailing, test_trailing_comma_three_components);
 	suite_add_tcase(s, tc_trailing);
+
+	TCase *tc_limbo = tcase_create("limbo_components");
+	tcase_add_checked_fixture(tc_limbo, query_iterator_setup, query_iterator_teardown);
+	tcase_set_timeout(tc_limbo, 10);
+	tcase_add_test(tc_limbo, test_optional_limbo_returns_null);
+	tcase_add_test(tc_limbo, test_not_limbo_matches_all);
+	tcase_add_test(tc_limbo, test_optional_limbo_with_query_get_opt);
+	suite_add_tcase(s, tc_limbo);
 
 	return s;
 }

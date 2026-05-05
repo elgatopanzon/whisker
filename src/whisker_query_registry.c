@@ -194,7 +194,20 @@ static inline void w_query_registry_parse_query_term_components(struct w_query *
 		if (term->component_id == W_ENTITY_INVALID && term->component_name != W_STRING_TABLE_INVALID_ID)
 		{
 			char *component_name = w_string_table_lookup(string_table, term->component_name);
-			w_entity_id component_id = w_entity_lookup_by_name(component_registry->entities, component_name);
+
+			// OPTIONAL and NOT terms use w_component_get_id which creates
+			// a limbo component ID if not registered (allows query to proceed)
+			// READ/WRITE terms use w_entity_lookup_by_name (must exist)
+			w_entity_id component_id;
+			if (term->access_type == W_QUERY_ACCESS_OPTIONAL ||
+			    term->access_type == W_QUERY_ACCESS_NOT)
+			{
+				component_id = w_component_get_id(component_registry, component_name);
+			}
+			else
+			{
+				component_id = w_entity_lookup_by_name(component_registry->entities, component_name);
+			}
 
 			if (component_id != W_ENTITY_INVALID)
 			{
@@ -304,9 +317,10 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 		// assign bitset pointers from component registry
 		// count required terms (read/write) for intersection
 		// count exclude terms (not) for AND-NOT
-		// IMPORTANT: required terms must come before optional/has/not terms in query string
+		// pack only READ/WRITE bitsets at sequential indices for intersection
 		size_t required_count = 0;
 		size_t exclude_count = 0;
+		size_t req_idx = 0;
 		for (size_t i = 0; i < query->terms_length; ++i)
 		{
 			// optional/has/not terms may have NULL entry if component has no data
@@ -319,11 +333,11 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 				return false;
 			}
 
-			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
-			// only read/write terms participate in intersection (not optional/has/not)
+			// only read/write terms participate in intersection
 			if (query->terms[i].access_type == W_QUERY_ACCESS_READ ||
 			    query->terms[i].access_type == W_QUERY_ACCESS_WRITE)
 			{
+				query->bitset_cache.bitsets[req_idx++] = entry ? &entry->data_bitset : NULL;
 				required_count++;
 			}
 			else if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
@@ -352,13 +366,19 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	}
 
 	// refresh bitset pointers (entries array may have been reallocated)
+	// pack only READ/WRITE bitsets at sequential indices matching init logic
+	size_t req_idx = 0;
 	for (size_t i = 0; i < query->terms_length; ++i)
 	{
 		struct w_component_entry *entry = w_component_registry_get_entry(
 			registry->component_registry, query->terms[i].component_id);
 		query->terms[i].component_entry = entry;
-		if (i < query->bitset_cache.bitsets_length)
-			query->bitset_cache.bitsets[i] = entry ? &entry->data_bitset : NULL;
+		if ((query->terms[i].access_type == W_QUERY_ACCESS_READ ||
+		     query->terms[i].access_type == W_QUERY_ACCESS_WRITE) &&
+		    req_idx < query->bitset_cache.bitsets_length)
+		{
+			query->bitset_cache.bitsets[req_idx++] = entry ? &entry->data_bitset : NULL;
+		}
 	}
 
 	// refresh exclude bitset pointers
