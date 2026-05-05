@@ -151,6 +151,15 @@
 		_qgo_result_; \
 	})
 
+#define w_query_get_opt_or_default(T) \
+	({ \
+	T *opt = w_query_get_opt(T); \
+	if (!opt) { \
+		opt = w_ecs_frame_malloc(world, sizeof(T)); \
+		*opt = T##_get_default(); \
+	} \
+	opt; \
+	})
 
 
 

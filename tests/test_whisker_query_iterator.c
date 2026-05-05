@@ -44,6 +44,18 @@ typedef struct {
 	float scale;
 } Scale;
 
+// for opt_or_default tests: lowercase name matches registered component name
+typedef struct {
+	float val;
+} opt_comp;
+
+static w_entity_id opt_comp_component_id_ = W_ENTITY_INVALID;
+
+static opt_comp opt_comp_get_default(void)
+{
+	return (opt_comp){.val = 99.0f};
+}
+
 
 /*****************************
 *  fixture                   *
@@ -97,6 +109,13 @@ static void set_scale(w_entity_id entity, float scale)
 	Scale s = {scale};
 	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float,
 		w_ecs_get_component_by_name(&g_world, "scale"), entity, &s, sizeof(Scale));
+}
+
+static void set_opt_comp(w_entity_id entity, float val)
+{
+	opt_comp c = {val};
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_float,
+		w_ecs_get_component_by_name(&g_world, "opt_comp"), entity, &c, sizeof(opt_comp));
 }
 
 
@@ -1126,6 +1145,69 @@ START_TEST(test_not_limbo_matches_all)
 }
 END_TEST
 
+START_TEST(test_opt_or_default_returns_value_when_present)
+{
+	// component exists with non-default value -- should return actual value
+	struct w_ecs_world *world = &g_world;
+
+	for (int i = 0; i < 3; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+		set_opt_comp(e, 42.0f);
+	}
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, optional opt_comp");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	w_query_for_each(&g_world, "read position, optional opt_comp", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		opt_comp *c = w_query_get_opt_or_default(opt_comp);
+		ck_assert_ptr_nonnull(c);
+		ck_assert_float_eq(c->val, 42.0f);
+		count++;
+	});
+
+	(void)world;
+	ck_assert_int_eq(count, 3);
+}
+END_TEST
+
+START_TEST(test_opt_or_default_returns_default_when_absent)
+{
+	// component doesn't exist -- should return the default value
+	struct w_ecs_world *world = &g_world;
+
+	for (int i = 0; i < 3; i++)
+	{
+		w_entity_id e = w_ecs_request_entity(&g_world);
+		set_position(e, (float)i, 0);
+		// no opt_comp set
+	}
+
+	// register so query parses, but no entities have it
+	w_ecs_get_component_by_name(&g_world, "opt_comp");
+
+	struct w_query *q = w_ecs_get_query(&g_world, "read position, optional opt_comp");
+	w_query_rebuild_cache(&g_world.queries, q);
+
+	int count = 0;
+	w_query_for_each(&g_world, "read position, optional opt_comp", {
+		Position *pos = w_itor_get(Position);
+		(void)pos;
+		opt_comp *c = w_query_get_opt_or_default(opt_comp);
+		ck_assert_ptr_nonnull(c);
+		ck_assert_float_eq(c->val, 99.0f);  // default
+		count++;
+	});
+
+	(void)world;
+	ck_assert_int_eq(count, 3);
+}
+END_TEST
+
 START_TEST(test_optional_limbo_with_query_get_opt)
 {
 	// test the type-safe w_query_get_opt macro with limbo component
@@ -1264,6 +1346,13 @@ Suite *whisker_query_iterator_suite(void)
 	tcase_add_test(tc_limbo, test_not_limbo_matches_all);
 	tcase_add_test(tc_limbo, test_optional_limbo_with_query_get_opt);
 	suite_add_tcase(s, tc_limbo);
+
+	TCase *tc_opt_default = tcase_create("opt_or_default");
+	tcase_add_checked_fixture(tc_opt_default, query_iterator_setup, query_iterator_teardown);
+	tcase_set_timeout(tc_opt_default, 10);
+	tcase_add_test(tc_opt_default, test_opt_or_default_returns_value_when_present);
+	tcase_add_test(tc_opt_default, test_opt_or_default_returns_default_when_absent);
+	suite_add_tcase(s, tc_opt_default);
 
 	return s;
 }
