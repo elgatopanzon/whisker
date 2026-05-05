@@ -127,12 +127,17 @@
 
 #define w_query_get(T) \
 	({ \
-		(void)sizeof(T); \
+		W_ECS_SET_COMP_ID_CACHE(T); \
 		struct w_component_entry *_ent_ = itor.query->terms[itor.query->component_id_to_terms[T##_component_id_]].component_entry; \
 		(T *)((_ent_)->data + (itor.entity_id * (_ent_)->type_size)); \
 	})
 
-#define w_query_get_opt(T) ((void)sizeof(T), w_itor_get_optional(T)
+#define w_query_get_opt(T) ( \
+    { \
+		(void)sizeof(T); \
+		w_query_get(T); \
+    }) \
+
 
 
 
