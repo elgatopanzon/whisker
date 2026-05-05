@@ -32,6 +32,11 @@ void w_scheduler_init(struct w_scheduler *scheduler)
 			W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
 	);
 	scheduler->phases_order_length = 0;
+	w_array_init_t(
+			scheduler->phases_id_to_order,
+			W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
+	);
+	scheduler->phases_id_to_order_length = 0;
 
 	w_array_init_t(
 			scheduler->schedule.items, 
@@ -48,6 +53,7 @@ void w_scheduler_free(struct w_scheduler *scheduler)
 	free_null(scheduler->phases);
 	free_null(scheduler->time_steps_order);
 	free_null(scheduler->phases_order);
+	free_null(scheduler->phases_id_to_order);
 	free_null(scheduler->schedule.items);
 }
 
@@ -155,6 +161,41 @@ struct w_scheduler_schedule *w_scheduler_get_schedule(struct w_scheduler *schedu
 }
 
 
+static inline void w_scheduler_rebuild_phase_order_lookup_(struct w_scheduler *scheduler)
+{
+	// find max phase_id
+	size_t max_id = 0;
+	for (size_t i = 0; i < scheduler->phases_order_length; i++)
+	{
+		if (scheduler->phases_order[i] > max_id)
+			max_id = scheduler->phases_order[i];
+	}
+
+	// ensure array large enough for max_id+1
+	size_t needed = max_id + 1;
+	w_array_ensure_alloc_block_size(
+		scheduler->phases_id_to_order,
+		needed,
+		W_SCHEDULER_PHASES_REALLOC_BLOCK_SIZE
+	);
+
+	// clear and rebuild
+	memset(scheduler->phases_id_to_order, 0, needed * sizeof(size_t));
+	scheduler->phases_id_to_order_length = needed;
+
+	for (size_t i = 0; i < scheduler->phases_order_length; i++)
+	{
+		scheduler->phases_id_to_order[scheduler->phases_order[i]] = i;
+	}
+}
+
+size_t w_scheduler_get_phase_order(struct w_scheduler *scheduler, size_t phase_id)
+{
+	if (phase_id < scheduler->phases_id_to_order_length)
+		return scheduler->phases_id_to_order[phase_id];
+	return 0;
+}
+
 /********************************
 *  phase management functions  *
 ********************************/
@@ -181,6 +222,7 @@ size_t w_scheduler_register_phase(struct w_scheduler *scheduler, struct w_schedu
 
 	// append id to phase order list
 	scheduler->phases_order[scheduler->phases_order_length++] = id;
+	w_scheduler_rebuild_phase_order_lookup_(scheduler);
 
 	scheduler->schedule.schedule_dirty = true;
 
@@ -212,6 +254,7 @@ size_t w_scheduler_register_phase_at(struct w_scheduler *scheduler, struct w_sch
 
 	// append id to phase order list
 	scheduler->phases_order[scheduler->phases_order_length++] = desired_id;
+	w_scheduler_rebuild_phase_order_lookup_(scheduler);
 
 	scheduler->schedule.schedule_dirty = true;
 
@@ -238,6 +281,7 @@ void w_scheduler_reset_phases(struct w_scheduler *scheduler)
 {
 	scheduler->phases_length = 0;
 	scheduler->phases_order_length = 0;
+	scheduler->phases_id_to_order_length = 0;
 	scheduler->schedule.schedule_dirty = true;
 }
 static inline void w_scheduler_move_phase_(struct w_scheduler *scheduler, size_t phase_id, size_t target_phase_id, bool runs_before)
@@ -287,6 +331,7 @@ static inline void w_scheduler_move_phase_(struct w_scheduler *scheduler, size_t
 		scheduler->phases_order[to] = phase_id;
 	}
 
+	w_scheduler_rebuild_phase_order_lookup_(scheduler);
 	scheduler->schedule.schedule_dirty = true;
 }
 void w_scheduler_set_phase_runs_before(struct w_scheduler *scheduler, size_t phase_id, size_t runs_before_phase_id)

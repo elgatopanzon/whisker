@@ -84,6 +84,7 @@ struct w_scheduler
 	w_array_declare(struct w_scheduler_phase, phases);
 	w_array_declare(size_t, time_steps_order);
 	w_array_declare(size_t, phases_order);
+	w_array_declare(size_t, phases_id_to_order); // reverse lookup: phase_id -> order index
 
 	struct w_scheduler_schedule schedule;
 };
@@ -112,6 +113,9 @@ void w_scheduler_reset_phases(struct w_scheduler *scheduler);
 void w_scheduler_set_phase_runs_before(struct w_scheduler *scheduler, size_t phase_id, size_t runs_before_phase_id);
 // phase management: set phase runs after
 void w_scheduler_set_phase_runs_after(struct w_scheduler *scheduler, size_t phase_id, size_t runs_after_phase_id);
+// phase management: get order index for a phase ID
+size_t w_scheduler_get_phase_order(struct w_scheduler *scheduler, size_t phase_id);
+
 // phase management: chain a list of chains together
 void w_scheduler_chain_phases_(struct w_scheduler *scheduler, uint* phases, size_t count);
 
