@@ -478,6 +478,9 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	} \
 	w_ecs_declare_system_register_fn(name, phase) \
 
+#define w_ecs_render_layer(phase_id) \
+	w_scheduler_get_phase_order(&world->scheduler, phase_id)
+
 // register a system with the ECS scheduler
 size_t w_ecs_register_system(struct w_ecs_world *world, char *name, struct w_system *system);
 size_t w_ecs_set_system_state(struct w_ecs_world *world, size_t system_id, bool system_state);

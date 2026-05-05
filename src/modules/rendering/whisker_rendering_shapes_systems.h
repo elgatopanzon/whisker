@@ -21,6 +21,7 @@
 		w_query_r(rotation_3d), \
 		w_query_r(scale_3d), \
 		w_query_r(origin_3d), \
+		w_query_r(render_layer), \
 		w_query_n(hidden) \
 
 static inline void w_rendering_shapes_dispatch_draw_static_shape(
@@ -100,8 +101,8 @@ static inline void w_rendering_shapes_dispatch_draw_static_shape(
 *************************/
 
 w_ecs_system(
-	w_rendering_shapes_dispatch_draw_world_rects,
-	WM_RENDER_PHASE_ON_WORLD,
+	w_rendering_shapes_dispatch_draw_rects,
+	WM_PHASE_PRE_RENDER,
 	w_query(
 		w_query_r(color),
 		w_query_r(position_3d),
@@ -110,13 +111,13 @@ w_ecs_system(
 		w_query_r(origin_3d),
 		w_query_h(shape_type_rect),
 		w_query_o(shape_outline_color),
-		w_query_h(render_world),
+		w_query_r(render_layer),
 		w_query_n(hidden),
 	),
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
-		phase_priority,
+		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_RECT,
 		w_query_get(color),
 		w_query_get_opt(shape_outline_color),
@@ -128,45 +129,17 @@ w_ecs_system(
 });
 
 w_ecs_system(
-	w_rendering_shapes_dispatch_draw_world_cubes,
-	WM_RENDER_PHASE_ON_WORLD,
+	w_rendering_shapes_dispatch_draw_cubes,
+	WM_PHASE_PRE_RENDER,
 	w_query(
 		w_rendering_shapes_base_query,
 		w_query_r(shape_type_cube),
-		w_query_h(render_world),
 	),
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
-		phase_priority,
+		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_CUBE,
-		w_query_get(color),
-		w_query_get(shape_outline_color),
-		w_query_get(position_3d),
-		w_query_get(rotation_3d),
-		w_query_get(scale_3d),
-		w_query_get(origin_3d)
-	);
-});
-
-
-/***************************
-*  OVERLAY phase systems  *
-***************************/
-
-w_ecs_system(
-	w_rendering_shapes_dispatch_draw_overlay_rects,
-	WM_RENDER_PHASE_ON_OVERLAY,
-	w_query(
-		w_rendering_shapes_base_query,
-		w_query_r(shape_type_rect),
-		w_query_h(render_overlay),
-	),
-{
-	w_rendering_shapes_dispatch_draw_static_shape(
-		world,
-		phase_priority,
-		W_RENDERING_SHAPE_TYPE_RECT,
 		w_query_get(color),
 		w_query_get(shape_outline_color),
 		w_query_get(position_3d),

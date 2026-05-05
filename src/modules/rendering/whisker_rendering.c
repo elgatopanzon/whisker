@@ -194,12 +194,8 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	/********************
 	*  shapes systems  *
 	********************/
-	// world
-	w_rendering_shapes_dispatch_draw_world_rects_register(world);
-	w_rendering_shapes_dispatch_draw_world_cubes_register(world);
-
-	// overlay
-	w_rendering_shapes_dispatch_draw_overlay_rects_register(world);
+	w_rendering_shapes_dispatch_draw_rects_register(world);
+	w_rendering_shapes_dispatch_draw_cubes_register(world);
 }
 
 void wm_rendering_free(struct w_ecs_world *world)

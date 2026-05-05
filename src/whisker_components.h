@@ -27,12 +27,6 @@ w_ecs_define_component(w_color8, color, 255, 255, 255, 255);
 w_ecs_define_component(w_color, color_f, 1.0f, 1.0f, 1.0f, 1.0f);
 w_ecs_define_component(float, alpha, 1.0f);
 
-/*****************
-*  visual tags  *
-*****************/
-w_ecs_define_tag(render_world);
-w_ecs_define_tag(render_overlay);
-
 
 /**************************
 *  hierarchy components  *

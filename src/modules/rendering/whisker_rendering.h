@@ -178,6 +178,9 @@ enum WM_RENDER_PHASE
 	WM_RENDER_PHASE_POST_OVERLAY = 121,
 };
 
+// phase as render layer
+w_ecs_define_component(int, render_layer, 0);
+
 // initialize the rendering module
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *rendering_config);
 
