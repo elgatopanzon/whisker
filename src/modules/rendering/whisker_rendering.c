@@ -13,6 +13,7 @@
 #include "whisker_rendering_scaling_systems.h"
 #include "whisker_rendering_draw_systems.h"
 #include "whisker_rendering_camera_systems.h"
+#include "whisker_rendering_shapes_systems.h"
 
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {
@@ -188,6 +189,17 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_rendering_camera_state_sync_register(world);
 	w_rendering_camera_dispatch_begin_camera_3d_register(world);
 	w_rendering_camera_dispatch_end_camera_3d_register(world);
+
+
+	/********************
+	*  shapes systems  *
+	********************/
+	// world
+	w_rendering_shapes_dispatch_draw_world_rects_register(world);
+	w_rendering_shapes_dispatch_draw_world_cubes_register(world);
+
+	// overlay
+	w_rendering_shapes_dispatch_draw_overlay_rects_register(world);
 }
 
 void wm_rendering_free(struct w_ecs_world *world)

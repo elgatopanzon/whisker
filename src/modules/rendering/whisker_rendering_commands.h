@@ -87,7 +87,13 @@ enum W_RENDERING_CMD
 	*  110-199: 2D draw commands  *
 	*******************************/
 	
+	// draw text to the screen
+	// payload: struct w_rendering_cmd_draw_text
+	W_RENDERING_CMD_DRAW_TEXT = 110,
 
+	// draw verts to the screen
+	// payload: struct w_rendering_cmd_draw_verts
+	W_RENDERING_CMD_DRAW_VERTS = 111,
 };
 
 // dummy payload, for when theres none
@@ -142,6 +148,36 @@ struct w_rendering_cmd_camera_begin_3d
 
 	// look_at view matrix
 	w_mat4 view_matrix;
+};
+
+// simple draw text to screen
+struct w_rendering_cmd_draw_text 
+{
+	const char *text;
+	w_vec2 position;
+	float rotation;
+	w_vec2 origin;
+	int font_size;
+	int font_spacing;
+	w_color8 font_color;
+};
+
+// draw verts to screen
+enum W_RENDERING_DRAW_VERT_MODE
+{
+	W_RENDERING_DRAW_VERT_MODE_LINES,
+	W_RENDERING_DRAW_VERT_MODE_TRIANGLES,
+	W_RENDERING_DRAW_VERT_MODE_QUADS,
+};
+struct w_rendering_cmd_draw_verts {
+	const w_vec3 *verts;
+	size_t verts_length;
+	enum W_RENDERING_DRAW_VERT_MODE draw_mode;
+	w_vec3 position;
+    w_vec3 origin;
+    w_quat rotation;
+    w_vec3 scale;
+    w_color8 color;
 };
 
 #endif /* WHISKER_RENDERING_COMMANDS_H */
