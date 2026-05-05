@@ -2,7 +2,7 @@
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_rendering_shapes_systems
  * @created     : Thursday Apr 30, 2026 19:17:19 CST
- * @description : 
+ * @description : static primitive shape systems
  */
 
 #include "whisker_components.h"
@@ -104,15 +104,8 @@ w_ecs_system(
 	w_rendering_shapes_dispatch_draw_rects,
 	WM_PHASE_PRE_RENDER,
 	w_query(
-		w_query_r(color),
-		w_query_r(position_3d),
-		w_query_r(rotation_3d),
-		w_query_r(scale_3d),
-		w_query_r(origin_3d),
+		w_rendering_shapes_base_query,
 		w_query_h(shape_type_rect),
-		w_query_o(shape_outline_color),
-		w_query_r(render_layer),
-		w_query_n(hidden),
 	),
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
