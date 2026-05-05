@@ -460,8 +460,8 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	static inline void name(void *ctx, double delta_time) { \
 		struct w_ecs_world *world = ctx; \
 		(void)delta_time; \
-		int phase_id = phase; \
-		(void)phase_id; \
+		int phase_priority = (int)w_scheduler_get_phase_order(&world->scheduler, phase); \
+		(void)phase_priority; \
 		w_query_for_each(world, query, { \
 			work; \
 		}); \
@@ -472,8 +472,8 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	static inline void name(void *ctx, double delta_time) { \
 		struct w_ecs_world *world = ctx; \
 		(void)delta_time; \
-		int phase_id = phase; \
-		(void)phase_id; \
+		int phase_priority = (int)w_scheduler_get_phase_order(&world->scheduler, phase); \
+		(void)phase_priority; \
 		work; \
 	} \
 	w_ecs_declare_system_register_fn(name, phase) \
