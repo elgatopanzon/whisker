@@ -29,6 +29,7 @@
 #define w_return(entity) w_ecs_return_entity(world, entity);
 #define w_request() w_ecs_request_entity(world);
 #define w_request_named(name) w_ecs_request_entity_with_name(world, name);
+#define w_entity(name) w_ecs_get_entity_by_name(world, name)
 
 // component short forms for type-safe components only
 #define w_set(entity, name, ptr) ((void)sizeof(name), name##_set(world, entity, ptr))
