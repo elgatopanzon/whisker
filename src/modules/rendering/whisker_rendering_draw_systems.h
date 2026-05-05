@@ -18,7 +18,7 @@ w_ecs_simple_system(
 {
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_DRAW_BEGIN,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -28,7 +28,7 @@ w_ecs_simple_system(
 {
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_DRAW_END,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -40,7 +40,7 @@ w_ecs_simple_system(
 
 	w_rendering_dispatch_render_cmd_value(
 		W_RENDERING_CMD_CLEAR_COLOR,
-		phase_id,
+		phase_priority,
 		struct w_rendering_cmd_clear_color,
 			.clear_color = render_config->render_clear_color
 	);
@@ -52,7 +52,7 @@ w_ecs_simple_system(
 {
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_DRAW_MAIN_FRAMEBUFFER,
-		phase_id
+		phase_priority
 	);
 });
 

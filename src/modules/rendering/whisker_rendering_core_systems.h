@@ -31,7 +31,7 @@ w_ecs_simple_system(
 {
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_RENDER_STATE_SYNC,
-		phase_id
+		phase_priority
 	);
 });
 

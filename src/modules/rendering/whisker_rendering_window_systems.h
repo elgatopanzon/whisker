@@ -27,7 +27,7 @@ w_ecs_simple_system(
 
 	w_rendering_dispatch_render_cmd_value(
 		W_RENDERING_CMD_INIT_WINDOW,
-		phase_id,
+		phase_priority,
 		struct w_rendering_cmd_init_window,
 			.window_resolution = display_config->window_resolution, 
 			.window_title = window_title
@@ -41,7 +41,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_CLOSE_WINDOW,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -56,7 +56,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_HANDLE_WINDOW_CLOSE,
-		phase_id
+		phase_priority
 	);
 });
 

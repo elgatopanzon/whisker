@@ -25,7 +25,7 @@
 
 static inline void w_rendering_shapes_dispatch_draw_static_shape(
 	struct w_ecs_world *world,
-	int phase_id,
+	int phase_priority,
 	enum W_RENDERING_SHAPE_TYPE type,
 	const w_color8 *color,
 	const w_color8 *outline_color,
@@ -74,7 +74,7 @@ static inline void w_rendering_shapes_dispatch_draw_static_shape(
 
 		w_rendering_dispatch_render_cmd(
 			W_RENDERING_CMD_DRAW_VERTS, 
-			phase_id,
+			phase_priority,
 			&cmd
 		);
 	}
@@ -88,7 +88,7 @@ static inline void w_rendering_shapes_dispatch_draw_static_shape(
 
 		w_rendering_dispatch_render_cmd(
 			W_RENDERING_CMD_DRAW_VERTS, 
-			phase_id,
+			phase_priority,
 			&cmd
 		);
 	}
@@ -116,7 +116,7 @@ w_ecs_system(
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
-		WM_RENDER_PHASE_ON_WORLD,
+		phase_priority,
 		W_RENDERING_SHAPE_TYPE_RECT,
 		w_query_get(color),
 		w_query_get_opt(shape_outline_color),
@@ -138,7 +138,7 @@ w_ecs_system(
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
-		WM_RENDER_PHASE_ON_WORLD,
+		phase_priority,
 		W_RENDERING_SHAPE_TYPE_CUBE,
 		w_query_get(color),
 		w_query_get(shape_outline_color),
@@ -165,7 +165,7 @@ w_ecs_system(
 {
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
-		WM_RENDER_PHASE_ON_OVERLAY,
+		phase_priority,
 		W_RENDERING_SHAPE_TYPE_RECT,
 		w_query_get(color),
 		w_query_get(shape_outline_color),

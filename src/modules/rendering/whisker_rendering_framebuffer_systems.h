@@ -18,7 +18,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_FRAMEBUFFER_MAIN_INIT,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -29,7 +29,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_FRAMEBUFFER_MAIN_ACTIVATE,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -40,7 +40,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_FRAMEBUFFER_MAIN_DEACTIVATE,
-		phase_id
+		phase_priority
 	);
 });
 
@@ -54,7 +54,7 @@ w_ecs_simple_system(
 	{
 		w_rendering_dispatch_render_cmd_value(
 			W_RENDERING_CMD_CLEAR_COLOR,
-			phase_id,
+			phase_priority,
 			struct w_rendering_cmd_clear_color,
 				.clear_color = render_config->window_clear_color
 		);
@@ -71,7 +71,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_value(
 		W_RENDERING_CMD_FRAMEBUFFER_MAIN_SET_FILTER,
-		phase_id,
+		phase_priority,
 		struct w_rendering_cmd_framebuffer_set_filter,
 			.filter_type = render_config->texture_filter,
 	);

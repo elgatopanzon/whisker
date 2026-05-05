@@ -91,7 +91,7 @@ w_ecs_simple_system(
 
 	w_rendering_dispatch_render_cmd_value(
 		W_RENDERING_CMD_CAMERA_BEGIN_3D,
-		phase_id,
+		phase_priority,
 		struct w_rendering_cmd_camera_begin_3d,
 			.projection_type = camera_state->camera_projection,
 			.left = -right, .right = right,
@@ -109,7 +109,7 @@ w_ecs_simple_system(
 	// currently no payload, upstream just implements this
 	w_rendering_dispatch_render_cmd_no_payload(
 		W_RENDERING_CMD_CAMERA_END_3D,
-		phase_id
+		phase_priority
 	);
 });
 
