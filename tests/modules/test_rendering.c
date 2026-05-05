@@ -53,8 +53,8 @@ static void rendering_teardown(void)
 
 START_TEST(test_rendering_phase_count)
 {
-	// 22 from scheduler_defaults + 12 from rendering module
-	ck_assert_int_eq(g_world.scheduler.phases_order_length, 34);
+	// 22 from scheduler_defaults + 22 from rendering module
+	ck_assert_int_eq(g_world.scheduler.phases_order_length, 44);
 }
 END_TEST
 
@@ -132,37 +132,90 @@ END_TEST
 
 START_TEST(test_phase_ordering_rendering_module)
 {
-	// FINAL_RENDER < PRE_SCALE < ON_SCALE < POST_SCALE < PRE_FILTER < ON_FILTER
-	// < POST_FILTER < PRE_DRAW < ON_DRAW < POST_DRAW
-	// (rendering module phases now come after FINAL_RENDER in execution order)
+	// PRE_RENDER chain: PRE_SYNC < ON_SYNC < POST_SYNC
+	// ON_RENDER chain: PRE_WORLD < BEGIN_WORLD < WORLD_BG < ON_WORLD < WORLD_FG < END_WORLD < POST_WORLD
+	// POST_WORLD chain: PRE_OVERLAY < ON_OVERLAY < POST_OVERLAY
+	// POST_RENDER chain: PRE_SCALE < ON_SCALE < POST_SCALE < PRE_FILTER < ON_FILTER < POST_FILTER < PRE_DRAW < ON_DRAW < POST_DRAW
 	size_t *order = g_world.scheduler.phases_order;
 	size_t len = g_world.scheduler.phases_order_length;
 
-	size_t pos_final_render = 0;
-	size_t pos_pre_scale    = 0;
-	size_t pos_on_scale     = 0;
-	size_t pos_post_scale   = 0;
-	size_t pos_pre_filter   = 0;
-	size_t pos_on_filter    = 0;
-	size_t pos_post_filter  = 0;
-	size_t pos_pre_draw     = 0;
-	size_t pos_on_draw      = 0;
-	size_t pos_post_draw    = 0;
+	size_t pos_pre_render     = 0;
+	size_t pos_pre_sync       = 0;
+	size_t pos_on_sync        = 0;
+	size_t pos_post_sync      = 0;
+	size_t pos_on_render      = 0;
+	size_t pos_pre_world      = 0;
+	size_t pos_begin_world    = 0;
+	size_t pos_world_bg       = 0;
+	size_t pos_on_world       = 0;
+	size_t pos_world_fg       = 0;
+	size_t pos_end_world      = 0;
+	size_t pos_post_world     = 0;
+	size_t pos_pre_overlay    = 0;
+	size_t pos_on_overlay     = 0;
+	size_t pos_post_overlay   = 0;
+	size_t pos_post_render    = 0;
+	size_t pos_pre_scale      = 0;
+	size_t pos_on_scale       = 0;
+	size_t pos_post_scale     = 0;
+	size_t pos_pre_filter     = 0;
+	size_t pos_on_filter      = 0;
+	size_t pos_post_filter    = 0;
+	size_t pos_pre_draw       = 0;
+	size_t pos_on_draw        = 0;
+	size_t pos_post_draw      = 0;
+	size_t pos_final_render   = 0;
 
 	for (size_t i = 0; i < len; i++) {
-		if (order[i] == WM_PHASE_FINAL_RENDER)         pos_final_render = i;
-		if (order[i] == WM_RENDER_PHASE_PRE_SCALE)     pos_pre_scale    = i;
-		if (order[i] == WM_RENDER_PHASE_ON_SCALE)      pos_on_scale     = i;
-		if (order[i] == WM_RENDER_PHASE_POST_SCALE)    pos_post_scale   = i;
-		if (order[i] == WM_RENDER_PHASE_PRE_FILTER)    pos_pre_filter   = i;
-		if (order[i] == WM_RENDER_PHASE_ON_FILTER)     pos_on_filter    = i;
-		if (order[i] == WM_RENDER_PHASE_POST_FILTER)   pos_post_filter  = i;
-		if (order[i] == WM_RENDER_PHASE_PRE_DRAW)      pos_pre_draw     = i;
-		if (order[i] == WM_RENDER_PHASE_ON_DRAW)       pos_on_draw      = i;
-		if (order[i] == WM_RENDER_PHASE_POST_DRAW)     pos_post_draw    = i;
+		if (order[i] == WM_PHASE_PRE_RENDER)               pos_pre_render   = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_SYNC)          pos_pre_sync     = i;
+		if (order[i] == WM_RENDER_PHASE_ON_SYNC)           pos_on_sync      = i;
+		if (order[i] == WM_RENDER_PHASE_POST_SYNC)         pos_post_sync    = i;
+		if (order[i] == WM_PHASE_ON_RENDER)                pos_on_render    = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_WORLD)         pos_pre_world    = i;
+		if (order[i] == WM_RENDER_PHASE_BEGIN_WORLD)       pos_begin_world  = i;
+		if (order[i] == WM_RENDER_PHASE_WORLD_BACKGROUND)  pos_world_bg     = i;
+		if (order[i] == WM_RENDER_PHASE_ON_WORLD)          pos_on_world     = i;
+		if (order[i] == WM_RENDER_PHASE_WORLD_FOREGROUND)  pos_world_fg     = i;
+		if (order[i] == WM_RENDER_PHASE_END_WORLD)         pos_end_world    = i;
+		if (order[i] == WM_RENDER_PHASE_POST_WORLD)        pos_post_world   = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_OVERLAY)       pos_pre_overlay  = i;
+		if (order[i] == WM_RENDER_PHASE_ON_OVERLAY)        pos_on_overlay   = i;
+		if (order[i] == WM_RENDER_PHASE_POST_OVERLAY)      pos_post_overlay = i;
+		if (order[i] == WM_PHASE_POST_RENDER)              pos_post_render  = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_SCALE)         pos_pre_scale    = i;
+		if (order[i] == WM_RENDER_PHASE_ON_SCALE)          pos_on_scale     = i;
+		if (order[i] == WM_RENDER_PHASE_POST_SCALE)        pos_post_scale   = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_FILTER)        pos_pre_filter   = i;
+		if (order[i] == WM_RENDER_PHASE_ON_FILTER)         pos_on_filter    = i;
+		if (order[i] == WM_RENDER_PHASE_POST_FILTER)       pos_post_filter  = i;
+		if (order[i] == WM_RENDER_PHASE_PRE_DRAW)          pos_pre_draw     = i;
+		if (order[i] == WM_RENDER_PHASE_ON_DRAW)           pos_on_draw      = i;
+		if (order[i] == WM_RENDER_PHASE_POST_DRAW)         pos_post_draw    = i;
+		if (order[i] == WM_PHASE_FINAL_RENDER)             pos_final_render = i;
 	}
 
-	ck_assert_uint_lt(pos_final_render, pos_pre_scale);
+	// PRE_RENDER chain: sync phases
+	ck_assert_uint_lt(pos_pre_render,   pos_pre_sync);
+	ck_assert_uint_lt(pos_pre_sync,     pos_on_sync);
+	ck_assert_uint_lt(pos_on_sync,      pos_post_sync);
+
+	// ON_RENDER chain: world phases
+	ck_assert_uint_lt(pos_on_render,    pos_pre_world);
+	ck_assert_uint_lt(pos_pre_world,    pos_begin_world);
+	ck_assert_uint_lt(pos_begin_world,  pos_world_bg);
+	ck_assert_uint_lt(pos_world_bg,     pos_on_world);
+	ck_assert_uint_lt(pos_on_world,     pos_world_fg);
+	ck_assert_uint_lt(pos_world_fg,     pos_end_world);
+	ck_assert_uint_lt(pos_end_world,    pos_post_world);
+
+	// POST_WORLD chain: overlay phases
+	ck_assert_uint_lt(pos_post_world,   pos_pre_overlay);
+	ck_assert_uint_lt(pos_pre_overlay,  pos_on_overlay);
+	ck_assert_uint_lt(pos_on_overlay,   pos_post_overlay);
+
+	// POST_RENDER chain: scale -> filter -> draw
+	ck_assert_uint_lt(pos_post_render,  pos_pre_scale);
 	ck_assert_uint_lt(pos_pre_scale,    pos_on_scale);
 	ck_assert_uint_lt(pos_on_scale,     pos_post_scale);
 	ck_assert_uint_lt(pos_post_scale,   pos_pre_filter);
@@ -171,6 +224,9 @@ START_TEST(test_phase_ordering_rendering_module)
 	ck_assert_uint_lt(pos_post_filter,  pos_pre_draw);
 	ck_assert_uint_lt(pos_pre_draw,     pos_on_draw);
 	ck_assert_uint_lt(pos_on_draw,      pos_post_draw);
+
+	// all rendering phases before FINAL_RENDER
+	ck_assert_uint_lt(pos_post_draw,    pos_final_render);
 }
 END_TEST
 

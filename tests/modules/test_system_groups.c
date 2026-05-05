@@ -43,6 +43,11 @@ static void teardown(void)
 	w_arena_free(&g_arena);
 }
 
+/* dummy system functions for macro tests (macros take bare identifiers) */
+static void sys_a(void *ctx) { (void)ctx; }
+static void sys_enter(void *ctx) { (void)ctx; }
+static void sys_exit(void *ctx) { (void)ctx; }
+
 /* helper: register a dummy system and return its ID */
 static size_t reg_sys(const char *name)
 {
@@ -303,7 +308,7 @@ START_TEST(test_macro_assign_to_root_group)
 	struct w_system_group_registry *reg = wm_system_group_get_registry(&g_world);
 	size_t root_id = w_system_group_register_root(reg, "root_a");
 	reg_sys("sys_a");
-	w_system_group_assign_to_root_group(&g_world, "root_a", "sys_a");
+	w_system_group_assign_to_root_group(&g_world, "root_a", sys_a);
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_a");
 	ck_assert_ptr_nonnull(sid);
 	ck_assert(w_sparse_bitset_get(&reg->group_systems[root_id], *sid));
@@ -316,7 +321,7 @@ START_TEST(test_macro_assign_to_sub_group)
 	w_system_group_register_root(reg, "root_a");
 	size_t sub_id = w_system_group_register_sub(reg, "root_a", "sub_a");
 	reg_sys("sys_a");
-	w_system_group_assign_to_sub_group(&g_world, "sub_a", "sys_a");
+	w_system_group_assign_to_sub_group(&g_world, "sub_a", sys_a);
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_a");
 	ck_assert_ptr_nonnull(sid);
 	ck_assert(w_sparse_bitset_get(&reg->group_systems[sub_id], *sid));
@@ -330,7 +335,7 @@ START_TEST(test_macro_assign_to_all_sub_groups)
 	size_t sub_a = w_system_group_register_sub(reg, "root_a", "sub_a");
 	size_t sub_b = w_system_group_register_sub(reg, "root_a", "sub_b");
 	reg_sys("sys_a");
-	w_system_group_assign_to_all_sub_groups(&g_world, "root_a", "sys_a");
+	w_system_group_assign_to_all_sub_groups(&g_world, "root_a", sys_a);
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_a");
 	ck_assert_ptr_nonnull(sid);
 	ck_assert(w_sparse_bitset_get(&reg->group_systems[sub_a], *sid));
@@ -344,7 +349,7 @@ START_TEST(test_macro_exclude_from_sub_group)
 	w_system_group_register_root(reg, "root_a");
 	size_t sub_id = w_system_group_register_sub(reg, "root_a", "sub_a");
 	reg_sys("sys_a");
-	w_system_group_assign_to_sub_group(&g_world, "sub_a", "sys_a");
+	w_system_group_assign_to_sub_group(&g_world, "sub_a", sys_a);
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_a");
 	ck_assert(w_sparse_bitset_get(&reg->group_systems[sub_id], *sid));
 	w_system_group_exclude_from_sub_group(&g_world, "sub_a", "sys_a");
@@ -889,7 +894,7 @@ START_TEST(test_macro_register_on_enter_system)
 	size_t sub_id = w_system_group_register_sub(reg, "root_a", "sub_a");
 	reg_sys("sys_enter");
 
-	w_system_group_register_on_enter_system(&g_world, "sub_a", "sys_enter");
+	w_system_group_register_on_enter_system(&g_world, "sub_a", sys_enter);
 
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_enter");
 	ck_assert_ptr_nonnull(reg->group_callbacks[sub_id]);
@@ -905,7 +910,7 @@ START_TEST(test_macro_register_on_exit_system)
 	size_t sub_id = w_system_group_register_sub(reg, "root_a", "sub_a");
 	reg_sys("sys_exit");
 
-	w_system_group_register_on_exit_system(&g_world, "sub_a", "sys_exit");
+	w_system_group_register_on_exit_system(&g_world, "sub_a", sys_exit);
 
 	size_t *sid = w_system_get_id_by_name(&g_world.systems, "sys_exit");
 	ck_assert_ptr_nonnull(reg->group_callbacks[sub_id]);
