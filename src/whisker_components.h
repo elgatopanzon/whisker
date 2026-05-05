@@ -27,6 +27,12 @@ w_ecs_define_component(w_color8, color, 255, 255, 255, 255);
 w_ecs_define_component(w_color, color_f, 1.0f, 1.0f, 1.0f, 1.0f);
 w_ecs_define_component(float, alpha, 1.0f);
 
+/*****************
+*  visual tags  *
+*****************/
+w_ecs_define_tag(render_world);
+w_ecs_define_tag(render_overlay);
+
 
 /**************************
 *  hierarchy components  *
@@ -44,11 +50,13 @@ w_ecs_define_component(int, priority, 0);
 w_ecs_define_component(w_vec3, position_3d, 0.0f, 0.0f, 0.0f);
 w_ecs_define_component(w_quat, rotation_3d, 0.0f, 0.0f, 0.0f, 1.0f);
 w_ecs_define_component(w_vec3, scale_3d, 1.0f, 1.0f, 1.0f);
+w_ecs_define_component(w_vec3, origin_3d, 0.0f, 0.0f, 0.0f);
 
 // 2D
 w_ecs_define_component(w_vec2, position_2d, 0.0f, 0.0f);
 w_ecs_define_component(float, rotation_2d, 0.0f);
 w_ecs_define_component(w_vec2, scale_2d, 1.0f, 1.0f);
+w_ecs_define_component(w_vec2, origin_2d, 0.0f, 0.0f);
 
 /************************
 *  physics components  *

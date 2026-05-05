@@ -11,6 +11,12 @@
 #ifndef WHISKER_RENDERING_SHAPES_H
 #define WHISKER_RENDERING_SHAPES_H
 
+enum W_RENDERING_SHAPE_TYPE
+{
+	W_RENDERING_SHAPE_TYPE_RECT,
+	W_RENDERING_SHAPE_TYPE_CUBE,
+};
+
 // verts for shapes XZ native
 
 // rectangle
@@ -72,17 +78,21 @@ static const w_vec3 w_shape_cube_lines[] = {
 };
 #define W_SHAPE_CUBE_LINES_LEN (sizeof(w_shape_cube_lines) / sizeof(*w_shape_cube_lines))
 
+
 /**************************
 *  shape tag components  *
 **************************/
-// shape type tags
+w_ecs_define_tag(shape_type_rect);
 w_ecs_define_tag(shape_type_cube);
 
 
 /**********************
 *  shape components  *
 **********************/
-w_ecs_define_component(w_color8, shape_outline_color, 0, 0, 0, 255);
+
+// color applied to outline when exists and .a > 0
+// note: alpha defaults to 0 so we don't draw the outline
+w_ecs_define_component(w_color8, shape_outline_color, 0, 0, 0, 0);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 
