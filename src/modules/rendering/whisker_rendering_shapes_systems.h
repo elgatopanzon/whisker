@@ -105,9 +105,11 @@ w_ecs_system(
 	WM_PHASE_PRE_RENDER,
 	w_query(
 		w_rendering_shapes_base_query,
-		w_query_h(shape_type_rect),
+		w_query_r(rectangle),
 	),
 {
+	w_vec2 rect_s = *w_query_get(rectangle);
+	w_vec3 scale = w_vec3_mul(((w_vec3){rect_s.x, 1.0f, rect_s.y}), *w_query_get(scale_3d));
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
 		w_ecs_render_layer(*w_query_get(render_layer)),
@@ -116,7 +118,7 @@ w_ecs_system(
 		w_query_get_opt(shape_outline_color),
 		w_query_get(position_3d),
 		w_query_get(rotation_3d),
-		w_query_get(scale_3d),
+		&scale,
 		w_query_get(origin_3d)
 	);
 });
@@ -126,9 +128,11 @@ w_ecs_system(
 	WM_PHASE_PRE_RENDER,
 	w_query(
 		w_rendering_shapes_base_query,
-		w_query_r(shape_type_cube),
+		w_query_r(cube),
 	),
 {
+	w_vec3 cube_s = *w_query_get(cube);
+	w_vec3 scale = w_vec3_mul(cube_s, *w_query_get(scale_3d));
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
 		w_ecs_render_layer(*w_query_get(render_layer)),
@@ -137,7 +141,7 @@ w_ecs_system(
 		w_query_get(shape_outline_color),
 		w_query_get(position_3d),
 		w_query_get(rotation_3d),
-		w_query_get(scale_3d),
+		&scale,
 		w_query_get(origin_3d)
 	);
 });
