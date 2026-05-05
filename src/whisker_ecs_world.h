@@ -460,6 +460,8 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	static inline void name(void *ctx, double delta_time) { \
 		struct w_ecs_world *world = ctx; \
 		(void)delta_time; \
+		int phase_id = phase; \
+		(void)phase_id; \
 		w_query_for_each(world, query, { \
 			work; \
 		}); \
@@ -470,6 +472,8 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	static inline void name(void *ctx, double delta_time) { \
 		struct w_ecs_world *world = ctx; \
 		(void)delta_time; \
+		int phase_id = phase; \
+		(void)phase_id; \
 		work; \
 	} \
 	w_ecs_declare_system_register_fn(name, phase) \

@@ -101,15 +101,15 @@ static const int W_RENDERING_DUMMY_PAYLOAD = 0;
 #define w_rendering_dispatch_dummy_payload (void *)&W_RENDERING_DUMMY_PAYLOAD
 
 // helper function to push a render command
-// note: implicit world to fetch the render buffer
-#define w_rendering_dispatch_render_cmd_value(cmd, payload_type, ...) \
-	((void)sizeof(cmd), (void)sizeof(payload_type), w_dispatch_buffer_push(w_rendering_get_render_dispatch_buffer(world), cmd, &((payload_type){__VA_ARGS__}), sizeof(payload_type)));
+// note: implicit world and phase_id to fetch the render buffer and set priority
+#define w_rendering_dispatch_render_cmd_value(cmd, phase_id, payload_type, ...) \
+	((void)sizeof(cmd), (void)sizeof(payload_type), w_dispatch_buffer_push(w_rendering_get_render_dispatch_buffer(world), cmd, phase_id, &((payload_type){__VA_ARGS__}), sizeof(payload_type)));
 
-#define w_rendering_dispatch_render_cmd(cmd, payload) \
-	((void)sizeof(cmd), w_dispatch_buffer_push(w_rendering_get_render_dispatch_buffer(world), cmd, payload, sizeof(*payload)));
+#define w_rendering_dispatch_render_cmd(cmd, phase_id, payload) \
+	((void)sizeof(cmd), w_dispatch_buffer_push(w_rendering_get_render_dispatch_buffer(world), cmd, phase_id, payload, sizeof(*payload)));
 
-#define w_rendering_dispatch_render_cmd_no_payload(cmd) \
-	w_rendering_dispatch_render_cmd_value(cmd, bool, false)
+#define w_rendering_dispatch_render_cmd_no_payload(cmd, phase_id) \
+	w_rendering_dispatch_render_cmd_value(cmd, phase_id, bool, false)
 
 /*********************
 *  command structs  *

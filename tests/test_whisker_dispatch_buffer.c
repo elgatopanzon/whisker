@@ -43,7 +43,7 @@ END_TEST
 START_TEST(test_dispatch_buffer_push_single)
 {
 	int val = 42;
-	w_dispatch_buffer_push(&buf, 1, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 1, 0, &val, sizeof(int));
 	ck_assert_int_eq(buf.entries_length, 1);
 	ck_assert(w_dispatch_buffer_has_entries(&buf));
 	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 1);
@@ -53,7 +53,7 @@ END_TEST
 START_TEST(test_dispatch_buffer_pop_returns_entry)
 {
 	int val = 99;
-	w_dispatch_buffer_push(&buf, 5, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 5, 0, &val, sizeof(int));
 
 	void *payload = NULL;
 	struct w_dispatch_entry *entry = w_dispatch_buffer_pop(&buf, &payload);
@@ -68,8 +68,8 @@ END_TEST
 START_TEST(test_dispatch_buffer_pop_advances_read_index)
 {
 	int v1 = 1, v2 = 2;
-	w_dispatch_buffer_push(&buf, 10, &v1, sizeof(int));
-	w_dispatch_buffer_push(&buf, 20, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 10, 0, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 20, 0, &v2, sizeof(int));
 
 	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 2);
 
@@ -93,7 +93,7 @@ END_TEST
 START_TEST(test_dispatch_buffer_pop_null_payload)
 {
 	int val = 123;
-	w_dispatch_buffer_push(&buf, 7, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 7, 0, &val, sizeof(int));
 
 	// pass NULL for payload - should not crash
 	struct w_dispatch_entry *entry = w_dispatch_buffer_pop(&buf, NULL);
@@ -105,8 +105,8 @@ END_TEST
 START_TEST(test_dispatch_buffer_clear_resets_buffer)
 {
 	int val = 1;
-	w_dispatch_buffer_push(&buf, 1, &val, sizeof(int));
-	w_dispatch_buffer_push(&buf, 2, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 1, 0, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 2, 0, &val, sizeof(int));
 
 	w_dispatch_buffer_clear(&buf);
 
@@ -122,8 +122,8 @@ END_TEST
 START_TEST(test_dispatch_buffer_peek_does_not_advance)
 {
 	int v1 = 10, v2 = 20;
-	w_dispatch_buffer_push(&buf, 1, &v1, sizeof(int));
-	w_dispatch_buffer_push(&buf, 2, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 1, 0, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 2, 0, &v2, sizeof(int));
 
 	void *payload = NULL;
 	struct w_dispatch_entry *entry = w_dispatch_buffer_peek(&buf, 0, &payload);
@@ -147,7 +147,7 @@ END_TEST
 START_TEST(test_dispatch_buffer_peek_out_of_range)
 {
 	int val = 1;
-	w_dispatch_buffer_push(&buf, 1, &val, sizeof(int));
+	w_dispatch_buffer_push(&buf, 1, 0, &val, sizeof(int));
 
 	void *payload = NULL;
 	struct w_dispatch_entry *entry = w_dispatch_buffer_peek(&buf, 5, &payload);
@@ -160,9 +160,9 @@ END_TEST
 START_TEST(test_dispatch_buffer_push_multiple)
 {
 	int v0 = 0, v1 = 1, v2 = 2;
-	w_dispatch_buffer_push(&buf, 100, &v0, sizeof(int));
-	w_dispatch_buffer_push(&buf, 200, &v1, sizeof(int));
-	w_dispatch_buffer_push(&buf, 300, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 100, 0, &v0, sizeof(int));
+	w_dispatch_buffer_push(&buf, 200, 0, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 300, 0, &v2, sizeof(int));
 	ck_assert_int_eq(buf.entries_length, 3);
 	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 3);
 }
@@ -171,7 +171,7 @@ END_TEST
 START_TEST(test_dispatch_buffer_preserves_order)
 {
 	for (int i = 0; i < 5; i++)
-		w_dispatch_buffer_push(&buf, i * 10, &i, sizeof(int));
+		w_dispatch_buffer_push(&buf, i * 10, 0, &i, sizeof(int));
 
 	for (int i = 0; i < 5; i++)
 	{
@@ -189,7 +189,7 @@ START_TEST(test_dispatch_buffer_stress_large_count)
 {
 	int val = 7;
 	for (int i = 0; i < 1000; i++)
-		w_dispatch_buffer_push(&buf, i, &val, sizeof(int));
+		w_dispatch_buffer_push(&buf, i, 0, &val, sizeof(int));
 
 	ck_assert_int_eq(buf.entries_length, 1000);
 	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 1000);
@@ -218,7 +218,7 @@ START_TEST(test_dispatch_buffer_stress_varying_payload_sizes)
 
 	// push entries with varying sizes (1..256)
 	for (int sz = 1; sz <= 256; sz++)
-		w_dispatch_buffer_push(&buf, sz, payloads, sz);
+		w_dispatch_buffer_push(&buf, sz, 0, payloads, sz);
 
 	ck_assert_int_eq(buf.entries_length, 256);
 

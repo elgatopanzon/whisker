@@ -19,6 +19,7 @@
 struct w_dispatch_entry
 {
 	int type_id;
+	int priority;
 	size_t payload_offset;
 	size_t payload_size;
 };
@@ -30,8 +31,8 @@ struct w_dispatch_buffer
 	size_t read_index; // current read position for pop
 };
 
-#define w_dispatch_buffer_push_value(buf, cmd, payload_type, ...) \
-	((void)sizeof(cmd), (void)sizeof(payload_type), w_dispatch_buffer_push(buf, cmd, &((payload_type){__VA_ARGS__}), sizeof(payload_type)));
+#define w_dispatch_buffer_push_value(buf, cmd, priority, payload_type, ...) \
+	((void)sizeof(cmd), (void)sizeof(payload_type), w_dispatch_buffer_push(buf, cmd, priority, &((payload_type){__VA_ARGS__}), sizeof(payload_type)));
 
 // init dispatch buffer
 void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer);
@@ -39,7 +40,7 @@ void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer);
 void w_dispatch_buffer_free(struct w_dispatch_buffer *buffer);
 
 // push a dispatch entry to the buffer
-void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, void *payload, size_t payload_size);
+void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, int priority, void *payload, size_t payload_size);
 
 // pop next entry from buffer, returns NULL if empty
 // payload pointer set to payload data location

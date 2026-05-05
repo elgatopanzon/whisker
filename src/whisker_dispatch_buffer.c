@@ -27,7 +27,7 @@ void w_dispatch_buffer_free(struct w_dispatch_buffer *buffer)
 	buffer->read_index = 0;
 }
 
-void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, void *payload, size_t payload_size)
+void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, int priority, void *payload, size_t payload_size)
 {
 	w_array_ensure_alloc_block_size(
 		buffer->entries,
@@ -43,6 +43,7 @@ void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, void 
 
 	// set entry
 	buffer->entries[buffer->entries_length].type_id = type_id;
+	buffer->entries[buffer->entries_length].priority = priority;
 	buffer->entries[buffer->entries_length].payload_offset = buffer->payload_data_length;
 	buffer->entries[buffer->entries_length].payload_size = payload_size;
 
