@@ -236,6 +236,160 @@ START_TEST(test_dispatch_buffer_stress_varying_payload_sizes)
 }
 END_TEST
 
+// sort tests
+
+START_TEST(test_dispatch_buffer_sort_empty)
+{
+	// sorting empty buffer should not crash
+	w_dispatch_buffer_sort_by_priority(&buf);
+	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 0);
+}
+END_TEST
+
+START_TEST(test_dispatch_buffer_sort_single)
+{
+	int val = 1;
+	w_dispatch_buffer_push(&buf, 10, 5, &val, sizeof(int));
+
+	w_dispatch_buffer_sort_by_priority(&buf);
+
+	void *payload = NULL;
+	struct w_dispatch_entry *entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 10);
+	ck_assert_int_eq(entry->priority, 5);
+	ck_assert_int_eq(*(int *)payload, 1);
+}
+END_TEST
+
+START_TEST(test_dispatch_buffer_sort_by_priority_ascending)
+{
+	int v1 = 10, v2 = 20, v3 = 30;
+	w_dispatch_buffer_push(&buf, 1, 30, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 2, 10, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 3, 20, &v3, sizeof(int));
+
+	w_dispatch_buffer_sort_by_priority(&buf);
+
+	void *payload = NULL;
+	struct w_dispatch_entry *entry;
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 2);
+	ck_assert_int_eq(entry->priority, 10);
+	ck_assert_int_eq(*(int *)payload, 20);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 3);
+	ck_assert_int_eq(entry->priority, 20);
+	ck_assert_int_eq(*(int *)payload, 30);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 1);
+	ck_assert_int_eq(entry->priority, 30);
+	ck_assert_int_eq(*(int *)payload, 10);
+}
+END_TEST
+
+START_TEST(test_dispatch_buffer_sort_stable_equal_priority)
+{
+	// entries with same priority should preserve insertion order
+	int v1 = 100, v2 = 200, v3 = 300;
+	w_dispatch_buffer_push(&buf, 1, 5, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 2, 5, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 3, 5, &v3, sizeof(int));
+
+	w_dispatch_buffer_sort_by_priority(&buf);
+
+	void *payload = NULL;
+	struct w_dispatch_entry *entry;
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 1);
+	ck_assert_int_eq(*(int *)payload, 100);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 2);
+	ck_assert_int_eq(*(int *)payload, 200);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 3);
+	ck_assert_int_eq(*(int *)payload, 300);
+}
+END_TEST
+
+START_TEST(test_dispatch_buffer_sort_after_partial_pop)
+{
+	int v1 = 10, v2 = 20, v3 = 30, v4 = 40;
+	w_dispatch_buffer_push(&buf, 1, 0, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 2, 40, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 3, 10, &v3, sizeof(int));
+	w_dispatch_buffer_push(&buf, 4, 20, &v4, sizeof(int));
+
+	// pop first entry, leaving 3 unread
+	w_dispatch_buffer_pop(&buf, NULL);
+	ck_assert_int_eq(w_dispatch_buffer_count(&buf), 3);
+
+	// sort remaining unread entries
+	w_dispatch_buffer_sort_by_priority(&buf);
+
+	void *payload = NULL;
+	struct w_dispatch_entry *entry;
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 3);
+	ck_assert_int_eq(entry->priority, 10);
+	ck_assert_int_eq(*(int *)payload, 30);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 4);
+	ck_assert_int_eq(entry->priority, 20);
+	ck_assert_int_eq(*(int *)payload, 40);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 2);
+	ck_assert_int_eq(entry->priority, 40);
+	ck_assert_int_eq(*(int *)payload, 20);
+}
+END_TEST
+
+// custom comparator: sort by type_id descending
+static int compare_by_type_id_desc(
+	struct w_dispatch_buffer *buffer,
+	struct w_dispatch_entry *entry_a, void *payload_a,
+	struct w_dispatch_entry *entry_b, void *payload_b)
+{
+	(void)buffer;
+	(void)payload_a;
+	(void)payload_b;
+	return entry_b->type_id - entry_a->type_id;
+}
+
+START_TEST(test_dispatch_buffer_sort_custom_comparator)
+{
+	int v1 = 1, v2 = 2, v3 = 3;
+	w_dispatch_buffer_push(&buf, 10, 0, &v1, sizeof(int));
+	w_dispatch_buffer_push(&buf, 30, 0, &v2, sizeof(int));
+	w_dispatch_buffer_push(&buf, 20, 0, &v3, sizeof(int));
+
+	w_dispatch_buffer_sort(&buf, compare_by_type_id_desc);
+
+	void *payload = NULL;
+	struct w_dispatch_entry *entry;
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 30);
+	ck_assert_int_eq(*(int *)payload, 2);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 20);
+	ck_assert_int_eq(*(int *)payload, 3);
+
+	entry = w_dispatch_buffer_pop(&buf, &payload);
+	ck_assert_int_eq(entry->type_id, 10);
+	ck_assert_int_eq(*(int *)payload, 1);
+}
+END_TEST
+
 // test suite
 Suite* whisker_dispatch_buffer_suite(void)
 {
@@ -268,6 +422,18 @@ Suite* whisker_dispatch_buffer_suite(void)
 	tcase_add_test(tc_multi, test_dispatch_buffer_push_multiple);
 	tcase_add_test(tc_multi, test_dispatch_buffer_preserves_order);
 	suite_add_tcase(s, tc_multi);
+
+	// sort tcase
+	TCase *tc_sort = tcase_create("sort");
+	tcase_add_checked_fixture(tc_sort, whisker_dispatch_buffer_setup, whisker_dispatch_buffer_teardown);
+	tcase_set_timeout(tc_sort, 10);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_empty);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_single);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_by_priority_ascending);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_stable_equal_priority);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_after_partial_pop);
+	tcase_add_test(tc_sort, test_dispatch_buffer_sort_custom_comparator);
+	suite_add_tcase(s, tc_sort);
 
 	// stress tcase
 	TCase *tc_stress = tcase_create("stress");

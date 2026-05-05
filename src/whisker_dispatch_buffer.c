@@ -88,6 +88,51 @@ size_t w_dispatch_buffer_count(struct w_dispatch_buffer *buffer)
 	return buffer->entries_length - buffer->read_index;
 }
 
+void w_dispatch_buffer_sort(struct w_dispatch_buffer *buffer, w_dispatch_compare_fn compare_fn)
+{
+	size_t start = buffer->read_index;
+	size_t end = buffer->entries_length;
+	if (end - start < 2) return;
+
+	// insertion sort for stability (preserves order of equal entries)
+	for (size_t i = start + 1; i < end; i++)
+	{
+		struct w_dispatch_entry key = buffer->entries[i];
+		void *key_payload = buffer->payload_data + key.payload_offset;
+		size_t j = i;
+
+		while (j > start)
+		{
+			struct w_dispatch_entry *prev = &buffer->entries[j - 1];
+			void *prev_payload = buffer->payload_data + prev->payload_offset;
+
+			if (compare_fn(buffer, prev, prev_payload, &key, key_payload) <= 0)
+				break;
+
+			buffer->entries[j] = buffer->entries[j - 1];
+			j--;
+		}
+
+		buffer->entries[j] = key;
+	}
+}
+
+int w_dispatch_buffer_compare_by_priority(
+	struct w_dispatch_buffer *buffer,
+	struct w_dispatch_entry *entry_a, void *payload_a,
+	struct w_dispatch_entry *entry_b, void *payload_b)
+{
+	(void)buffer;
+	(void)payload_a;
+	(void)payload_b;
+	return entry_a->priority - entry_b->priority;
+}
+
+void w_dispatch_buffer_sort_by_priority(struct w_dispatch_buffer *buffer)
+{
+	w_dispatch_buffer_sort(buffer, w_dispatch_buffer_compare_by_priority);
+}
+
 void w_dispatch_buffer_clear(struct w_dispatch_buffer *buffer)
 {
 	buffer->entries_length = 0;

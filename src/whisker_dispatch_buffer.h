@@ -50,6 +50,26 @@ struct w_dispatch_entry* w_dispatch_buffer_pop(struct w_dispatch_buffer *buffer,
 // returns NULL if index out of range
 struct w_dispatch_entry* w_dispatch_buffer_peek(struct w_dispatch_buffer *buffer, size_t index, void **payload);
 
+// compare function for sorting entries
+// returns negative if A < B, 0 if equal, positive if A > B
+typedef int (*w_dispatch_compare_fn)(
+	struct w_dispatch_buffer *buffer,
+	struct w_dispatch_entry *entry_a, void *payload_a,
+	struct w_dispatch_entry *entry_b, void *payload_b
+);
+
+// sort unread entries using a custom compare function
+void w_dispatch_buffer_sort(struct w_dispatch_buffer *buffer, w_dispatch_compare_fn compare_fn);
+
+// default comparator: ascending by priority field
+int w_dispatch_buffer_compare_by_priority(
+	struct w_dispatch_buffer *buffer,
+	struct w_dispatch_entry *entry_a, void *payload_a,
+	struct w_dispatch_entry *entry_b, void *payload_b);
+
+// convenience: sort unread entries ascending by priority
+void w_dispatch_buffer_sort_by_priority(struct w_dispatch_buffer *buffer);
+
 // check if buffer has entries to read
 bool w_dispatch_buffer_has_entries(struct w_dispatch_buffer *buffer);
 
