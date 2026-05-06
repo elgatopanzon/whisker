@@ -154,9 +154,9 @@ struct w_rendering_cmd_camera_begin_3d
 struct w_rendering_cmd_draw_text 
 {
 	const char *text;
-	w_vec2 position;
-	float rotation;
-	w_vec2 origin;
+	w_vec3 position;
+	w_quat rotation;
+	w_vec3 origin;
 	int font_size;
 	int font_spacing;
 	w_color8 font_color;
