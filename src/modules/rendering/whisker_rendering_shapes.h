@@ -17,64 +17,66 @@ enum W_RENDERING_SHAPE_TYPE
 	W_RENDERING_SHAPE_TYPE_CUBE,
 };
 
-// verts for shapes XZ native
+// verts for shapes XZ native (-1 to 1 range, scale 0.5 normalizes to 1 unit)
+static const w_vec3 w_shape_vert_scale = {0.5f, 0.5f, 0.5f};
+static const int w_shape_vert_range[] = {-1, 1};
 
 // rectangle
 static const w_vec3 w_shape_rect_tris[] = {
-    {-0.5f, 0, -0.5f}, {-0.5f, 0, 0.5f}, {0.5f, 0, -0.5f},
-    {0.5f, 0, -0.5f}, {-0.5f, 0, 0.5f}, {0.5f, 0, 0.5f},
+    {-1.0f, 0, -1.0f}, {-1.0f, 0, 1.0f}, {1.0f, 0, -1.0f},
+    {1.0f, 0, -1.0f}, {-1.0f, 0, 1.0f}, {1.0f, 0, 1.0f},
 };
 #define W_SHAPE_RECT_TRIS_LEN (sizeof(w_shape_rect_tris) / sizeof(*w_shape_rect_tris))
 
 // rectangle outline (4 edges, 8 verts)
 static const w_vec3 w_shape_rect_lines[] = {
-    {-0.5f, 0, -0.5f}, {0.5f, 0, -0.5f},  // bottom
-    {0.5f, 0, -0.5f}, {0.5f, 0, 0.5f},  // right
-    {0.5f, 0, 0.5f}, {-0.5f, 0, 0.5f},  // top
-    {-0.5f, 0, 0.5f}, {-0.5f, 0, -0.5f},  // left
+    {-1.0f, 0, -1.0f}, {1.0f, 0, -1.0f},  // bottom
+    {1.0f, 0, -1.0f}, {1.0f, 0, 1.0f},  // right
+    {1.0f, 0, 1.0f}, {-1.0f, 0, 1.0f},  // top
+    {-1.0f, 0, 1.0f}, {-1.0f, 0, -1.0f},  // left
 };
 #define W_SHAPE_RECT_LINES_LEN (sizeof(w_shape_rect_lines) / sizeof(*w_shape_rect_lines))
 
-// cube triangles (centered, -0.5 to 0.5 range, 36 verts)
+// cube triangles (centered, -1 to 1 range, 36 verts)
 static const w_vec3 w_shape_cube_tris[] = {
     // front
-    {-0.5f, -0.5f,  0.5f}, { 0.5f, -0.5f,  0.5f}, { 0.5f,  0.5f,  0.5f},
-    {-0.5f, -0.5f,  0.5f}, { 0.5f,  0.5f,  0.5f}, {-0.5f,  0.5f,  0.5f},
+    {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
+    {-1.0f, -1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f},
     // back
-    { 0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, -0.5f}, {-0.5f,  0.5f, -0.5f},
-    { 0.5f, -0.5f, -0.5f}, {-0.5f,  0.5f, -0.5f}, { 0.5f,  0.5f, -0.5f},
+    { 1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f},
+    { 1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
     // top
-    {-0.5f,  0.5f, -0.5f}, {-0.5f,  0.5f,  0.5f}, { 0.5f,  0.5f,  0.5f},
-    {-0.5f,  0.5f, -0.5f}, { 0.5f,  0.5f,  0.5f}, { 0.5f,  0.5f, -0.5f},
+    {-1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
+    {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f, -1.0f},
     // bottom
-    {-0.5f, -0.5f, -0.5f}, { 0.5f, -0.5f, -0.5f}, { 0.5f, -0.5f,  0.5f},
-    {-0.5f, -0.5f, -0.5f}, { 0.5f, -0.5f,  0.5f}, {-0.5f, -0.5f,  0.5f},
+    {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f,  1.0f},
+    {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f},
     // right
-    { 0.5f, -0.5f, -0.5f}, { 0.5f,  0.5f, -0.5f}, { 0.5f,  0.5f,  0.5f},
-    { 0.5f, -0.5f, -0.5f}, { 0.5f,  0.5f,  0.5f}, { 0.5f, -0.5f,  0.5f},
+    { 1.0f, -1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f,  1.0f},
+    { 1.0f, -1.0f, -1.0f}, { 1.0f,  1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f},
     // left
-    {-0.5f, -0.5f,  0.5f}, {-0.5f,  0.5f,  0.5f}, {-0.5f,  0.5f, -0.5f},
-    {-0.5f, -0.5f,  0.5f}, {-0.5f,  0.5f, -0.5f}, {-0.5f, -0.5f, -0.5f},
+    {-1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f},
+    {-1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
 };
 #define W_SHAPE_CUBE_TRIS_LEN (sizeof(w_shape_cube_tris) / sizeof(*w_shape_cube_tris))
 
 // cube outline (12 edges, 24 verts)
 static const w_vec3 w_shape_cube_lines[] = {
     // front face
-    {-0.5f, -0.5f,  0.5f}, { 0.5f, -0.5f,  0.5f},
-    { 0.5f, -0.5f,  0.5f}, { 0.5f,  0.5f,  0.5f},
-    { 0.5f,  0.5f,  0.5f}, {-0.5f,  0.5f,  0.5f},
-    {-0.5f,  0.5f,  0.5f}, {-0.5f, -0.5f,  0.5f},
+    {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f},
+    { 1.0f, -1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
+    { 1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f},
+    {-1.0f,  1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f},
     // back face
-    {-0.5f, -0.5f, -0.5f}, { 0.5f, -0.5f, -0.5f},
-    { 0.5f, -0.5f, -0.5f}, { 0.5f,  0.5f, -0.5f},
-    { 0.5f,  0.5f, -0.5f}, {-0.5f,  0.5f, -0.5f},
-    {-0.5f,  0.5f, -0.5f}, {-0.5f, -0.5f, -0.5f},
+    {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f},
+    { 1.0f, -1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
+    { 1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f},
+    {-1.0f,  1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
     // connecting edges
-    {-0.5f, -0.5f,  0.5f}, {-0.5f, -0.5f, -0.5f},
-    { 0.5f, -0.5f,  0.5f}, { 0.5f, -0.5f, -0.5f},
-    { 0.5f,  0.5f,  0.5f}, { 0.5f,  0.5f, -0.5f},
-    {-0.5f,  0.5f,  0.5f}, {-0.5f,  0.5f, -0.5f},
+    {-1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f, -1.0f},
+    { 1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f, -1.0f},
+    { 1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f, -1.0f},
+    {-1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f},
 };
 #define W_SHAPE_CUBE_LINES_LEN (sizeof(w_shape_cube_lines) / sizeof(*w_shape_cube_lines))
 

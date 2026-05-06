@@ -36,6 +36,7 @@ w_ecs_system(
 	cmd.scale = *w_query_get(scale_3d);
 	cmd.origin = *w_query_get(origin_3d);
 	cmd.color = *w_query_get(color);
+	cmd.scale = w_vec3_mul(cmd.scale, w_shape_vert_scale);
 
 	cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
@@ -61,23 +62,28 @@ w_ecs_system(
 	w_vec3 *grid_verts = w_ecs_frame_malloc(world, total_verts * sizeof(w_vec3));
 	int v = 0;
 
-	// vertical lines (span Z) - normalized -0.5 to 0.5
+	// use w_shape_vert_range for normalization bounds
+	float vert_lo = (float)w_shape_vert_range[0];
+	float vert_hi = (float)w_shape_vert_range[1];
+	float vert_span = vert_hi - vert_lo;
+
+	// vertical lines (span Z) - normalized to vert range
 	for (int i = 0; i <= cells_x; i++) {
-    	float x_base = (float)i / cells_x - 0.5f;
+    	float x_base = (float)i / cells_x * vert_span + vert_lo;
     	for (int t = 0; t < thickness_lines; t++) {
         	float x = x_base - half_thickness + t * line_offset;
-        	grid_verts[v++] = ((w_vec3){x, 0, -0.5f});
-        	grid_verts[v++] = ((w_vec3){x, 0, 0.5f});
+        	grid_verts[v++] = ((w_vec3){x, 0, vert_lo});
+        	grid_verts[v++] = ((w_vec3){x, 0, vert_hi});
     	}
 	}
 
-	// horizontal lines (span X) - normalized -0.5 to 0.5
+	// horizontal lines (span X) - normalized to vert range
 	for (int i = 0; i <= cells_z; i++) {
-    	float z_base = (float)i / cells_z - 0.5f;
+    	float z_base = (float)i / cells_z * vert_span + vert_lo;
     	for (int t = 0; t < thickness_lines; t++) {
         	float z = z_base - half_thickness + t * line_offset;
-        	grid_verts[v++] = ((w_vec3){-0.5f, 0, z});
-        	grid_verts[v++] = ((w_vec3){0.5f, 0, z});
+        	grid_verts[v++] = ((w_vec3){vert_lo, 0, z});
+        	grid_verts[v++] = ((w_vec3){vert_hi, 0, z});
     	}
 	}
 

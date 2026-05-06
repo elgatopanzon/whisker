@@ -110,6 +110,7 @@ w_ecs_system(
 {
 	w_vec2 rect_s = *w_query_get(rectangle);
 	w_vec3 scale = w_vec3_mul(((w_vec3){rect_s.x, 1.0f, rect_s.y}), *w_query_get(scale_3d));
+	scale = w_vec3_mul(scale, w_shape_vert_scale);
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
 		w_ecs_render_layer(*w_query_get(render_layer)),
@@ -133,6 +134,7 @@ w_ecs_system(
 {
 	w_vec3 cube_s = *w_query_get(cube);
 	w_vec3 scale = w_vec3_mul(cube_s, *w_query_get(scale_3d));
+	scale = w_vec3_mul(scale, w_shape_vert_scale);
 	w_rendering_shapes_dispatch_draw_static_shape(
 		world,
 		w_ecs_render_layer(*w_query_get(render_layer)),
