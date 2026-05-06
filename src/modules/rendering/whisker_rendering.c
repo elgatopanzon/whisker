@@ -14,6 +14,7 @@
 #include "whisker_rendering_draw_systems.h"
 #include "whisker_rendering_camera_systems.h"
 #include "whisker_rendering_shapes_systems.h"
+#include "whisker_rendering_shapes_procedural_systems.h"
 
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {
@@ -196,6 +197,7 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	********************/
 	w_rendering_shapes_dispatch_draw_rects_register(world);
 	w_rendering_shapes_dispatch_draw_cubes_register(world);
+	w_rendering_shapes_procedural_dispatch_draw_grid_register(world);
 }
 
 void wm_rendering_free(struct w_ecs_world *world)

@@ -82,8 +82,10 @@ static const w_vec3 w_shape_cube_lines[] = {
 /**********************
 *  shape components  *
 **********************/
+w_ecs_define_component(float, thickness, 1.0f);
 w_ecs_define_component(w_vec2, rectangle, 0.0f, 0.0f);
 w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
+w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 
 // color applied to outline when exists and .a > 0
 // note: alpha defaults to 0 so we don't draw the outline
