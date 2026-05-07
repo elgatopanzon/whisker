@@ -175,7 +175,7 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	// init a default camera
 	camera_state->camera_entity_id = W_ENTITY_INVALID;
 
-	camera_state->camera_position = ((w_vec3){ -6.0f, 0.0f, 0.0f });
+	camera_state->camera_position = ((w_vec3){ 0.0f, 0.0f, 6.0f });
     camera_state->camera_rotation = rotation_3d_default();
     camera_state->camera_up = camera_up_default();
     camera_state->camera_fov_deg = camera_fov_deg_default();
