@@ -45,7 +45,7 @@ w_ecs_simple_system(
 
 	// set camera state directly from active entity components
 	camera_state->camera_position = *w_get(entity, position_3d);
-	camera_state->camera_target = *w_get(entity, camera_target);
+	camera_state->camera_rotation = *w_get(entity, rotation_3d);
 	camera_state->camera_up = *w_get(entity, camera_up);
 	camera_state->camera_fov_deg = *w_get(entity, camera_fov_deg);
 	camera_state->camera_near_clip = *w_get(entity, camera_near_clip);
@@ -53,6 +53,23 @@ w_ecs_simple_system(
 	camera_state->camera_projection = *w_get(entity, camera_projection);
 });
 
+w_ecs_system(
+	w_rendering_camera_look_at_target_sync,
+	WM_RENDER_PHASE_ON_SYNC,
+	w_query(
+		w_query_h(camera),
+		w_query_r(camera_target),
+		w_query_r(camera_up),
+		w_query_r(position_3d),
+		w_query_w(rotation_3d)
+	),
+{
+	// we negate the position to make it -Z as look_rotation uses +Z
+	*w_query_get(rotation_3d) = w_quat_look_rotation(
+    	w_vec3_sub(*w_query_get(position_3d), *w_query_get(camera_target)),
+    	*w_query_get(camera_up)
+	);
+});
 
 /**********************
 *  dispatch systems  *
@@ -87,7 +104,12 @@ w_ecs_simple_system(
     }
 
 	// calculate the view matrix from the camera
-    w_mat4 camera_matrix = w_mat4_look_at(camera_state->camera_position, camera_state->camera_target, camera_state->camera_up);
+    /* w_mat4 camera_matrix = w_mat4_look_at(camera_state->camera_position, camera_state->camera_target, camera_state->camera_up); */
+    w_mat4 camera_matrix = w_mat4_inverse(w_mat4_from_trs(
+       camera_state->camera_position,
+       camera_state->camera_rotation,
+       ((w_vec3){1,1,1})
+   	));
 
 	w_rendering_dispatch_render_cmd_value(
 		W_RENDERING_CMD_CAMERA_BEGIN_3D,

@@ -35,7 +35,7 @@ struct w_rendering_camera_state
 	w_entity_id camera_entity_id;
 
 	w_vec3 camera_position;
-	w_vec3 camera_target;
+	w_quat camera_rotation;
 	w_vec3 camera_up;
 	float camera_near_clip;
 	float camera_far_clip;
@@ -56,7 +56,7 @@ w_ecs_define_component(float, camera_fov_deg, 45.0f);
 w_ecs_define_component(w_vec3, camera_up, 0.0f, 1.0f, 0.0f);
 
 // target vector
-w_ecs_define_component(w_vec3, camera_target, 0.0f, 1.0f, 0.0f);
+w_ecs_define_component(w_vec3, camera_target, 0.0f, 0.0f, 0.0f);
 
 // near and far planes e.g. 0.1 / 1000
 w_ecs_define_component(float, camera_near_clip, 0.01f);
