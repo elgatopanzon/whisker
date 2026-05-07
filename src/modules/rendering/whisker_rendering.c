@@ -15,6 +15,7 @@
 #include "whisker_rendering_camera_systems.h"
 #include "whisker_rendering_shapes_systems.h"
 #include "whisker_rendering_shapes_procedural_systems.h"
+#include "whisker_rendering_transform_modifier_systems.h"
 
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *render_config)
 {
@@ -166,6 +167,11 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_rendering_draw_dispatch_draw_main_framebuffer_register(world);
 	w_rendering_draw_dispatch_draw_end_register(world);
 	
+
+	/************************************
+	*  transform modification systems  *
+	************************************/
+	w_rendering_transform_mod_billboard_sync_register(world);
 
 	/*******************
 	*  camera module  *

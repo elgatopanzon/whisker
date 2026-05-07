@@ -178,8 +178,20 @@ enum WM_RENDER_PHASE
 	WM_RENDER_PHASE_POST_OVERLAY = 121,
 };
 
+/*************************
+*  components and tags  *
+*************************/
+
 // phase as render layer
 w_ecs_define_component(int, render_layer, 0);
+
+// enable billboard on Y or all axies
+enum W_RENDERING_BILLBOARD
+{
+	W_RENDERING_BILLBOARD_Y,
+	W_RENDERING_BILLBOARD_ALL,
+};
+w_ecs_define_component(int, render_billboard, W_RENDERING_BILLBOARD_Y);
 
 // initialize the rendering module
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *rendering_config);
