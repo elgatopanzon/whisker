@@ -14,6 +14,10 @@
 #ifndef WHISKER_RENDERING_TRANSFORM_MODIFIER_SYSTEMS_H
 #define WHISKER_RENDERING_TRANSFORM_MODIFIER_SYSTEMS_H
 
+// the billboard implementation supports 2 modes:
+// - Y only
+// - All
+// its a simple rotation modification pipeline
 w_ecs_system(
     w_rendering_transform_mod_billboard_sync,
     WM_RENDER_PHASE_POST_SYNC,
@@ -46,6 +50,34 @@ w_ecs_system(
 
         *rot = w_quat_mul(*rot, w_quat_look_rotation(look_dir, cam->camera_up));
     }
+});
+
+
+// the render_scale_screen will keep the scale so it has the same size
+// regardless of camera distance
+w_ecs_system(
+    w_rendering_transform_mod_scale_screen_sync,
+    WM_RENDER_PHASE_POST_SYNC,
+    w_query(
+        w_query_h(render_scale_screen),
+        w_query_r(render_position_3d),
+        w_query_w(render_scale_3d)
+    ),
+{
+    struct w_rendering_camera_state *cam = w_rendering_get_camera_state(world);
+    struct w_rendering_render_config *config = w_rendering_get_render_config(world);
+
+    w_vec3 *pos = w_query_get(render_position_3d);
+    w_vec3 *scale = w_query_get(render_scale_3d);
+
+    float distance = w_vec3_length(w_vec3_sub(*pos, cam->camera_position));
+    float fov_rad = cam->camera_fov_deg * W_DEG2RAD * 0.5f;
+    float scale_factor = distance * 2.0f * tanf(fov_rad) / (float)config->render_resolution.y;
+
+    // scale based on scale factor and world pixel scale
+    scale->x *= scale_factor * W_RENDERING_WORLD_PIXEL_SCALE;
+    scale->y *= scale_factor * W_RENDERING_WORLD_PIXEL_SCALE;
+    scale->z *= scale_factor * W_RENDERING_WORLD_PIXEL_SCALE;
 });
 
 #endif /* WHISKER_RENDERING_TRANSFORM_MODIFIER_SYSTEMS_H */

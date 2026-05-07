@@ -172,6 +172,7 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	*  transform modification systems  *
 	************************************/
 	w_rendering_transform_mod_billboard_sync_register(world);
+	w_rendering_transform_mod_scale_screen_sync_register(world);
 
 	/*******************
 	*  camera module  *

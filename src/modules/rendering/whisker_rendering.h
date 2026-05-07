@@ -27,6 +27,10 @@
 #define w_rendering_get_render_state(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_STATE_RESOURCE_ID)
 #define w_rendering_get_render_dispatch_buffer(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID)
 
+#ifndef W_RENDERING_WORLD_PIXEL_SCALE
+#define W_RENDERING_WORLD_PIXEL_SCALE 100.0f;
+#endif
+
 struct w_rendering_display_config 
 {
 	// display resolution and monitor selection
@@ -192,6 +196,9 @@ enum W_RENDERING_BILLBOARD
 	W_RENDERING_BILLBOARD_ALL,
 };
 w_ecs_define_component(int, render_billboard, W_RENDERING_BILLBOARD_Y);
+
+// render at screen scale
+w_ecs_define_tag(render_scale_screen);
 
 // initialize the rendering module
 void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_config *display_config, struct w_rendering_render_config *rendering_config);
