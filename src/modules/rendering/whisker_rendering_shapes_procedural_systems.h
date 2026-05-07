@@ -16,25 +16,25 @@
 
 w_ecs_system(
 	w_rendering_shapes_procedural_dispatch_draw_grid,
-	WM_PHASE_PRE_RENDER,
+	WM_RENDER_PHASE_PRE_WORLD,
 	w_query(
 		w_query_r(grid),
 		w_query_r(thickness),
 		w_query_r(color),
-		w_query_r(position_3d),
-		w_query_r(rotation_3d),
-		w_query_r(scale_3d),
-		w_query_r(origin_3d),
+		w_query_r(render_position_3d),
+		w_query_r(render_rotation_3d),
+		w_query_r(render_scale_3d),
+		w_query_r(render_origin_3d),
 		w_query_r(render_layer),
 		w_query_n(hidden),
 	),
 {
 	struct w_rendering_cmd_draw_verts cmd = {0};
 
-	cmd.position = *w_query_get(position_3d);
-	cmd.rotation = *w_query_get(rotation_3d);
-	cmd.scale = *w_query_get(scale_3d);
-	cmd.origin = *w_query_get(origin_3d);
+	cmd.position = *w_query_get(render_position_3d);
+	cmd.rotation = *w_query_get(render_rotation_3d);
+	cmd.scale = *w_query_get(render_scale_3d);
+	cmd.origin = *w_query_get(render_origin_3d);
 	cmd.color = *w_query_get(color);
 	cmd.scale = w_vec3_mul(cmd.scale, w_shape_vert_scale);
 

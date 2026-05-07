@@ -58,6 +58,25 @@
 #define w_id(name) ((void)sizeof(name), name##_get_id(world))
 #define w_gid(name, gname) ((void)sizeof(name), name##_get_generic_id(world, gname))
 
+#define w_for_each(q, work) w_query_for_each(world, q, work)
+#define w_sync(from, to) \
+	({ \
+	(void)sizeof(from); (void)sizeof(to); \
+	w_ecs_world_do_unbuffered(world, { \
+	/* create to if from does not exist */ \
+	w_for_each(w_query(w_query_r(from), w_query_n(to)), { \
+		w_set_default(entity, to); \
+	}); \
+	/* delete from if to does not exist */ \
+	w_for_each(w_query(w_query_n(from), w_query_h(to)), { \
+		w_remove(entity, to); \
+	}); \
+	/* sync to to from when both exist */ \
+	w_for_each(w_query(w_query_r(from), w_query_w(to)), { \
+		w_set(entity, to, w_query_get(from)); \
+	}); \
+	}); \
+	})
 
 enum W_COMPONENT_ACTION
 {

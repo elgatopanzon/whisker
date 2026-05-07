@@ -52,6 +52,7 @@ w_ecs_define_component(float, rotation_2d, 0.0f);
 w_ecs_define_component(w_vec2, scale_2d, 1.0f, 1.0f);
 w_ecs_define_component(w_vec2, origin_2d, 0.0f, 0.0f);
 
+
 /************************
 *  physics components  *
 ************************/
@@ -67,6 +68,23 @@ w_ecs_define_component(w_vec3, angular_velocity_3d, 0.0f, 0.0f, 0.0f);
 w_ecs_define_component(w_vec2, velocity_2d, 0.0f, 0.0f);
 w_ecs_define_component(w_vec2, acceleration_2d, 0.0f, 0.0f);
 w_ecs_define_component(float, angular_velocity_2d);
+
+
+/****************************
+*  render copy components  *
+****************************/
+// render components are copies of base authorative components at render time
+// 3D
+w_ecs_define_component(w_vec3, render_position_3d, 0.0f, 0.0f, 0.0f);
+w_ecs_define_component(w_quat, render_rotation_3d, 0.0f, 0.0f, 0.0f, 1.0f);
+w_ecs_define_component(w_vec3, render_scale_3d, 1.0f, 1.0f, 1.0f);
+w_ecs_define_component(w_vec3, render_origin_3d, 0.0f, 0.0f, 0.0f);
+
+// 2D
+w_ecs_define_component(w_vec2, render_position_2d, 0.0f, 0.0f);
+w_ecs_define_component(float, render_rotation_2d, 0.0f);
+w_ecs_define_component(w_vec2, render_scale_2d, 1.0f, 1.0f);
+w_ecs_define_component(w_vec2, render_origin_2d, 0.0f, 0.0f);
 
 #endif /* WHISKER_COMPONENTS_H */
 

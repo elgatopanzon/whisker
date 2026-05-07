@@ -35,7 +35,7 @@ w_ecs_system(
 
 w_ecs_simple_system(
 	w_rendering_camera_state_sync,
-	WM_RENDER_PHASE_ON_SYNC,
+	WM_RENDER_PHASE_PRE_WORLD,
 {
 	struct w_rendering_camera_state *camera_state = w_ecs_get_module_resource(world, WM_RENDERING_CAMERA_STATE_RESOURCE_ID);
 
@@ -44,8 +44,8 @@ w_ecs_simple_system(
 	w_entity_id entity = camera_state->camera_entity_id;
 
 	// set camera state directly from active entity components
-	camera_state->camera_position = *w_get(entity, position_3d);
-	camera_state->camera_rotation = *w_get(entity, rotation_3d);
+	camera_state->camera_position = *w_get(entity, render_position_3d);
+	camera_state->camera_rotation = *w_get(entity, render_rotation_3d);
 	camera_state->camera_up = *w_get(entity, camera_up);
 	camera_state->camera_fov_deg = *w_get(entity, camera_fov_deg);
 	camera_state->camera_near_clip = *w_get(entity, camera_near_clip);
@@ -53,9 +53,10 @@ w_ecs_simple_system(
 	camera_state->camera_projection = *w_get(entity, camera_projection);
 });
 
+// we use regular position/rotation 3D to ensure authorative rotation
 w_ecs_system(
 	w_rendering_camera_look_at_target_sync,
-	WM_RENDER_PHASE_ON_SYNC,
+	WM_PHASE_PRE_RENDER,
 	w_query(
 		w_query_h(camera),
 		w_query_r(camera_target),
