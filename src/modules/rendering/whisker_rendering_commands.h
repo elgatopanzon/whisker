@@ -156,6 +156,7 @@ struct w_rendering_cmd_draw_text
 	const char *text;
 	w_vec3 position;
 	w_quat rotation;
+	w_vec3 scale;
 	w_vec3 origin;
 	int font_size;
 	int font_spacing;
