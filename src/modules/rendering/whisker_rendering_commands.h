@@ -160,7 +160,12 @@ struct w_rendering_cmd_draw_text
 	w_vec3 origin;
 	int font_size;
 	int font_spacing;
+	float font_line_height;
 	w_color8 font_color;
+	w_vec2 font_shadow;
+	w_color8 font_shadow_color;
+	enum W_RENDERING_TEXT_ALIGN font_alignment;
+	float max_width;
 };
 
 // draw verts to screen
