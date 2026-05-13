@@ -6,6 +6,7 @@
  */
 
 #include "whisker_rendering.h"
+#include "whisker_rendering_components.h"
 #include "whisker_rendering_camera.h"
 
 #ifndef WHISKER_RENDERING_COMMANDS_H
