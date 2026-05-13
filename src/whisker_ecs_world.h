@@ -488,6 +488,17 @@ struct w_component_entry *w_ecs_get_component_entry(struct w_ecs_world *world, w
 	} \
 	w_ecs_declare_system_register_fn(name, phase) \
 
+#define w_ecs_filtered_system(name, phase, query, filter, work) \
+	static inline bool name##_filter(struct w_ecs_world *world, struct w_query_iterator itor, double delta_time) { \
+		(void)world; (void)itor; (void)delta_time; \
+		filter \
+	} \
+	w_ecs_system(name, phase, query, { \
+		if (!name##_filter(world, itor, delta_time)) continue; \
+		work \
+	}) \
+
+
 #define w_ecs_simple_system(name, phase, work) \
 	static inline void name(void *ctx, double delta_time) { \
 		struct w_ecs_world *world = ctx; \
