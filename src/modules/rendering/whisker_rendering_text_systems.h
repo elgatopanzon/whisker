@@ -26,6 +26,7 @@ w_ecs_system(
 
 		// required layer
 		w_query_r(render_layer),
+		w_query_n(hidden),
 
 		// required text components
 		w_query_r(string),

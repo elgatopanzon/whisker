@@ -18,6 +18,7 @@ enum W_RENDERING_SHAPE_TYPE
 	W_RENDERING_SHAPE_TYPE_LINE,
 	W_RENDERING_SHAPE_TYPE_TRIANGLE,
 	W_RENDERING_SHAPE_TYPE_RECT,
+	W_RENDERING_SHAPE_TYPE_CIRCLE,
 	W_RENDERING_SHAPE_TYPE_CUBE,
 };
 
@@ -120,12 +121,16 @@ static const w_vec3 w_shape_cube_lines[] = {
 **********************/
 // general
 w_ecs_define_component(float, thickness, 1.0f);
+w_ecs_define_component(float, shape_angle_start, 0);
+w_ecs_define_component(float, shape_angle_end, 360); // full circle
+w_ecs_define_component(float, shape_segments, 32);
 
 // 2D
 w_ecs_define_component(float, point, 1.0f);
 w_ecs_define_component(float, line, 1.0f);
 w_ecs_define_component(float, triangle, 1.0f);
 w_ecs_define_component(w_vec2, rectangle, 0.0f, 0.0f);
+w_ecs_define_component(float, circle, 1.0f); // diameter
 w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 
 // 3D

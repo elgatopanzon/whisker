@@ -92,10 +92,185 @@ w_ecs_system(
 
 	// single dispatch for entire grid
 	w_rendering_dispatch_render_cmd(
-		W_RENDERING_CMD_DRAW_VERTS, 
-		w_ecs_render_layer(*w_query_get(render_layer)), 
-		&cmd
-	);
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+			);
+	});
+
+
+w_ecs_system(
+	w_rendering_shapes_procedural_dispatch_draw_circle,
+	WM_RENDER_PHASE_PRE_WORLD,
+	w_query(
+		// transform
+		w_query_r(render_position_3d),
+		w_query_r(render_rotation_3d),
+		w_query_r(render_scale_3d),
+		w_query_r(render_origin_3d),
+
+		// required render components
+		w_query_r(render_layer),
+		w_query_n(hidden),
+
+		// required shape components
+		w_query_r(circle),
+		w_query_r(color),
+
+		// optional shape components
+		w_query_o(shape_angle_start),
+		w_query_o(shape_angle_end),
+		w_query_o(shape_segments),
+		w_query_o(shape_outline_color),
+	),
+{
+	float diameter = *w_query_get(circle);
+	float start_rad = *w_query_get_opt_or_default(shape_angle_start) * W_DEG2RAD;
+	float end_rad = *w_query_get_opt_or_default(shape_angle_end) * W_DEG2RAD;
+	int segments = *w_query_get_opt_or_default(shape_segments);
+
+	w_color8 shape_color = *w_query_get(color);
+	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
+
+
+	// sanitize diameter
+	if (diameter <= 0) diameter = 1;
+
+	// sanitize start/end angle
+	if (end_rad < start_rad)
+	{
+		float angle_swap = start_rad;
+		start_rad = end_rad;
+		end_rad = angle_swap;
+	}
+	if (end_rad - start_rad < 0.001f) return; // degenerate arc
+
+	// calculate the minimum segments for the start and end angle
+	// if the desired segments are less, calculate the segments based on the diameter
+	int segments_min = (int)ceilf((end_rad - start_rad)/(W_PI/2));
+
+    if (segments < segments_min)
+    {
+    	// larger circles need more segments to maintain smoothness
+        float th = acosf(2*powf(1 - 1.0f/diameter, 2) - 1);
+        segments = (int)ceilf((end_rad - start_rad)/th);
+
+        if (segments <= 0) segments = segments_min;
+    }
+
+	// calculate steps
+    float step_length = (end_rad - start_rad)/(float)segments;
+
+	// set default verts arrays and lengths
+	w_vec3 *circle_verts = NULL;
+	int circle_verts_count = 0;
+
+	w_vec3 *circle_outline_verts = NULL;
+	int circle_outline_verts_count = 0;
+
+	// generate verts array for the shape
+	if (shape_color.a > 0)
+	{
+		circle_verts_count = segments * 3;
+		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
+		for (int i = 0; i < segments; i++)
+    	{
+        	float angle0 = start_rad + i * step_length;
+    		float angle1 = start_rad + (i + 1) * step_length;
+
+        	// center vertex
+        	circle_verts[i * 3 + 0].x = 0.0f;
+        	circle_verts[i * 3 + 0].y = 0.0f;
+        	circle_verts[i * 3 + 0].z = 0.0f;
+
+        	// first edge vertex (CCW)
+        	circle_verts[i * 3 + 1].x = cosf(angle1);
+        	circle_verts[i * 3 + 1].y = 0.0f;
+        	circle_verts[i * 3 + 1].z = sinf(angle1);
+
+        	// second edge vertex (CCW)
+        	circle_verts[i * 3 + 2].x = cosf(angle0);
+        	circle_verts[i * 3 + 2].y = 0.0f;
+        	circle_verts[i * 3 + 2].z = sinf(angle0);
+    	}
+	}
+
+	// generate verts array for just the outline as vec3 lines  
+	if (outline_color.a > 0)
+	{
+    	bool is_full_circle = (end_rad - start_rad) >= (2.0f * W_PI - 0.001f);
+    	
+    	// arc segments + 2 radial lines for partial circles
+    	circle_outline_verts_count = segments * 2 + (is_full_circle ? 0 : 4);
+    	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
+    	
+		for (int i = 0; i < segments; i++)  
+		{  
+    		float angle0 = start_rad + i * step_length;  
+    		float angle1 = start_rad + (i + 1) * step_length;
+
+    		// first point of the line (CCW)  
+    		circle_outline_verts[i * 2 + 0].x = cosf(angle1);  
+    		circle_outline_verts[i * 2 + 0].y = 0.0f;  
+    		circle_outline_verts[i * 2 + 0].z = sinf(angle1);  
+
+    		// second point of the line (CCW)  
+    		circle_outline_verts[i * 2 + 1].x = cosf(angle0);  
+    		circle_outline_verts[i * 2 + 1].y = 0.0f;  
+    		circle_outline_verts[i * 2 + 1].z = sinf(angle0);  
+		}
+    	
+    	// add radial lines for partial circles (pie slice edges)
+    	if (!is_full_circle)
+    	{
+        	int base = segments * 2;
+        	
+        	// center to start
+        	circle_outline_verts[base + 0] = ((w_vec3){0, 0, 0});
+        	circle_outline_verts[base + 1] = ((w_vec3){cosf(start_rad), 0, sinf(start_rad)});
+        	
+        	// center to end
+        	circle_outline_verts[base + 2] = ((w_vec3){0, 0, 0});
+        	circle_outline_verts[base + 3] = ((w_vec3){cosf(end_rad), 0, sinf(end_rad)});
+    	}
+    }
+
+	// prepare draw command
+	struct w_rendering_cmd_draw_verts cmd = {0};
+
+	cmd.position = *w_query_get(render_position_3d);
+	cmd.rotation = *w_query_get(render_rotation_3d);
+	cmd.scale = *w_query_get(render_scale_3d);
+	cmd.origin = *w_query_get(render_origin_3d);
+	cmd.scale = w_vec3_mul(cmd.scale, ((w_vec3){ diameter * w_shape_vert_scale.x, diameter * w_shape_vert_scale.y, diameter * w_shape_vert_scale.z}));
+
+	if (shape_color.a > 0)
+	{
+		cmd.color = shape_color;
+		cmd.verts = circle_verts;
+		cmd.verts_length = circle_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
+
+	if (outline_color.a > 0)
+	{
+		cmd.color = outline_color;
+		cmd.verts = circle_outline_verts;
+		cmd.verts_length = circle_outline_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
 });
 
 #endif /* WHISKER_RENDERING_SHAPES_PROCEDURAL_SYSTEMS_H */
