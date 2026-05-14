@@ -28,7 +28,7 @@
 #define w_rendering_get_render_dispatch_buffer(w) w_ecs_get_module_resource(w, WM_RENDERING_RENDER_DISPATCH_BUFFER_RESOURCE_ID)
 
 #ifndef W_RENDERING_WORLD_PIXEL_SCALE
-#define W_RENDERING_WORLD_PIXEL_SCALE 100.0f;
+#define W_RENDERING_WORLD_PIXEL_SCALE 100.0f
 #endif
 
 struct w_rendering_display_config 

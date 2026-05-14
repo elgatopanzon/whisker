@@ -205,6 +205,9 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	/********************
 	*  shapes systems  *
 	********************/
+	w_rendering_shapes_dispatch_draw_points_register(world);
+	w_rendering_shapes_dispatch_draw_lines_register(world);
+	w_rendering_shapes_dispatch_draw_triangles_register(world);
 	w_rendering_shapes_dispatch_draw_rects_register(world);
 	w_rendering_shapes_dispatch_draw_cubes_register(world);
 	w_rendering_shapes_procedural_dispatch_draw_grid_register(world);
