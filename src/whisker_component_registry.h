@@ -32,6 +32,10 @@
 #define W_COMPONENT_REGISTRY_DATA_REALLOC_BLOCK_SIZE_BASE 64
 #endif /* ifndef W_COMPONENT_REGISTRY_DATA_REALLOC_BLOCK_SIZE_BASE */
 
+// pointer types for enum mappings
+typedef const char* char_ptr;
+typedef void* void_ptr;
+
 // these component types are supported by the component registry
 enum W_COMPONENT_TYPE { 
 	// basic primitives
@@ -63,6 +67,9 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_bool = 10,
 	W_COMPONENT_TYPE__Bool = 10,
 	W_COMPONENT_TYPE_char = 11,
+
+	W_COMPONENT_TYPE_char_ptr = 12,
+	W_COMPONENT_TYPE_void_ptr = 13,
 
 	// engine types
 	W_COMPONENT_TYPE_w_vec2 = 20,
@@ -121,6 +128,8 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_double]      = "double",
 	[W_COMPONENT_TYPE_bool]        = "bool",
 	[W_COMPONENT_TYPE_char]        = "char",
+	[W_COMPONENT_TYPE_char_ptr]    = "char_ptr",
+	[W_COMPONENT_TYPE_void_ptr]    = "void_ptr",
 	[W_COMPONENT_TYPE_w_vec2]      = "w_vec2",
 	[W_COMPONENT_TYPE_w_vec2i]     = "w_vec2i",
 	[W_COMPONENT_TYPE_w_vec2u]     = "w_vec2u",
@@ -165,6 +174,8 @@ static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_double]      = sizeof(double),
 	[W_COMPONENT_TYPE_bool]        = sizeof(bool),
 	[W_COMPONENT_TYPE_char]        = sizeof(char),
+	[W_COMPONENT_TYPE_char_ptr]    = sizeof(char_ptr),
+	[W_COMPONENT_TYPE_void_ptr]    = sizeof(void_ptr),
 	[W_COMPONENT_TYPE_w_vec2]      = sizeof(w_vec2),
 	[W_COMPONENT_TYPE_w_vec2i]     = sizeof(w_vec2i),
 	[W_COMPONENT_TYPE_w_vec2u]     = sizeof(w_vec2u),
