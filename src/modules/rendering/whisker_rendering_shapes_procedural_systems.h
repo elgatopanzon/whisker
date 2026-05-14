@@ -171,7 +171,7 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		circle_verts_count = segments * 3;
+		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
 		for (int i = 0; i < segments; i++)
     	{
@@ -201,7 +201,7 @@ w_ecs_system(
     	bool is_full_circle = (end_rad - start_rad) >= (2.0f * W_PI - 0.001f);
     	
     	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = segments * 2 + (is_full_circle ? 0 : 4);
+    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
 		for (int i = 0; i < segments; i++)  

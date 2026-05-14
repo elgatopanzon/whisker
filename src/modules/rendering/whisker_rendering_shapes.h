@@ -22,6 +22,9 @@ enum W_RENDERING_SHAPE_TYPE
 	W_RENDERING_SHAPE_TYPE_CUBE,
 };
 
+/*************************************
+*  static shape verts and outlines  *
+*************************************/
 // NOTE: all verts are CCW winded
 
 // verts for shapes XZ native (-1 to 1 range, scale 0.5 normalizes to 1 unit)
@@ -114,6 +117,14 @@ static const w_vec3 w_shape_cube_lines[] = {
     {-1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f},
 };
 #define W_SHAPE_CUBE_LINES_LEN (sizeof(w_shape_cube_lines) / sizeof(*w_shape_cube_lines))
+
+
+/*************************
+*  shape helper macros  *
+*************************/
+#define W_CIRCLE_VERTS_COUNT(segments) ((segments) * 3)
+#define W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full) ((segments) * 2 + ((is_full) ? 0 : 4))
+#define W_CYLINDER_VERTS_COUNT(segments) ((segments) * 12)  // 2 caps + sides
 
 
 /**********************
