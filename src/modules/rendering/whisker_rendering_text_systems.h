@@ -19,10 +19,10 @@ w_ecs_system(
 	WM_RENDER_PHASE_PRE_WORLD,
 	w_query(
 		// transform
-		w_query_r(position_3d),
-		w_query_r(rotation_3d),
-		w_query_r(scale_3d),
-		w_query_r(origin_3d),
+		w_query_r(render_position_3d),
+		w_query_r(render_rotation_3d),
+		w_query_r(render_scale_3d),
+		w_query_r(render_origin_3d),
 
 		// required layer
 		w_query_r(render_layer),
@@ -43,10 +43,10 @@ w_ecs_system(
 {
 	w_rendering_dispatch_render_cmd_value(W_RENDERING_CMD_DRAW_TEXT, w_ecs_render_layer(*w_query_get(render_layer)), struct w_rendering_cmd_draw_text,
 		.text = *w_query_get(string),
-		.position = *w_query_get(position_3d),
-		.scale = *w_query_get(scale_3d),
-		.origin = *w_query_get(origin_3d),
-		.rotation = *w_query_get(rotation_3d),
+		.position = *w_query_get(render_position_3d),
+		.scale = *w_query_get(render_scale_3d),
+		.origin = *w_query_get(render_origin_3d),
+		.rotation = *w_query_get(render_rotation_3d),
 		.font_size = *w_query_get(font_size),
 		.font_line_height = *w_query_get_opt_or_default(font_line_height),
 		.font_spacing = *w_query_get_opt_or_default(font_spacing),
