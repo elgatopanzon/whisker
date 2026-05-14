@@ -20,6 +20,16 @@ w_ecs_define_tag(hidden);
 w_ecs_define_tag(dirty);
 
 
+/************************
+*  generic components  *
+************************/
+
+// string is a char* pointer
+w_ecs_define_component(char_ptr, string);
+w_ecs_define_component(void_ptr, ptr);
+w_ecs_define_component(int, string_id);
+
+
 /***********************
 *  visual components  *
 ***********************/

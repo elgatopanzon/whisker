@@ -156,7 +156,7 @@
 	T *opt = w_query_get_opt(T); \
 	if (!opt) { \
 		opt = w_ecs_frame_malloc(world, sizeof(T)); \
-		*opt = T##_get_default(); \
+		*opt = T##_default(); \
 	} \
 	opt; \
 	})

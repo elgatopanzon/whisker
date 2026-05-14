@@ -51,7 +51,7 @@ typedef struct {
 
 static w_entity_id opt_comp_component_id_ = W_ENTITY_INVALID;
 
-static opt_comp opt_comp_get_default(void)
+static opt_comp opt_comp_default(void)
 {
 	return (opt_comp){.val = 99.0f};
 }
