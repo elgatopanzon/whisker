@@ -159,10 +159,10 @@ w_ecs_define_component(w_color8, shape_outline_color, 0, 0, 0, 0);
 bool w_rendering_shape_sanitize_circle_params(float *diameter, float *start_rad, float *end_rad, int *segments);
 
 // generate the tri verts for a circle
-int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, bool face_up);
+int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset, bool face_up);
 
 // generate the line verts for a circle outline
-int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad);
+int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 

@@ -32,7 +32,7 @@ bool w_rendering_shape_sanitize_circle_params(float *diameter, float *start_rad,
     return true;
 }
 
-int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, bool face_up)
+int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset, bool face_up)
 {
 	// calculate steps
     float step_length = (end_rad - start_rad)/(float)segments;
@@ -51,25 +51,25 @@ int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int s
 		}
 
         // center vertex
-        out_verts[offset + i * 3 + 0].x = 0.0f;
-        out_verts[offset + i * 3 + 0].y = 0.0f;
-        out_verts[offset + i * 3 + 0].z = 0.0f;
+        out_verts[offset + i * 3 + 0].x = vert_offset.x;
+        out_verts[offset + i * 3 + 0].y = vert_offset.y;
+        out_verts[offset + i * 3 + 0].z = vert_offset.z;
 
         // first edge vertex (CCW)
-        out_verts[offset + i * 3 + 1].x = cosf(angle1);
-        out_verts[offset + i * 3 + 1].y = 0.0f;
-        out_verts[offset + i * 3 + 1].z = sinf(angle1);
+        out_verts[offset + i * 3 + 1].x = vert_offset.x + cosf(angle1);
+        out_verts[offset + i * 3 + 1].y = vert_offset.y + 0.0f;
+        out_verts[offset + i * 3 + 1].z = vert_offset.z + sinf(angle1);
 
         // second edge vertex (CCW)
-        out_verts[offset + i * 3 + 2].x = cosf(angle0);
-        out_verts[offset + i * 3 + 2].y = 0.0f;
-        out_verts[offset + i * 3 + 2].z = sinf(angle0);
+        out_verts[offset + i * 3 + 2].x = vert_offset.x + cosf(angle0);
+        out_verts[offset + i * 3 + 2].y = vert_offset.y + 0.0f;
+        out_verts[offset + i * 3 + 2].z = vert_offset.z + sinf(angle0);
     }
 
 	return W_CIRCLE_VERTS_COUNT(segments);
 }
 
-int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad)
+int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset)
 {
 	// calculate steps
     float step_length = (end_rad - start_rad)/(float)segments;
@@ -83,14 +83,14 @@ int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offse
     	float angle1 = start_rad + (i + 1) * step_length;
 
     	// first point of the line (CCW)  
-    	out_verts[offset + i * 2 + 0].x = cosf(angle1);  
-    	out_verts[offset + i * 2 + 0].y = 0.0f;  
-    	out_verts[offset + i * 2 + 0].z = sinf(angle1);  
+    	out_verts[offset + i * 2 + 0].x = vert_offset.x + cosf(angle1);  
+    	out_verts[offset + i * 2 + 0].y = vert_offset.y + 0.0f;  
+    	out_verts[offset + i * 2 + 0].z = vert_offset.z + sinf(angle1);  
 
     	// second point of the line (CCW)  
-    	out_verts[offset + i * 2 + 1].x = cosf(angle0);  
-    	out_verts[offset + i * 2 + 1].y = 0.0f;  
-    	out_verts[offset + i * 2 + 1].z = sinf(angle0);  
+    	out_verts[offset + i * 2 + 1].x = vert_offset.x + cosf(angle0);  
+    	out_verts[offset + i * 2 + 1].y = vert_offset.y + 0.0f;  
+    	out_verts[offset + i * 2 + 1].z = vert_offset.z + sinf(angle0);  
 	}
     
     // add radial lines for partial circles (pie slice edges)
@@ -99,12 +99,12 @@ int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offse
         int base = segments * 2;
         
         // center to start
-        out_verts[offset + base + 0] = ((w_vec3){0, 0, 0});
-        out_verts[offset + base + 1] = ((w_vec3){cosf(start_rad), 0, sinf(start_rad)});
+        out_verts[offset + base + 0] = vert_offset;
+        out_verts[offset + base + 1] = ((w_vec3){vert_offset.x + cosf(start_rad), vert_offset.y + 0, vert_offset.z + sinf(start_rad)});
         
         // center to end
-        out_verts[offset + base + 2] = ((w_vec3){0, 0, 0});
-        out_verts[offset + base + 3] = ((w_vec3){cosf(end_rad), 0, sinf(end_rad)});
+        out_verts[offset + base + 2] = vert_offset;
+        out_verts[offset + base + 3] = ((w_vec3){vert_offset.x + cosf(end_rad), vert_offset.y + 0, vert_offset.z + sinf(end_rad)});
     }
 
 	return W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);

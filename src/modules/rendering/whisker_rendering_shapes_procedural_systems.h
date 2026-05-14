@@ -151,7 +151,7 @@ w_ecs_system(
 	{
 		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
-		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, true);
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
 	}
 
 	// generate verts array for just the outline as vec3 lines  
@@ -163,7 +163,7 @@ w_ecs_system(
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
     	// count is set and respects full/not full circle so extra memory doesn't matter
-		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad);
+		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}));
     }
 
 	// prepare draw command
