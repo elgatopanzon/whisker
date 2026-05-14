@@ -58,6 +58,9 @@
 #define w_id(name) ((void)sizeof(name), name##_get_id(world))
 #define w_gid(name, gname) ((void)sizeof(name), name##_get_generic_id(world, gname))
 
+#define w_string_to_id(str) w_string_table_intern_str(world->string_table, str)
+#define w_string_from_id(id) w_string_table_lookup(world->string_table, id)
+
 #define w_for_each(q, work) w_query_for_each(world, q, work)
 #define w_sync(from, to) \
 	({ \
