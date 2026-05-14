@@ -60,6 +60,20 @@
 
 #define w_string_to_id(str) w_string_table_intern_str(world->string_table, str)
 #define w_string_from_id(id) w_string_table_lookup(world->string_table, id)
+#define w_string_format_from_id(id, ...) \
+	({ \
+		const char *fmt = w_string_from_id(id); \
+        int _len = snprintf(NULL, 0, fmt, ##__VA_ARGS__); \
+        char *_buf = w_ecs_frame_malloc(world, _len + 1); \
+        snprintf(_buf, _len + 1, fmt, ##__VA_ARGS__); \
+        _buf; \
+    })
+#define w_entity_format_string(entity, ...) \
+    do { \
+        *w_get(entity, string) = w_string_format_from_id(*w_get(entity, string_id), ##__VA_ARGS__); \
+    } while(0)
+
+#define w_entity_format_string_str(entity_str, ...) w_entity_format_string(w_entity(entity_str), __VA_ARGS__);
 
 #define w_for_each(q, work) w_query_for_each(world, q, work)
 #define w_sync(from, to) \
