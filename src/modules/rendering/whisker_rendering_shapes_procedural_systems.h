@@ -132,34 +132,9 @@ w_ecs_system(
 	w_color8 shape_color = *w_query_get(color);
 	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
 
-
-	// sanitize diameter
-	if (diameter <= 0) diameter = 1;
-
-	// sanitize start/end angle
-	if (end_rad < start_rad)
-	{
-		float angle_swap = start_rad;
-		start_rad = end_rad;
-		end_rad = angle_swap;
-	}
-	if (end_rad - start_rad < 0.001f) return; // degenerate arc
-
-	// calculate the minimum segments for the start and end angle
-	// if the desired segments are less, calculate the segments based on the diameter
-	int segments_min = (int)ceilf((end_rad - start_rad)/(W_PI/2));
-
-    if (segments < segments_min)
-    {
-    	// larger circles need more segments to maintain smoothness
-        float th = acosf(2*powf(1 - 1.0f/diameter, 2) - 1);
-        segments = (int)ceilf((end_rad - start_rad)/th);
-
-        if (segments <= 0) segments = segments_min;
-    }
-
-	// calculate steps
-    float step_length = (end_rad - start_rad)/(float)segments;
+	// first ensure the params are valid for generation
+	if (!w_rendering_shape_sanitize_circle_params(&diameter, &start_rad, &end_rad, &segments))
+    	continue;  // degenerate, skip
 
 	// set default verts arrays and lengths
 	w_vec3 *circle_verts = NULL;
@@ -169,70 +144,26 @@ w_ecs_system(
 	int circle_outline_verts_count = 0;
 
 	// generate verts array for the shape
+	// calculate steps
+    float step_length = (end_rad - start_rad)/(float)segments;
+
 	if (shape_color.a > 0)
 	{
 		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
-		for (int i = 0; i < segments; i++)
-    	{
-        	float angle0 = start_rad + i * step_length;
-    		float angle1 = start_rad + (i + 1) * step_length;
-
-        	// center vertex
-        	circle_verts[i * 3 + 0].x = 0.0f;
-        	circle_verts[i * 3 + 0].y = 0.0f;
-        	circle_verts[i * 3 + 0].z = 0.0f;
-
-        	// first edge vertex (CCW)
-        	circle_verts[i * 3 + 1].x = cosf(angle1);
-        	circle_verts[i * 3 + 1].y = 0.0f;
-        	circle_verts[i * 3 + 1].z = sinf(angle1);
-
-        	// second edge vertex (CCW)
-        	circle_verts[i * 3 + 2].x = cosf(angle0);
-        	circle_verts[i * 3 + 2].y = 0.0f;
-        	circle_verts[i * 3 + 2].z = sinf(angle0);
-    	}
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, true);
 	}
 
 	// generate verts array for just the outline as vec3 lines  
 	if (outline_color.a > 0)
 	{
-    	bool is_full_circle = (end_rad - start_rad) >= (2.0f * W_PI - 0.001f);
-    	
     	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);
+    	// NOTE: this assumes its not a full circle so that we get the extra space for the connecting lines in the memory
+    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, true);
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
-		for (int i = 0; i < segments; i++)  
-		{  
-    		float angle0 = start_rad + i * step_length;  
-    		float angle1 = start_rad + (i + 1) * step_length;
-
-    		// first point of the line (CCW)  
-    		circle_outline_verts[i * 2 + 0].x = cosf(angle1);  
-    		circle_outline_verts[i * 2 + 0].y = 0.0f;  
-    		circle_outline_verts[i * 2 + 0].z = sinf(angle1);  
-
-    		// second point of the line (CCW)  
-    		circle_outline_verts[i * 2 + 1].x = cosf(angle0);  
-    		circle_outline_verts[i * 2 + 1].y = 0.0f;  
-    		circle_outline_verts[i * 2 + 1].z = sinf(angle0);  
-		}
-    	
-    	// add radial lines for partial circles (pie slice edges)
-    	if (!is_full_circle)
-    	{
-        	int base = segments * 2;
-        	
-        	// center to start
-        	circle_outline_verts[base + 0] = ((w_vec3){0, 0, 0});
-        	circle_outline_verts[base + 1] = ((w_vec3){cosf(start_rad), 0, sinf(start_rad)});
-        	
-        	// center to end
-        	circle_outline_verts[base + 2] = ((w_vec3){0, 0, 0});
-        	circle_outline_verts[base + 3] = ((w_vec3){cosf(end_rad), 0, sinf(end_rad)});
-    	}
+    	// count is set and respects full/not full circle so extra memory doesn't matter
+		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad);
     }
 
 	// prepare draw command
