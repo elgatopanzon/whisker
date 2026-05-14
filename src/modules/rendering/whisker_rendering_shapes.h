@@ -21,6 +21,8 @@ enum W_RENDERING_SHAPE_TYPE
 	W_RENDERING_SHAPE_TYPE_CUBE,
 };
 
+// NOTE: all verts are CCW winded
+
 // verts for shapes XZ native (-1 to 1 range, scale 0.5 normalizes to 1 unit)
 static const w_vec3 w_shape_vert_scale = {0.5f, 0.5f, 0.5f};
 static const int w_shape_vert_range[] = {-1, 1};
