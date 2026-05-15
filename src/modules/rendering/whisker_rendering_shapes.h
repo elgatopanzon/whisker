@@ -131,6 +131,9 @@ static const w_vec3 w_shape_cube_lines[] = {
      + 6 * ((rings) + 1))
 //   ^poles (2 fans)      ^bands between rings
 //                         ^wedge sides (max)
+#define W_CAPSULE_VERTS_COUNT(segments, rings) \
+    (((segments) * 3 + (segments) * 6 * ((rings) - 1)) * 2 + \
+     (segments) * 6)
 
 
 /*********************
@@ -157,6 +160,9 @@ int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start
 
 // generate sphere verts (top/bottom pole fans + bands between rings)
 int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float angle_start, float angle_end);
+
+// generate capsule verts (two hemispheres + cylinder sides)
+int w_rendering_shape_generate_capsule_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float half_length);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 

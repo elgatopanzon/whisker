@@ -45,6 +45,7 @@ w_ecs_define_component(float, thickness, 1.0f);
 *************************/
 w_ecs_define_component(float, angle_start, 0);
 w_ecs_define_component(float, angle_end, 360); // full circle
+w_ecs_define_component(float, diameter, 1.0f);
 w_ecs_define_component(float, diameter_top, 1.0f); // top diameter
 w_ecs_define_component(float, diameter_bottom, 1.0f); // bottom diameter
 w_ecs_define_component(int, segments, 32);
@@ -67,6 +68,7 @@ w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
 w_ecs_define_component(float, cylinder, 1.0f); // height
 w_ecs_define_component(float, sphere, 1.0f); // diameter
+w_ecs_define_component(float, capsule, 1.0f); // length
 
 /**************************
 *  hierarchy components  *

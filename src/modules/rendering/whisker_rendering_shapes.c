@@ -172,6 +172,128 @@ int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start
     return segments * 6;
 }
 
+int w_rendering_shape_generate_capsule_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float half_length)
+{
+    float sphere_radius = diameter;
+    float az_step = (2.0f * W_PI) / (float)segments;
+    int idx = start_index;
+
+    // Top hemisphere: theta from 0 (pole) to PI/2 (equator)
+    // all Y offset by +half_length
+    w_vec3 top_pole = {0.0f, sphere_radius + half_length, 0.0f};
+    float theta0 = (W_PI * 0.5f) / (float)rings;
+    float r0 = sinf(theta0) * sphere_radius;
+    float y0 = cosf(theta0) * sphere_radius + half_length;
+
+    for (int i = 0; i < segments; i++)
+    {
+        float az0 = i * az_step;
+        float az1 = (i + 1) * az_step;
+
+        // CCW from outside: pole, ring[az1], ring[az0]
+        out_verts[idx + i * 3 + 0] = top_pole;
+        out_verts[idx + i * 3 + 1] = (w_vec3){cosf(az1) * r0, y0, sinf(az1) * r0};
+        out_verts[idx + i * 3 + 2] = (w_vec3){cosf(az0) * r0, y0, sinf(az0) * r0};
+    }
+    idx += segments * 3;
+
+    // top hemisphere bands
+    for (int ri = 0; ri < rings - 1; ri++)
+    {
+        float theta_top = (ri + 1) * (W_PI * 0.5f) / (float)rings;
+        float theta_bot = (ri + 2) * (W_PI * 0.5f) / (float)rings;
+
+        float r_top = sinf(theta_top) * sphere_radius;
+        float y_top = cosf(theta_top) * sphere_radius + half_length;
+        float r_bot = sinf(theta_bot) * sphere_radius;
+        float y_bot = cosf(theta_bot) * sphere_radius + half_length;
+
+        for (int i = 0; i < segments; i++)
+        {
+            float az0 = i * az_step;
+            float az1 = (i + 1) * az_step;
+
+            w_vec3 tl = {cosf(az0) * r_top, y_top, sinf(az0) * r_top};
+            w_vec3 tr = {cosf(az1) * r_top, y_top, sinf(az1) * r_top};
+            w_vec3 bl = {cosf(az0) * r_bot, y_bot, sinf(az0) * r_bot};
+            w_vec3 br = {cosf(az1) * r_bot, y_bot, sinf(az1) * r_bot};
+
+            int base = idx + i * 6;
+
+            // tri 1 (CCW from outside)
+            out_verts[base + 0] = tl;
+            out_verts[base + 1] = br;
+            out_verts[base + 2] = bl;
+            // tri 2 (CCW from outside)
+            out_verts[base + 3] = tl;
+            out_verts[base + 4] = tr;
+            out_verts[base + 5] = br;
+        }
+        idx += segments * 6;
+    }
+
+    // Bottom hemisphere: theta from PI/2 (equator) to PI (pole)
+    // all Y offset by -half_length, winding matches sphere bottom half
+    for (int ri = 0; ri < rings - 1; ri++)
+    {
+        float theta_top = (W_PI * 0.5f) + ri * (W_PI * 0.5f) / (float)rings;
+        float theta_bot = (W_PI * 0.5f) + (ri + 1) * (W_PI * 0.5f) / (float)rings;
+
+        float r_top = sinf(theta_top) * sphere_radius;
+        float y_top = cosf(theta_top) * sphere_radius - half_length;
+        float r_bot = sinf(theta_bot) * sphere_radius;
+        float y_bot = cosf(theta_bot) * sphere_radius - half_length;
+
+        for (int i = 0; i < segments; i++)
+        {
+            float az0 = i * az_step;
+            float az1 = (i + 1) * az_step;
+
+            w_vec3 tl = {cosf(az0) * r_top, y_top, sinf(az0) * r_top};
+            w_vec3 tr = {cosf(az1) * r_top, y_top, sinf(az1) * r_top};
+            w_vec3 bl = {cosf(az0) * r_bot, y_bot, sinf(az0) * r_bot};
+            w_vec3 br = {cosf(az1) * r_bot, y_bot, sinf(az1) * r_bot};
+
+            int base = idx + i * 6;
+
+            // tri 1 (CCW from outside)
+            out_verts[base + 0] = tl;
+            out_verts[base + 1] = br;
+            out_verts[base + 2] = bl;
+            // tri 2 (CCW from outside)
+            out_verts[base + 3] = tl;
+            out_verts[base + 4] = tr;
+            out_verts[base + 5] = br;
+        }
+        idx += segments * 6;
+    }
+
+    // bottom pole fan
+    w_vec3 bot_pole = {0.0f, -sphere_radius - half_length, 0.0f};
+    float theta_last = (W_PI * 0.5f) + (rings - 1) * (W_PI * 0.5f) / (float)rings;
+    float r_last = sinf(theta_last) * sphere_radius;
+    float y_last = cosf(theta_last) * sphere_radius - half_length;
+
+    for (int i = 0; i < segments; i++)
+    {
+        float az0 = i * az_step;
+        float az1 = (i + 1) * az_step;
+
+        // CCW from outside: pole, ring[az0], ring[az1]
+        out_verts[idx + i * 3 + 0] = bot_pole;
+        out_verts[idx + i * 3 + 1] = (w_vec3){cosf(az0) * r_last, y_last, sinf(az0) * r_last};
+        out_verts[idx + i * 3 + 2] = (w_vec3){cosf(az1) * r_last, y_last, sinf(az1) * r_last};
+    }
+    idx += segments * 3;
+
+    // cylinder sides connecting hemisphere equators
+    idx += w_rendering_shape_generate_cylinder_sides_verts(
+        out_verts, idx, segments,
+        sphere_radius, sphere_radius, half_length);
+
+    return idx - start_index;
+}
+
 int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float angle_start, float angle_end)
 {
     float sphere_radius = diameter;
