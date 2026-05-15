@@ -66,6 +66,7 @@ w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 // 3D
 w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
 w_ecs_define_component(float, cylinder, 1.0f); // height
+w_ecs_define_component(float, sphere, 1.0f); // diameter
 
 /**************************
 *  hierarchy components  *

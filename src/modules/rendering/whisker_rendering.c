@@ -213,6 +213,7 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	w_rendering_shapes_procedural_dispatch_draw_grid_register(world);
 	w_rendering_shapes_procedural_dispatch_draw_circle_register(world);
 	w_rendering_shapes_procedural_dispatch_draw_polygon_register(world);
+	w_rendering_shapes_procedural_dispatch_draw_sphere_register(world);
 	w_rendering_shapes_procedural_dispatch_draw_cylinder_register(world);
 
 

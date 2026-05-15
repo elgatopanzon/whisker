@@ -126,7 +126,11 @@ static const w_vec3 w_shape_cube_lines[] = {
 #define W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full) ((segments) * 2 + ((is_full) ? 0 : 4))
 #define W_CYLINDER_CAP_VERTS_COUNT(segments)   ((segments) * 3)   // same as circle
 #define W_CYLINDER_SIDES_VERTS_COUNT(segments) ((segments) * 6)   // 1 quad = 2 tris
-
+#define W_SPHERE_VERTS_COUNT(segments, rings) \
+    ((segments) * 3 * 2 + (segments) * 6 * ((rings) - 1) \
+     + 6 * ((rings) + 1))
+//   ^poles (2 fans)      ^bands between rings
+//                         ^wedge sides (max)
 
 
 /*********************
@@ -150,6 +154,9 @@ int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offse
 
 // generate the sides of cylinder given segment count
 int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start_index, int segments, float diameter_top, float diameter_bottom, float half_height);
+
+// generate sphere verts (top/bottom pole fans + bands between rings)
+int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float angle_start, float angle_end);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 

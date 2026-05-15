@@ -171,3 +171,145 @@ int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start
 
     return segments * 6;
 }
+
+int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float angle_start, float angle_end)
+{
+    float sphere_radius = diameter;
+    float az_step = (angle_end - angle_start) / (float)segments;
+    int idx = start_index;
+
+    // top pole fan: pole connects to ring 0
+    w_vec3 top_pole = {0.0f, sphere_radius, 0.0f};
+    float theta0 = W_PI / (rings + 1);
+    float r0 = sinf(theta0) * sphere_radius;
+    float y0 = cosf(theta0) * sphere_radius;
+
+    for (int i = 0; i < segments; i++)
+    {
+        float az0 = angle_start + i * az_step;
+        float az1 = angle_start + (i + 1) * az_step;
+
+        // CCW from outside: pole, ring[az1], ring[az0]
+        out_verts[idx + i * 3 + 0] = top_pole;
+        out_verts[idx + i * 3 + 1] = (w_vec3){cosf(az1) * r0, y0, sinf(az1) * r0};
+        out_verts[idx + i * 3 + 2] = (w_vec3){cosf(az0) * r0, y0, sinf(az0) * r0};
+    }
+    idx += segments * 3;
+
+    // bands between adjacent rings
+    for (int ri = 0; ri < rings - 1; ri++)
+    {
+        float theta_top = (ri + 1) * W_PI / (rings + 1);
+        float theta_bot = (ri + 2) * W_PI / (rings + 1);
+
+        float r_top = sinf(theta_top) * sphere_radius;
+        float y_top = cosf(theta_top) * sphere_radius;
+        float r_bot = sinf(theta_bot) * sphere_radius;
+        float y_bot = cosf(theta_bot) * sphere_radius;
+
+        for (int i = 0; i < segments; i++)
+        {
+            float az0 = angle_start + i * az_step;
+            float az1 = angle_start + (i + 1) * az_step;
+
+            w_vec3 top_left  = {cosf(az0) * r_top, y_top, sinf(az0) * r_top};
+            w_vec3 top_right = {cosf(az1) * r_top, y_top, sinf(az1) * r_top};
+            w_vec3 bot_left  = {cosf(az0) * r_bot, y_bot, sinf(az0) * r_bot};
+            w_vec3 bot_right = {cosf(az1) * r_bot, y_bot, sinf(az1) * r_bot};
+
+            int base = idx + i * 6;
+
+            // tri 1 (CCW from outside)
+            out_verts[base + 0] = top_left;
+            out_verts[base + 1] = bot_right;
+            out_verts[base + 2] = bot_left;
+            // tri 2 (CCW from outside)
+            out_verts[base + 3] = top_left;
+            out_verts[base + 4] = top_right;
+            out_verts[base + 5] = bot_right;
+        }
+        idx += segments * 6;
+    }
+
+    // bottom pole fan: last ring connects to pole
+    w_vec3 bot_pole = {0.0f, -sphere_radius, 0.0f};
+    float theta_last = rings * W_PI / (rings + 1);
+    float r_last = sinf(theta_last) * sphere_radius;
+    float y_last = cosf(theta_last) * sphere_radius;
+
+    for (int i = 0; i < segments; i++)
+    {
+        float az0 = angle_start + i * az_step;
+        float az1 = angle_start + (i + 1) * az_step;
+
+        // CCW from outside: pole, ring[az0], ring[az1]
+        out_verts[idx + i * 3 + 0] = bot_pole;
+        out_verts[idx + i * 3 + 1] = (w_vec3){cosf(az0) * r_last, y_last, sinf(az0) * r_last};
+        out_verts[idx + i * 3 + 2] = (w_vec3){cosf(az1) * r_last, y_last, sinf(az1) * r_last};
+    }
+    idx += segments * 3;
+
+    // wedge sides for partial spheres
+    bool is_partial = (angle_end - angle_start)
+        < (2.0f * W_PI - 0.001f);
+    if (is_partial)
+    {
+        w_vec3 center = {0.0f, 0.0f, 0.0f};
+
+        for (int side = 0; side < 2; side++)
+        {
+            float az = (side == 0)
+                ? angle_start : angle_end;
+
+            for (int i = 0; i <= rings; i++)
+            {
+                w_vec3 p0, p1;
+
+                if (i == 0)
+                {
+                    p0 = top_pole;
+                }
+                else
+                {
+                    float th = i * W_PI / (rings + 1);
+                    float r = sinf(th) * sphere_radius;
+                    float y = cosf(th) * sphere_radius;
+                    p0 = (w_vec3){
+                        cosf(az) * r, y, sinf(az) * r
+                    };
+                }
+
+                if (i == rings)
+                {
+                    p1 = bot_pole;
+                }
+                else
+                {
+                    float th = (i + 1) * W_PI
+                        / (rings + 1);
+                    float r = sinf(th) * sphere_radius;
+                    float y = cosf(th) * sphere_radius;
+                    p1 = (w_vec3){
+                        cosf(az) * r, y, sinf(az) * r
+                    };
+                }
+
+                out_verts[idx++] = center;
+                if (side == 0)
+                {
+                    // start side: CCW from outside
+                    out_verts[idx++] = p0;
+                    out_verts[idx++] = p1;
+                }
+                else
+                {
+                    // end side: reversed winding
+                    out_verts[idx++] = p1;
+                    out_verts[idx++] = p0;
+                }
+            }
+        }
+    }
+
+    return idx - start_index;
+}
