@@ -144,9 +144,6 @@ w_ecs_system(
 	int circle_outline_verts_count = 0;
 
 	// generate verts array for the shape
-	// calculate steps
-    float step_length = (end_rad - start_rad)/(float)segments;
-
 	if (shape_color.a > 0)
 	{
 		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
@@ -310,6 +307,106 @@ w_ecs_system(
 		cmd.color = outline_color;
 		cmd.verts = outline_verts;
 		cmd.verts_length = outline_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
+});
+
+w_ecs_system(
+	w_rendering_shapes_procedural_dispatch_draw_polygon,
+	WM_RENDER_PHASE_PRE_WORLD,
+	w_query(
+		// transform
+		w_query_r(render_position_3d),
+		w_query_r(render_rotation_3d),
+		w_query_r(render_scale_3d),
+		w_query_r(render_origin_3d),
+
+		// required render components
+		w_query_r(render_layer),
+		w_query_n(hidden),
+
+		// required shape components
+		w_query_r(polygon),
+		w_query_r(color),
+
+		// optional shape components
+		w_query_o(shape_outline_color),
+	),
+{
+	// polygon relies on the circle generator with limited exposed components
+	float diameter = 1.0f;
+	float start_rad = 0;
+	float end_rad = 360 * W_DEG2RAD;
+	int segments = *w_query_get(polygon);
+
+	// ensure flat side is lined up X bottom
+	float rotation_offset = (W_PI / segments) + (90 * W_DEG2RAD);
+	start_rad = rotation_offset;
+	end_rad = rotation_offset + 2 * W_PI;
+
+	w_color8 shape_color = *w_query_get(color);
+	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
+
+	// set default verts arrays and lengths
+	w_vec3 *circle_verts = NULL;
+	int circle_verts_count = 0;
+
+	w_vec3 *circle_outline_verts = NULL;
+	int circle_outline_verts_count = 0;
+
+	// generate verts array for the shape
+	if (shape_color.a > 0)
+	{
+		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
+		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
+	}
+
+	// generate verts array for just the outline as vec3 lines  
+	if (outline_color.a > 0)
+	{
+    	// arc segments + 2 radial lines for partial circles
+    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
+    	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
+    	
+    	// count is set and respects full/not full circle so extra memory doesn't matter
+		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}));
+    }
+
+	// prepare draw command
+	struct w_rendering_cmd_draw_verts cmd = {0};
+
+	cmd.position = *w_query_get(render_position_3d);
+	cmd.rotation = *w_query_get(render_rotation_3d);
+	cmd.scale = *w_query_get(render_scale_3d);
+	cmd.origin = *w_query_get(render_origin_3d);
+	cmd.scale = w_vec3_mul(cmd.scale, ((w_vec3){ diameter * w_shape_vert_scale.x, diameter * w_shape_vert_scale.y, diameter * w_shape_vert_scale.z}));
+
+	if (shape_color.a > 0)
+	{
+		cmd.color = shape_color;
+		cmd.verts = circle_verts;
+		cmd.verts_length = circle_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
+
+	if (outline_color.a > 0)
+	{
+		cmd.color = outline_color;
+		cmd.verts = circle_outline_verts;
+		cmd.verts_length = circle_outline_verts_count;
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
 		w_rendering_dispatch_render_cmd(

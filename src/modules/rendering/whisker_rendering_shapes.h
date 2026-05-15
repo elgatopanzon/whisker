@@ -145,6 +145,7 @@ w_ecs_define_component(float, line, 1.0f);
 w_ecs_define_component(float, triangle, 1.0f);
 w_ecs_define_component(w_vec2, rectangle, 0.0f, 0.0f);
 w_ecs_define_component(float, circle, 1.0f); // diameter
+w_ecs_define_component(int, polygon, 5); // N-sides
 w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 
 // 3D
