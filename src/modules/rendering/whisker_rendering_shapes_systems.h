@@ -15,7 +15,7 @@
 #define WHISKER_RENDERING_SHAPES_SYSTEMS_H
 
 #define w_rendering_shapes_base_query \
-		w_query_o(shape_outline_color), \
+		w_query_o(outline_color), \
 		w_query_r(color), \
 		w_query_r(render_position_3d), \
 		w_query_r(render_rotation_3d), \
@@ -138,7 +138,7 @@ w_ecs_system(
 		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_POINT,
 		w_query_get(color),
-		w_query_get_opt(shape_outline_color),
+		w_query_get_opt(outline_color),
 		w_query_get(render_position_3d),
 		w_query_get(render_rotation_3d),
 		&scale,
@@ -161,7 +161,7 @@ w_ecs_system(
 		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_LINE,
 		w_query_get(color),
-		w_query_get_opt(shape_outline_color),
+		w_query_get_opt(outline_color),
 		w_query_get(render_position_3d),
 		w_query_get(render_rotation_3d),
 		&scale,
@@ -184,7 +184,7 @@ w_ecs_system(
 		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_TRIANGLE,
 		w_query_get(color),
-		w_query_get_opt(shape_outline_color),
+		w_query_get_opt(outline_color),
 		w_query_get(render_position_3d),
 		w_query_get(render_rotation_3d),
 		&scale,
@@ -208,7 +208,7 @@ w_ecs_system(
 		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_RECT,
 		w_query_get(color),
-		w_query_get_opt(shape_outline_color),
+		w_query_get_opt(outline_color),
 		w_query_get(render_position_3d),
 		w_query_get(render_rotation_3d),
 		&scale,
@@ -232,7 +232,7 @@ w_ecs_system(
 		w_ecs_render_layer(*w_query_get(render_layer)),
 		W_RENDERING_SHAPE_TYPE_CUBE,
 		w_query_get(color),
-		w_query_get(shape_outline_color),
+		w_query_get(outline_color),
 		w_query_get(render_position_3d),
 		w_query_get(render_rotation_3d),
 		&scale,

@@ -128,34 +128,6 @@ static const w_vec3 w_shape_cube_lines[] = {
 #define W_CYLINDER_SIDES_VERTS_COUNT(segments) ((segments) * 6)   // 1 quad = 2 tris
 
 
-/**********************
-*  shape components  *
-**********************/
-// general
-w_ecs_define_component(float, thickness, 1.0f);
-w_ecs_define_component(float, shape_angle_start, 0);
-w_ecs_define_component(float, shape_angle_end, 360); // full circle
-w_ecs_define_component(float, shape_diameter_top, 1.0f); // top diameter
-w_ecs_define_component(float, shape_diameter_bottom, 1.0f); // bottom diameter
-w_ecs_define_component(float, shape_segments, 32);
-
-// 2D
-w_ecs_define_component(float, point, 1.0f);
-w_ecs_define_component(float, line, 1.0f);
-w_ecs_define_component(float, triangle, 1.0f);
-w_ecs_define_component(w_vec2, rectangle, 0.0f, 0.0f);
-w_ecs_define_component(float, circle, 1.0f); // diameter
-w_ecs_define_component(int, polygon, 5); // N-sides
-w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
-
-// 3D
-w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
-w_ecs_define_component(float, cylinder, 1.0f); // height
-
-// color applied to outline when exists and .a > 0
-// note: alpha defaults to 0 so we don't draw the outline
-w_ecs_define_component(w_color8, shape_outline_color, 0, 0, 0, 0);
-
 
 /*********************
 *  shape functions  *

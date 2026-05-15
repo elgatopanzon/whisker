@@ -35,8 +35,37 @@ w_ecs_define_component(int, string_id);
 ***********************/
 w_ecs_define_component(w_color8, color, 255, 255, 255, 255);
 w_ecs_define_component(w_color, color_f, 1.0f, 1.0f, 1.0f, 1.0f);
+w_ecs_define_component(w_color8, outline_color, 0, 0, 0, 0);
 w_ecs_define_component(float, alpha, 1.0f);
+w_ecs_define_component(float, thickness, 1.0f);
 
+
+/*************************
+*  geometry components  *
+*************************/
+w_ecs_define_component(float, angle_start, 0);
+w_ecs_define_component(float, angle_end, 360); // full circle
+w_ecs_define_component(float, diameter_top, 1.0f); // top diameter
+w_ecs_define_component(float, diameter_bottom, 1.0f); // bottom diameter
+w_ecs_define_component(int, segments, 32);
+w_ecs_define_component(int, rings, 16);
+
+
+/**********************
+*  shape components  *
+**********************/
+// 2D
+w_ecs_define_component(float, point, 1.0f);
+w_ecs_define_component(float, line, 1.0f);
+w_ecs_define_component(float, triangle, 1.0f);
+w_ecs_define_component(w_vec2, rectangle, 0.0f, 0.0f);
+w_ecs_define_component(float, circle, 1.0f); // diameter
+w_ecs_define_component(int, polygon, 5); // N-sides
+w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
+
+// 3D
+w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
+w_ecs_define_component(float, cylinder, 1.0f); // height
 
 /**************************
 *  hierarchy components  *

@@ -118,22 +118,22 @@ w_ecs_system(
 		w_query_r(color),
 
 		// optional shape components
-		w_query_o(shape_angle_start),
-		w_query_o(shape_angle_end),
-		w_query_o(shape_segments),
-		w_query_o(shape_outline_color),
+		w_query_o(angle_start),
+		w_query_o(angle_end),
+		w_query_o(segments),
+		w_query_o(outline_color),
 	),
 {
 	float diameter = *w_query_get(circle);
-	float start_rad = *w_query_get_opt_or_default(shape_angle_start) * W_DEG2RAD;
-	float end_rad = *w_query_get_opt_or_default(shape_angle_end) * W_DEG2RAD;
-	int segments = *w_query_get_opt_or_default(shape_segments);
+	float start_rad = *w_query_get_opt_or_default(angle_start) * W_DEG2RAD;
+	float end_rad = *w_query_get_opt_or_default(angle_end) * W_DEG2RAD;
+	int seg = *w_query_get_opt_or_default(segments);
 
 	w_color8 shape_color = *w_query_get(color);
-	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
+	w_color8 outline_col = *w_query_get_opt_or_default(outline_color);
 
 	// first ensure the params are valid for generation
-	if (!w_rendering_shape_sanitize_circle_params(&diameter, &start_rad, &end_rad, &segments))
+	if (!w_rendering_shape_sanitize_circle_params(&diameter, &start_rad, &end_rad, &seg))
     	continue;  // degenerate, skip
 
 	// set default verts arrays and lengths
@@ -146,20 +146,20 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
+		circle_verts_count = W_CIRCLE_VERTS_COUNT(seg);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
-		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}), true);
 	}
 
 	// generate verts array for just the outline as vec3 lines  
-	if (outline_color.a > 0)
+	if (outline_col.a > 0)
 	{
     	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
+    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(seg, false);
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
     	// count is set and respects full/not full circle so extra memory doesn't matter
-		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}));
+		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}));
     }
 
 	// prepare draw command
@@ -185,9 +185,9 @@ w_ecs_system(
 		);
 	}
 
-	if (outline_color.a > 0)
+	if (outline_col.a > 0)
 	{
-		cmd.color = outline_color;
+		cmd.color = outline_col;
 		cmd.verts = circle_outline_verts;
 		cmd.verts_length = circle_outline_verts_count;
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
@@ -219,19 +219,19 @@ w_ecs_system(
 		w_query_r(color),
 
 		// optional shape components
-		w_query_o(shape_diameter_top),
-		w_query_o(shape_diameter_bottom),
-		w_query_o(shape_segments),
-		w_query_o(shape_outline_color),
+		w_query_o(diameter_top),
+		w_query_o(diameter_bottom),
+		w_query_o(segments),
+		w_query_o(outline_color),
 	),
 {
 	float height = *w_query_get(cylinder);
-	int segments = *w_query_get_opt_or_default(shape_segments);
-	float diameter_top = *w_query_get_opt_or_default(shape_diameter_top);
-	float diameter_bottom = *w_query_get_opt_or_default(shape_diameter_bottom);
+	int seg = *w_query_get_opt_or_default(segments);
+	float dia_top = *w_query_get_opt_or_default(diameter_top);
+	float dia_bottom = *w_query_get_opt_or_default(diameter_bottom);
 
 	w_color8 shape_color = *w_query_get(color);
-	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
+	w_color8 outline_col = *w_query_get_opt_or_default(outline_color);
 
 	float start_rad = 0 * W_DEG2RAD;
 	float end_rad = 360 * W_DEG2RAD;
@@ -239,14 +239,14 @@ w_ecs_system(
 	// calculate and create verts buffer
 	int verts_count = 0;
 	// add to verts_count calculation
-	verts_count += W_CYLINDER_SIDES_VERTS_COUNT(segments);
-	if (diameter_top > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(segments);
-	if (diameter_bottom > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(segments);
+	verts_count += W_CYLINDER_SIDES_VERTS_COUNT(seg);
+	if (dia_top > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(seg);
+	if (dia_bottom > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(seg);
 	w_vec3 *verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
 
 	int outline_verts_count = 0;
-	if (diameter_top > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(segments, true);
-	if (diameter_bottom > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(segments, true);
+	if (dia_top > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+	if (dia_bottom > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
 	w_vec3 *outline_verts = w_ecs_frame_malloc(world, outline_verts_count * sizeof(w_vec3));
 
 	int verts_offset = 0;
@@ -254,29 +254,29 @@ w_ecs_system(
 
 	// generate top and bottom circles if required
 	// top
-	if (diameter_top > 0) {
-		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, segments, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}), true);
+	if (dia_top > 0) {
+		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}), true);
 
-		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, segments, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}));
+		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}));
 
 		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(segments), verts_offset, ((w_vec3){diameter_top, 1.0f, diameter_top}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(segments, true), outline_verts_offset, ((w_vec3){diameter_top, 1.0f, diameter_top}));
+		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
 	}
 
 	// sides
 	// generate sides (after caps)
-	verts_offset += w_rendering_shape_generate_cylinder_sides_verts(verts, verts_offset, segments, diameter_top, diameter_bottom, height * 0.5f);
+	verts_offset += w_rendering_shape_generate_cylinder_sides_verts(verts, verts_offset, seg, dia_top, dia_bottom, height * 0.5f);
 
 	// bottom
-	if (diameter_bottom > 0) {
-		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, segments, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}), false);
+	if (dia_bottom > 0) {
+		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}), false);
 
-		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, segments, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}));
+		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}));
 
 		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(segments), verts_offset, ((w_vec3){diameter_bottom, 1.0f, diameter_bottom}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(segments, true), outline_verts_offset, ((w_vec3){diameter_bottom, 1.0f, diameter_bottom}));
+		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
 	}
 
 	// prepare draw command
@@ -302,9 +302,9 @@ w_ecs_system(
 		);
 	}
 
-	if (outline_color.a > 0)
+	if (outline_col.a > 0)
 	{
-		cmd.color = outline_color;
+		cmd.color = outline_col;
 		cmd.verts = outline_verts;
 		cmd.verts_length = outline_verts_count;
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
@@ -336,7 +336,7 @@ w_ecs_system(
 		w_query_r(color),
 
 		// optional shape components
-		w_query_o(shape_outline_color),
+		w_query_o(outline_color),
 	),
 {
 	// polygon relies on the circle generator with limited exposed components
@@ -351,7 +351,7 @@ w_ecs_system(
 	end_rad = rotation_offset + 2 * W_PI;
 
 	w_color8 shape_color = *w_query_get(color);
-	w_color8 outline_color = *w_query_get_opt_or_default(shape_outline_color);
+	w_color8 outline_col = *w_query_get_opt_or_default(outline_color);
 
 	// set default verts arrays and lengths
 	w_vec3 *circle_verts = NULL;
@@ -369,7 +369,7 @@ w_ecs_system(
 	}
 
 	// generate verts array for just the outline as vec3 lines  
-	if (outline_color.a > 0)
+	if (outline_col.a > 0)
 	{
     	// arc segments + 2 radial lines for partial circles
     	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
@@ -402,9 +402,9 @@ w_ecs_system(
 		);
 	}
 
-	if (outline_color.a > 0)
+	if (outline_col.a > 0)
 	{
-		cmd.color = outline_color;
+		cmd.color = outline_col;
 		cmd.verts = circle_outline_verts;
 		cmd.verts_length = circle_outline_verts_count;
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
