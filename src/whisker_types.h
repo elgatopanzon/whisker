@@ -67,6 +67,23 @@ typedef struct
 } w_mat4;
 
 
+/****************
+*  vec3 cells  *
+****************/
+
+// tricell8 holds 8 vec3
+// naming convention is 0 = -, 1 = +, to access a corner on the desired axis
+typedef struct {
+    w_vec3 c000;  // -X -Y -Z
+    w_vec3 c100;  // +X -Y -Z
+    w_vec3 c010;  // -X +Y -Z
+    w_vec3 c110;  // +X +Y -Z
+    w_vec3 c001;  // -X -Y +Z
+    w_vec3 c101;  // +X -Y +Z
+    w_vec3 c011;  // -X +Y +Z
+    w_vec3 c111;  // +X +Y +Z
+} w_tricell8;
+
 /***********
 *  color  *
 ***********/

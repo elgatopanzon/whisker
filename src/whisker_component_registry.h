@@ -111,7 +111,10 @@ enum W_COMPONENT_TYPE {
 	W_COMPONENT_TYPE_w_quati = 47,
 	W_COMPONENT_TYPE_w_quatu = 48,
 
-	W_COMPONENT_TYPE_COUNT = 49,
+	W_COMPONENT_TYPE_w_tricell8 = 49,
+
+	// other
+	W_COMPONENT_TYPE_COUNT = 50,
 };
 
 // static array of canonical type names keyed by enum ID
@@ -159,6 +162,7 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_w_quat]      = "w_quat",
 	[W_COMPONENT_TYPE_w_quati]      = "w_quati",
 	[W_COMPONENT_TYPE_w_quatu]      = "w_quatu",
+	[W_COMPONENT_TYPE_w_tricell8]      = "w_tricell8",
 };
 
 static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
@@ -205,6 +209,7 @@ static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_w_quat]  = sizeof(w_quat),
 	[W_COMPONENT_TYPE_w_quati]  = sizeof(w_quati),
 	[W_COMPONENT_TYPE_w_quatu]  = sizeof(w_quatu),
+	[W_COMPONENT_TYPE_w_tricell8]  = sizeof(w_tricell8),
 };
 
 // get string name for a component type enum ID, NULL if invalid
