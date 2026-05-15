@@ -124,7 +124,8 @@ static const w_vec3 w_shape_cube_lines[] = {
 *************************/
 #define W_CIRCLE_VERTS_COUNT(segments) ((segments) * 3)
 #define W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full) ((segments) * 2 + ((is_full) ? 0 : 4))
-#define W_CYLINDER_VERTS_COUNT(segments) ((segments) * 12)  // 2 caps + sides
+#define W_CYLINDER_CAP_VERTS_COUNT(segments)   ((segments) * 3)   // same as circle
+#define W_CYLINDER_SIDES_VERTS_COUNT(segments) ((segments) * 6)   // 1 quad = 2 tris
 
 
 /**********************
@@ -134,6 +135,8 @@ static const w_vec3 w_shape_cube_lines[] = {
 w_ecs_define_component(float, thickness, 1.0f);
 w_ecs_define_component(float, shape_angle_start, 0);
 w_ecs_define_component(float, shape_angle_end, 360); // full circle
+w_ecs_define_component(float, shape_diameter_top, 1.0f); // top diameter
+w_ecs_define_component(float, shape_diameter_bottom, 1.0f); // bottom diameter
 w_ecs_define_component(float, shape_segments, 32);
 
 // 2D
@@ -146,6 +149,7 @@ w_ecs_define_component(w_vec2, grid, 0.0f, 0.0f);
 
 // 3D
 w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
+w_ecs_define_component(float, cylinder, 1.0f); // height
 
 // color applied to outline when exists and .a > 0
 // note: alpha defaults to 0 so we don't draw the outline
@@ -156,6 +160,13 @@ w_ecs_define_component(w_color8, shape_outline_color, 0, 0, 0, 0);
 *  shape functions  *
 *********************/
 
+// apply an offset to a vert array
+void w_rendering_shape_apply_vert_offset(w_vec3 *verts, size_t from, size_t to, w_vec3 offset);
+
+// apply a scale to a vert array
+void w_rendering_shape_apply_vert_scale(w_vec3 *verts, size_t from, size_t to, w_vec3 scale);
+
+// sanitize incoming circle params
 bool w_rendering_shape_sanitize_circle_params(float *diameter, float *start_rad, float *end_rad, int *segments);
 
 // generate the tri verts for a circle
@@ -163,6 +174,9 @@ int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int s
 
 // generate the line verts for a circle outline
 int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset);
+
+// generate the sides of cylinder given segment count
+int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start_index, int segments, float diameter_top, float diameter_bottom, float half_height);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 

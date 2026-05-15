@@ -6,6 +6,22 @@
 
 #include "whisker_rendering_shapes.h"
 
+void w_rendering_shape_apply_vert_offset(w_vec3 *verts, size_t from, size_t to, w_vec3 offset)
+{
+	for (size_t i = from; i < to; ++i)
+	{
+		verts[i] = w_vec3_add(verts[i], offset);
+	}
+}
+
+void w_rendering_shape_apply_vert_scale(w_vec3 *verts, size_t from, size_t to, w_vec3 scale)
+{
+	for (size_t i = from; i < to; ++i)
+	{
+		verts[i] = w_vec3_mul(verts[i], scale);
+	}
+}
+
 // returns false if degenerate (caller should bail)
 bool w_rendering_shape_sanitize_circle_params(float *diameter, float *start_rad, float *end_rad, int *segments)
 {
@@ -108,4 +124,50 @@ int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offse
     }
 
 	return W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);
+}
+
+int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start_index, int segments, float diameter_top, float diameter_bottom, float half_height)
+{
+    float step = (2.0f * W_PI) / (float)segments;
+
+    for (int i = 0; i < segments; i++)
+    {
+        float angle0 = i * step;
+        float angle1 = (i + 1) * step;
+
+        // four corners of the quad
+        w_vec3 top_left = {
+            cosf(angle0) * diameter_top,
+            half_height,
+            sinf(angle0) * diameter_top
+        };
+        w_vec3 top_right = {
+            cosf(angle1) * diameter_top,
+            half_height,
+            sinf(angle1) * diameter_top
+        };
+        w_vec3 bot_left = {
+            cosf(angle0) * diameter_bottom,
+            -half_height,
+            sinf(angle0) * diameter_bottom
+        };
+        w_vec3 bot_right = {
+            cosf(angle1) * diameter_bottom,
+            -half_height,
+            sinf(angle1) * diameter_bottom
+        };
+
+        int base = start_index + i * 6;
+
+        // triangle 1 (CCW from outside)
+		out_verts[base + 0] = top_left;
+		out_verts[base + 1] = bot_right;
+		out_verts[base + 2] = bot_left;
+		// triangle 2 (CCW from outside)
+		out_verts[base + 3] = top_left;
+		out_verts[base + 4] = top_right;
+		out_verts[base + 5] = bot_right;
+    }
+
+    return segments * 6;
 }
