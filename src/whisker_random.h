@@ -19,12 +19,12 @@
 	#include <bcrypt.h>
 	#define w_rand_bytes(buf, len) \
 		BCryptGenRandom(NULL, (buf), (ULONG)(len), BCRYPT_USE_SYSTEM_PREFERRED_RNG)
+#elif defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+    #include <stdlib.h>
+    #define w_rand_bytes(buf, len) arc4random_buf((buf), (len))
 #elif defined(__linux__)
 	#include <sys/random.h>
 	#define w_rand_bytes(buf, len) getrandom((buf), (len), 0)
-#elif defined(__APPLE__) || defined(__FreeBSD__)
-	#include <stdlib.h>
-	#define w_rand_bytes(buf, len) arc4random_buf((buf), (len))
 #else
 	#include <stdio.h>
 	#define w_rand_bytes(buf, len) do { \
