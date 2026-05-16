@@ -10,17 +10,27 @@
 #ifndef WHISKER_DEBUG_H
 #define WHISKER_DEBUG_H
 
+// cross-platform printf
+#if defined(__ANDROID__)
+	#include <android/log.h>
+	#define w_printf(fmt, ...) \
+		__android_log_print(ANDROID_LOG_INFO, "whisker", fmt, ##__VA_ARGS__)
+#else
+	#define w_printf(fmt, ...) \
+		printf(fmt, ##__VA_ARGS__)
+#endif
+
 #ifndef NDEBUG
 #define trace_printf(fmt, ...) \
-    fprintf(stdout, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+    w_printf("[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
 #define debug_printf(fmt, ...) \
 	debug_log(DEBUG, _, fmt, ##__VA_ARGS__)
 
 #define debug_log(log_level, log_module, log_format, ...) \
-    fprintf(stdout, "%s | %s | " log_format "\n", #log_level, #log_module, ##__VA_ARGS__)
+    w_printf("%s | %s | " log_format "\n", #log_level, #log_module, ##__VA_ARGS__)
 #define trace_log(log_level, log_module, log_format, ...) \
-    fprintf(stdout, "%s | %s | " log_format, #log_level, #log_module, ##__VA_ARGS__); \
-    fprintf(stdout, " [%s:%d]\n", __FILE__, __LINE__)
+    w_printf("%s | %s | " log_format, #log_level, #log_module, ##__VA_ARGS__); \
+    w_printf(" [%s:%d]\n", __FILE__, __LINE__)
 
 #define w_assert(exp) \
 	w_assert_eq(exp, true)
