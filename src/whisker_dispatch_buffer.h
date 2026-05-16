@@ -6,6 +6,7 @@
  */
 
 #include "whisker_std.h"
+#include "whisker_hook_registry.h"
 #include "whisker_array.h"
 
 #ifndef WHISKER_DISPATCH_BUFFER_H
@@ -14,6 +15,12 @@
 #ifndef W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE
 #define W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE 16384
 #endif /* ifndef W_DISPATCH_BUFFER_DATA_REALLOC_BLOCK_SIZE */
+
+#define w_dispatch_buffer_register_handler(buf, cmd_id, handler_ptr) \
+	w_hook_registry_register_hook(&buf->handlers, cmd_id, (w_hook_fn)handler_ptr)
+
+#define w_dispatch_buffer_run_handler(buf, cmd_id, ctx, data) \
+	w_hook_registry_run_hooks(&buf->handlers, cmd_id, ctx, data)
 
 // struct for each buffered dispatch entry
 struct w_dispatch_entry
@@ -29,6 +36,7 @@ struct w_dispatch_buffer
 	w_array_declare(struct w_dispatch_entry, entries);
 	w_array_declare(uint8_t, payload_data);
 	size_t read_index; // current read position for pop
+	struct w_hook_registry handlers; // handlers for dispatch calls
 };
 
 #define w_dispatch_buffer_push_value(buf, cmd, priority, payload_type, ...) \

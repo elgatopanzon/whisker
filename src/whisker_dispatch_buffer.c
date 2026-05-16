@@ -5,8 +5,6 @@
  * @description : type-id based dispatch buffer for deferred processing
  */
 
-#include "whisker_std.h"
-
 #include "whisker_dispatch_buffer.h"
 
 void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer)
@@ -16,6 +14,7 @@ void w_dispatch_buffer_init(struct w_dispatch_buffer *buffer)
 	buffer->entries_length = 0;
 	buffer->payload_data_length = 0;
 	buffer->read_index = 0;
+	w_hook_registry_init(&buffer->handlers);
 }
 
 void w_dispatch_buffer_free(struct w_dispatch_buffer *buffer)
@@ -25,6 +24,7 @@ void w_dispatch_buffer_free(struct w_dispatch_buffer *buffer)
 	buffer->entries_length = 0;
 	buffer->payload_data_length = 0;
 	buffer->read_index = 0;
+	w_hook_registry_free(&buffer->handlers);
 }
 
 void w_dispatch_buffer_push(struct w_dispatch_buffer *buffer, int type_id, int priority, void *payload, size_t payload_size)
