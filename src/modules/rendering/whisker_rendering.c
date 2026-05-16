@@ -127,7 +127,7 @@ void wm_rendering_init(struct w_ecs_world *world, struct w_rendering_display_con
 	/******************
 	*  core systems  *
 	******************/
-	w_rendering_core_flush_render_dispatch_buffer_dummy_register(world);
+	w_rendering_core_flush_render_buffer_commands_register(world);
 	w_rendering_core_dispatch_render_state_sync_register(world);
 	w_rendering_core_sync_transform_components_register(world);
 

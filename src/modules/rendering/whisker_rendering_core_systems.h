@@ -14,14 +14,23 @@
 #define WHISKER_RENDERING_CORE_SYSTEMS_H
 
 w_ecs_simple_system(
-	w_rendering_core_flush_render_dispatch_buffer_dummy,
-	WM_PHASE_POST,
+	w_rendering_core_flush_render_buffer_commands,
+	WM_PHASE_FINAL_RENDER,
 {
+	// render dispatch buffer
 	struct w_dispatch_buffer *render_buffer = w_rendering_get_render_dispatch_buffer(world);
+	w_dispatch_buffer_sort(render_buffer, w_dispatch_buffer_compare_by_priority);
 
-	// this dummy system simply fakes consuming the render buffer in the case
-	// that there is no render module consuming it.
-	// when there's a real render module, its already consumed by this point
+	void *render_cmd_payload_ptr;
+	struct w_dispatch_entry *dispatch_entry;
+	while ((dispatch_entry = w_dispatch_buffer_pop(render_buffer, &render_cmd_payload_ptr)))
+	{
+		enum W_RENDERING_CMD render_cmd = dispatch_entry->type_id;
+
+		// trigger handler for each buffered command
+		w_dispatch_buffer_run_handler(render_buffer, render_cmd, world, render_cmd_payload_ptr);
+	}
+
 	w_dispatch_buffer_clear(render_buffer);
 });
 
