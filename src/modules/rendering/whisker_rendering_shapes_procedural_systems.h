@@ -146,7 +146,7 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		circle_verts_count = W_CIRCLE_VERTS_COUNT(seg);
+		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(seg);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
 		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}), true);
 	}
@@ -155,7 +155,7 @@ w_ecs_system(
 	if (outline_col.a > 0)
 	{
     	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(seg, false);
+    	circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, false);
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
     	// count is set and respects full/not full circle so extra memory doesn't matter
@@ -239,14 +239,14 @@ w_ecs_system(
 	// calculate and create verts buffer
 	int verts_count = 0;
 	// add to verts_count calculation
-	verts_count += W_CYLINDER_SIDES_VERTS_COUNT(seg);
-	if (dia_top > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(seg);
-	if (dia_bottom > 0) verts_count += W_CYLINDER_CAP_VERTS_COUNT(seg);
+	verts_count += W_SHAPE_CYLINDER_SIDES_VERTS_COUNT(seg);
+	if (dia_top > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
+	if (dia_bottom > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
 	w_vec3 *verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
 
 	int outline_verts_count = 0;
-	if (dia_top > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
-	if (dia_bottom > 0) outline_verts_count += W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+	if (dia_top > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+	if (dia_bottom > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
 	w_vec3 *outline_verts = w_ecs_frame_malloc(world, outline_verts_count * sizeof(w_vec3));
 
 	int verts_offset = 0;
@@ -260,8 +260,8 @@ w_ecs_system(
 		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}));
 
 		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
 	}
 
 	// sides
@@ -275,8 +275,8 @@ w_ecs_system(
 		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}));
 
 		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
 	}
 
 	// prepare draw command
@@ -363,7 +363,7 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		circle_verts_count = W_CIRCLE_VERTS_COUNT(segments);
+		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(segments);
 		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
 		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
 	}
@@ -372,7 +372,7 @@ w_ecs_system(
 	if (outline_col.a > 0)
 	{
     	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
+    	circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
     	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
     	
     	// count is set and respects full/not full circle so extra memory doesn't matter
@@ -457,7 +457,7 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		verts_count = W_SPHERE_VERTS_COUNT(seg, ring);
+		verts_count = W_SHAPE_SPHERE_VERTS_COUNT(seg, ring);
 		verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
 		verts_count = w_rendering_shape_generate_sphere_verts(verts, 0, seg, ring, diameter, start_rad, end_rad);
 	}
@@ -526,7 +526,7 @@ w_ecs_system(
 	// generate verts array for the shape
 	if (shape_color.a > 0)
 	{
-		verts_count = W_CAPSULE_VERTS_COUNT(seg, ring);
+		verts_count = W_SHAPE_CAPSULE_VERTS_COUNT(seg, ring);
 		verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
 		verts_count = w_rendering_shape_generate_capsule_verts(verts, 0, seg, ring, dia, length * 0.5f);
 	}
@@ -591,7 +591,7 @@ w_ecs_system(
 	// generate verts for filled hexahedron
 	if (shape_color.a > 0)
 	{
-		hexahedron_verts_count = W_HEXAHEDRON_VERTS_COUNT;
+		hexahedron_verts_count = W_SHAPE_HEXAHEDRON_VERTS_COUNT;
 		hexahedron_verts = w_ecs_frame_malloc(world, hexahedron_verts_count * sizeof(w_vec3));
 		w_rendering_shape_generate_hexahedron_verts(hexahedron_verts, &hex);
 	}
@@ -599,7 +599,7 @@ w_ecs_system(
 	// generate verts array for just the outline as vec3 lines  
 	if (outline_col.a > 0)
 	{
-		hexahedron_outline_verts_count = W_HEXAHEDRON_OUTLINE_VERTS_COUNT; 
+		hexahedron_outline_verts_count = W_SHAPE_HEXAHEDRON_OUTLINE_VERTS_COUNT; 
 		hexahedron_outline_verts = w_ecs_frame_malloc(world, hexahedron_outline_verts_count * sizeof(w_vec3));
 		w_rendering_shape_generate_hexahedron_outline_verts(hexahedron_outline_verts, &hex);
 	}

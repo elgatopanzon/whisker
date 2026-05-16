@@ -122,22 +122,22 @@ static const w_vec3 w_shape_cube_lines[] = {
 /*************************
 *  shape helper macros  *
 *************************/
-#define W_CIRCLE_VERTS_COUNT(segments) ((segments) * 3)
-#define W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full) ((segments) * 2 + ((is_full) ? 0 : 4))
-#define W_CYLINDER_CAP_VERTS_COUNT(segments)   ((segments) * 3)   // same as circle
-#define W_CYLINDER_SIDES_VERTS_COUNT(segments) ((segments) * 6)   // 1 quad = 2 tris
-#define W_SPHERE_VERTS_COUNT(segments, rings) \
+#define W_SHAPE_CIRCLE_VERTS_COUNT(segments) ((segments) * 3)
+#define W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full) ((segments) * 2 + ((is_full) ? 0 : 4))
+#define W_SHAPE_CYLINDER_CAP_VERTS_COUNT(segments)   ((segments) * 3)   // same as circle
+#define W_SHAPE_CYLINDER_SIDES_VERTS_COUNT(segments) ((segments) * 6)   // 1 quad = 2 tris
+#define W_SHAPE_SPHERE_VERTS_COUNT(segments, rings) \
     ((segments) * 3 * 2 + (segments) * 6 * ((rings) - 1) \
      + 6 * ((rings) + 1))
 //   ^poles (2 fans)      ^bands between rings
 //                         ^wedge sides (max)
-#define W_CAPSULE_VERTS_COUNT(segments, rings) \
+#define W_SHAPE_CAPSULE_VERTS_COUNT(segments, rings) \
     (((segments) * 3 + (segments) * 6 * ((rings) - 1)) * 2 + \
      (segments) * 6)
 
 // same as cube
-#define W_HEXAHEDRON_VERTS_COUNT W_SHAPE_CUBE_TRIS_LEN
-#define W_HEXAHEDRON_OUTLINE_VERTS_COUNT W_SHAPE_CUBE_LINES_LEN
+#define W_SHAPE_HEXAHEDRON_VERTS_COUNT W_SHAPE_CUBE_TRIS_LEN
+#define W_SHAPE_HEXAHEDRON_OUTLINE_VERTS_COUNT W_SHAPE_CUBE_LINES_LEN
 
 /*********************
 *  shape functions  *

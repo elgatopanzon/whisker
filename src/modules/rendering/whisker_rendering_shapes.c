@@ -82,7 +82,7 @@ int w_rendering_shape_generate_circle_verts(w_vec3 *out_verts, int offset, int s
         out_verts[offset + i * 3 + 2].z = vert_offset.z + sinf(angle0);
     }
 
-	return W_CIRCLE_VERTS_COUNT(segments);
+	return W_SHAPE_CIRCLE_VERTS_COUNT(segments);
 }
 
 int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offset, int segments, float start_rad, float end_rad, w_vec3 vert_offset)
@@ -123,7 +123,7 @@ int w_rendering_shape_generate_circle_outline_verts(w_vec3 *out_verts, int offse
         out_verts[offset + base + 3] = ((w_vec3){vert_offset.x + cosf(end_rad), vert_offset.y + 0, vert_offset.z + sinf(end_rad)});
     }
 
-	return W_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);
+	return W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, is_full_circle);
 }
 
 int w_rendering_shape_generate_cylinder_sides_verts(w_vec3 *out_verts, int start_index, int segments, float diameter_top, float diameter_bottom, float half_height)
