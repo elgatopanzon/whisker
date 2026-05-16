@@ -435,3 +435,32 @@ int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, 
 
     return idx - start_index;
 }
+
+void w_rendering_shape_generate_hexahedron_verts(w_vec3 *out_verts, const w_tricell8 *cell)
+{
+    const w_vec3 *corners = (const w_vec3 *)cell;
+
+    for (size_t i = 0; i < W_SHAPE_CUBE_TRIS_LEN; i++)
+    {
+        // map -1/+1 to corner index: x + y*2 + z*4
+        int idx = (w_shape_cube_tris[i].x > 0.0f ? 1 : 0)
+                + (w_shape_cube_tris[i].y > 0.0f ? 2 : 0)
+                + (w_shape_cube_tris[i].z > 0.0f ? 4 : 0);
+
+        out_verts[i] = corners[idx];
+    }
+}
+
+void w_rendering_shape_generate_hexahedron_outline_verts(w_vec3 *out_verts, const w_tricell8 *cell)
+{
+    const w_vec3 *corners = (const w_vec3 *)cell;
+
+    for (size_t i = 0; i < W_SHAPE_CUBE_LINES_LEN; i++)
+    {
+        int idx = (w_shape_cube_lines[i].x > 0.0f ? 1 : 0)
+                + (w_shape_cube_lines[i].y > 0.0f ? 2 : 0)
+                + (w_shape_cube_lines[i].z > 0.0f ? 4 : 0);
+
+        out_verts[i] = corners[idx];
+    }
+}

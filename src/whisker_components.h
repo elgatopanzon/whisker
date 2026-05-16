@@ -69,6 +69,17 @@ w_ecs_define_component(w_vec3, cube, 0.0f, 0.0f, 0.0f);
 w_ecs_define_component(float, cylinder, 1.0f); // height
 w_ecs_define_component(float, sphere, 1.0f); // diameter
 w_ecs_define_component(float, capsule, 1.0f); // length
+// defaults to a cube
+w_ecs_define_component(w_tricell8, hexahedron, 
+	.c000 = {-1.0f, -1.0f, -1.0f},
+    .c100 = { 1.0f, -1.0f, -1.0f},
+    .c010 = {-1.0f,  1.0f, -1.0f},
+    .c110 = { 1.0f,  1.0f, -1.0f},
+    .c001 = {-1.0f, -1.0f,  1.0f},
+    .c101 = { 1.0f, -1.0f,  1.0f},
+    .c011 = {-1.0f,  1.0f,  1.0f},
+    .c111 = { 1.0f,  1.0f,  1.0f},
+);
 
 /**************************
 *  hierarchy components  *

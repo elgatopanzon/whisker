@@ -135,6 +135,9 @@ static const w_vec3 w_shape_cube_lines[] = {
     (((segments) * 3 + (segments) * 6 * ((rings) - 1)) * 2 + \
      (segments) * 6)
 
+// same as cube
+#define W_HEXAHEDRON_VERTS_COUNT W_SHAPE_CUBE_TRIS_LEN
+#define W_HEXAHEDRON_OUTLINE_VERTS_COUNT W_SHAPE_CUBE_LINES_LEN
 
 /*********************
 *  shape functions  *
@@ -163,6 +166,12 @@ int w_rendering_shape_generate_sphere_verts(w_vec3 *out_verts, int start_index, 
 
 // generate capsule verts (two hemispheres + cylinder sides)
 int w_rendering_shape_generate_capsule_verts(w_vec3 *out_verts, int start_index, int segments, int rings, float diameter, float half_length);
+
+// generate 36 verts from tricell8
+void w_rendering_shape_generate_hexahedron_verts(w_vec3 *out_verts, const w_tricell8 *cell);
+
+// generate 24 verts from tricell8 for hexahedron outline
+void w_rendering_shape_generate_hexahedron_outline_verts(w_vec3 *out_verts, const w_tricell8 *cell);
 
 #endif /* WHISKER_RENDERING_SHAPES_H */
 

@@ -555,5 +555,92 @@ w_ecs_system(
 	}
 });
 
+w_ecs_system(
+	w_rendering_shapes_procedural_dispatch_draw_hexahedron,
+	WM_RENDER_PHASE_PRE_WORLD,
+	w_query(
+		// transform
+		w_query_r(render_position_3d),
+		w_query_r(render_rotation_3d),
+		w_query_r(render_scale_3d),
+		w_query_r(render_origin_3d),
+
+		// required render components
+		w_query_r(render_layer),
+		w_query_n(hidden),
+
+		// required shape component (hexahedron)
+		w_query_r(hexahedron),
+		w_query_r(color),
+
+		// optional shape components
+		w_query_o(outline_color),
+	),
+{
+	w_tricell8 hex = *w_query_get(hexahedron);
+	w_color8 shape_color = *w_query_get(color);
+	w_color8 outline_col = *w_query_get_opt_or_default(outline_color);
+
+	// set verts arrays and counts
+	w_vec3 *hexahedron_verts = NULL;
+	int hexahedron_verts_count = 0;
+
+	w_vec3 *hexahedron_outline_verts = NULL;
+	int hexahedron_outline_verts_count = 0;
+
+	// generate verts for filled hexahedron
+	if (shape_color.a > 0)
+	{
+		hexahedron_verts_count = W_HEXAHEDRON_VERTS_COUNT;
+		hexahedron_verts = w_ecs_frame_malloc(world, hexahedron_verts_count * sizeof(w_vec3));
+		w_rendering_shape_generate_hexahedron_verts(hexahedron_verts, &hex);
+	}
+
+	// generate verts array for just the outline as vec3 lines  
+	if (outline_col.a > 0)
+	{
+		hexahedron_outline_verts_count = W_HEXAHEDRON_OUTLINE_VERTS_COUNT; 
+		hexahedron_outline_verts = w_ecs_frame_malloc(world, hexahedron_outline_verts_count * sizeof(w_vec3));
+		w_rendering_shape_generate_hexahedron_outline_verts(hexahedron_outline_verts, &hex);
+	}
+
+	// prepare draw command
+	struct w_rendering_cmd_draw_verts cmd = {0};
+
+	cmd.position = *w_query_get(render_position_3d);
+	cmd.rotation = *w_query_get(render_rotation_3d);
+	cmd.scale = *w_query_get(render_scale_3d);
+	cmd.origin = *w_query_get(render_origin_3d);
+
+	if (shape_color.a > 0)
+	{
+		cmd.color = shape_color;
+		cmd.verts = hexahedron_verts;
+		cmd.verts_length = hexahedron_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
+
+	if (outline_col.a > 0)
+	{
+		cmd.color = outline_col;
+		cmd.verts = hexahedron_outline_verts;
+		cmd.verts_length = hexahedron_outline_verts_count;
+		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
+
+		w_rendering_dispatch_render_cmd(
+			W_RENDERING_CMD_DRAW_VERTS, 
+			w_ecs_render_layer(*w_query_get(render_layer)), 
+			&cmd
+		);
+	}
+});
+
+
 #endif /* WHISKER_RENDERING_SHAPES_PROCEDURAL_SYSTEMS_H */
 
