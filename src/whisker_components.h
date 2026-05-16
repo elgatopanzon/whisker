@@ -25,9 +25,9 @@ w_ecs_define_tag(dirty);
 ************************/
 
 // string is a char* pointer
-w_ecs_define_component(char_ptr, string);
-w_ecs_define_component(void_ptr, ptr);
-w_ecs_define_component(int, string_id);
+w_ecs_define_component(char_ptr, string, NULL);
+w_ecs_define_component(void_ptr, ptr, NULL);
+w_ecs_define_component(int, string_id, W_STRING_TABLE_INVALID_ID);
 
 
 /***********************
@@ -120,7 +120,7 @@ w_ecs_define_component(w_vec3, angular_velocity_3d, 0.0f, 0.0f, 0.0f);
 // 2D
 w_ecs_define_component(w_vec2, velocity_2d, 0.0f, 0.0f);
 w_ecs_define_component(w_vec2, acceleration_2d, 0.0f, 0.0f);
-w_ecs_define_component(float, angular_velocity_2d);
+w_ecs_define_component(float, angular_velocity_2d, 0.0f);
 
 
 /****************************
