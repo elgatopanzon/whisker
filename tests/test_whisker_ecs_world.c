@@ -756,17 +756,17 @@ START_TEST(test_unbuffered_return_entity)
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	ck_assert(entity != W_ENTITY_INVALID);
 
-	// verify entity is alive (next_id - recycled_stack_length)
-	size_t alive_before = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	// verify entity is alive (next_id - recycled_length)
+	size_t alive_before = g_world.entities.id_pool.next_id - g_world.entities.id_pool.recycled_length;
 	ck_assert_uint_eq(alive_before, 1);
 
 	// return immediately
 	w_ecs_return_entity(&g_world, entity);
 
 	// entity should be recycled immediately
-	size_t alive_after = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	size_t alive_after = g_world.entities.id_pool.next_id - g_world.entities.id_pool.recycled_length;
 	ck_assert_uint_eq(alive_after, 0);
-	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 1);
+	ck_assert_uint_eq(g_world.entities.id_pool.recycled_length, 1);
 }
 END_TEST
 
@@ -777,16 +777,16 @@ START_TEST(test_buffered_return_entity)
 	w_entity_id entity = w_ecs_request_entity(&g_world);
 	ck_assert(entity != W_ENTITY_INVALID);
 
-	size_t alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	size_t alive = g_world.entities.id_pool.next_id - g_world.entities.id_pool.recycled_length;
 	ck_assert_uint_eq(alive, 1);
 
 	// queue return (buffered)
 	w_ecs_return_entity(&g_world, entity);
 
 	// entity should still be alive (command buffered)
-	alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	alive = g_world.entities.id_pool.next_id - g_world.entities.id_pool.recycled_length;
 	ck_assert_uint_eq(alive, 1);
-	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 0);
+	ck_assert_uint_eq(g_world.entities.id_pool.recycled_length, 0);
 
 	// setup scheduler and flush via update
 	struct w_scheduler_time_step ts = {.enabled = true, .time_step = w_time_step_create(0, 1, true, true, true, true, true, true)};
@@ -797,9 +797,9 @@ START_TEST(test_buffered_return_entity)
 	w_ecs_update(&g_world);
 
 	// entity should now be recycled
-	alive = g_world.entities.next_id - g_world.entities.recycled_stack_length;
+	alive = g_world.entities.id_pool.next_id - g_world.entities.id_pool.recycled_length;
 	ck_assert_uint_eq(alive, 0);
-	ck_assert_uint_eq(g_world.entities.recycled_stack_length, 1);
+	ck_assert_uint_eq(g_world.entities.id_pool.recycled_length, 1);
 }
 END_TEST
 

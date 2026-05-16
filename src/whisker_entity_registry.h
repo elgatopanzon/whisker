@@ -11,8 +11,7 @@
 #include "whisker_memory.h"
 #include "whisker_array.h"
 #include "whisker_random.h"
-
-#include <stdatomic.h>
+#include "whisker_id_pool.h"
 
 #ifndef WHISKER_ENTITY_REGISTRY_H
 #define WHISKER_ENTITY_REGISTRY_H
@@ -40,9 +39,8 @@ struct w_entity_registry
 	w_array_declare(w_string_table_id, entity_to_name);
 	w_array_declare(w_entity_id, name_to_entity);
 
-	// recycle stack and ID counter (thread-safe via CAS)
-	_Atomic w_entity_id next_id;
-	w_array_declare(w_entity_id, recycled_stack);
+	// ID pool for entity ID management (thread-safe)
+	struct w_id_pool id_pool;
 };
 
 // init entity registry
@@ -70,13 +68,13 @@ char *w_entity_get_name(struct w_entity_registry *registry, w_entity_id id);
 w_entity_id w_entity_lookup_by_name(struct w_entity_registry *registry, char *name);
 
 // get alive entity count
-#define w_entity_alive_count(r) (r->next_id - r->recycled_length)
+#define w_entity_alive_count(r) w_id_pool_alive_count(&(r)->id_pool)
 
 // get recycled entity count
-#define w_entity_recycled_count(r) (r->recycled_length)
+#define w_entity_recycled_count(r) w_id_pool_recycled_count(&(r)->id_pool)
 
 // get total entity count
-#define w_entity_total_count(r) (r->next_id)
+#define w_entity_total_count(r) w_id_pool_total_count(&(r)->id_pool)
 
 #endif /* WHISKER_ENTITY_REGISTRY_H */
 

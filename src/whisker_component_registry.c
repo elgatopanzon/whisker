@@ -167,7 +167,7 @@ w_entity_id w_component_get_id(struct w_component_registry *registry, char *name
 char *w_component_get_name(struct w_component_registry *registry, w_entity_id type_entity_id)
 {
 	// invalid entity, cannot have a name
-	if (type_entity_id >= registry->entities->next_id) return NULL;
+	if (type_entity_id >= registry->entities->id_pool.next_id) return NULL;
 
 	// will return null if there's no name
 	return w_entity_get_name(registry->entities, type_entity_id);

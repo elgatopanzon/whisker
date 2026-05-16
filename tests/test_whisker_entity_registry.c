@@ -54,7 +54,7 @@ END_TEST
 
 START_TEST(test_init_next_id_zero)
 {
-	ck_assert_int_eq(g_registry.next_id, 0);
+	ck_assert_int_eq(g_registry.id_pool.next_id, 0);
 }
 END_TEST
 
@@ -62,7 +62,7 @@ START_TEST(test_init_arrays_empty)
 {
 	ck_assert_int_eq(g_registry.entity_to_name_length, 0);
 	ck_assert_int_eq(g_registry.name_to_entity_length, 0);
-	ck_assert_int_eq(g_registry.recycled_stack_length, 0);
+	ck_assert_int_eq(g_registry.id_pool.recycled_length, 0);
 }
 END_TEST
 
@@ -99,16 +99,16 @@ END_TEST
 START_TEST(test_return_entity_updates_recycled_count)
 {
 	w_entity_id id = w_entity_request(&g_registry);
-	ck_assert_int_eq(g_registry.recycled_stack_length, 0);
+	ck_assert_int_eq(g_registry.id_pool.recycled_length, 0);
 	w_entity_return(&g_registry, id);
-	ck_assert_int_eq(g_registry.recycled_stack_length, 1);
+	ck_assert_int_eq(g_registry.id_pool.recycled_length, 1);
 }
 END_TEST
 
-// helper to compute alive count (macro in header has bug: recycled_length vs recycled_stack_length)
+// helper to compute alive count
 static inline uint32_t alive_count(struct w_entity_registry *r)
 {
-	return r->next_id - r->recycled_stack_length;
+	return r->id_pool.next_id - r->id_pool.recycled_length;
 }
 
 START_TEST(test_alive_count_increments)
@@ -182,7 +182,7 @@ START_TEST(test_recycle_multiple_cycles)
 		w_entity_return(&g_registry, id);
 	}
 	// next_id should still be 1 (never incremented past the recycling)
-	ck_assert_int_eq(g_registry.next_id, 1);
+	ck_assert_int_eq(g_registry.id_pool.next_id, 1);
 }
 END_TEST
 
@@ -374,7 +374,7 @@ START_TEST(test_stress_request_return_cycles)
 		w_entity_return(&g_registry, id);
 	}
 	// should have only used one ID slot due to recycling
-	ck_assert_int_eq(g_registry.next_id, 1);
+	ck_assert_int_eq(g_registry.id_pool.next_id, 1);
 	ck_assert_int_eq(alive_count(&g_registry), 0);
 }
 END_TEST
@@ -531,7 +531,7 @@ START_TEST(test_free_empty_registry)
 
 	ck_assert_ptr_null(r.entity_to_name);
 	ck_assert_ptr_null(r.name_to_entity);
-	ck_assert_ptr_null(r.recycled_stack);
+	ck_assert_ptr_null(r.id_pool.recycled);
 }
 END_TEST
 
@@ -557,7 +557,7 @@ START_TEST(test_free_with_entities)
 	w_arena_free(&a);
 
 	ck_assert_ptr_null(r.entity_to_name);
-	ck_assert_int_eq(r.next_id, 0);
+	ck_assert_int_eq(r.id_pool.next_id, 0);
 }
 END_TEST
 

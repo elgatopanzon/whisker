@@ -12,7 +12,6 @@ void w_entity_registry_init(struct w_entity_registry *registry, struct w_string_
 {
 	w_array_init_t(registry->entity_to_name, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
 	w_array_init_t(registry->name_to_entity, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
-	w_array_init_t(registry->recycled_stack, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
 
 	// initialize entity_to_name to invalid IDs (calloc zeros, but 0 is a valid string table ID)
 	size_t entity_to_name_count = registry->entity_to_name_size / sizeof(*registry->entity_to_name);
@@ -22,9 +21,8 @@ void w_entity_registry_init(struct w_entity_registry *registry, struct w_string_
 
 	registry->entity_to_name_length = 0;
 	registry->name_to_entity_length = 0;
-	atomic_store(&registry->recycled_stack_length, 0);
 
-	atomic_store(&registry->next_id, 0);
+	w_id_pool_init(&registry->id_pool, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
 	registry->name_table = name_table;
 }
 
@@ -32,60 +30,19 @@ void w_entity_registry_free(struct w_entity_registry *registry)
 {
 	free_null(registry->entity_to_name);
 	free_null(registry->name_to_entity);
-	free_null(registry->recycled_stack);
 
-	atomic_store(&registry->next_id, 0);
-	atomic_store(&registry->recycled_stack_length, 0);
+	w_id_pool_free(&registry->id_pool);
 	registry->name_table = NULL;
 }
 
 w_entity_id w_entity_request(struct w_entity_registry *registry)
 {
-	w_entity_id id;
-
-	// try to pop from recycled stack (thread-safe via CAS)
-	while (true)
-	{
-		size_t current_len = atomic_load(&registry->recycled_stack_length);
-		if (current_len > 0)
-		{
-			// try CAS decrement to claim a slot
-			if (atomic_compare_exchange_weak(&registry->recycled_stack_length, &current_len, current_len - 1))
-			{
-				// success - we own slot at current_len - 1
-				id = registry->recycled_stack[current_len - 1];
-				break;
-			}
-			// CAS failed, retry
-		}
-		else
-		{
-			// stack empty, allocate new ID atomically
-			id = atomic_fetch_add(&registry->next_id, 1);
-			break;
-		}
-	}
-
-	return id;
+	return w_id_pool_request(&registry->id_pool);
 }
 
 void w_entity_return(struct w_entity_registry *registry, w_entity_id id)
 {
-	// push to recycled stack (thread-safe via CAS)
-	while (true)
-	{
-		size_t current_len = atomic_load(&registry->recycled_stack_length);
-		// ensure capacity before CAS
-		w_array_ensure_alloc_block_size(registry->recycled_stack, current_len + 1, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
-		// try CAS increment to claim a slot
-		if (atomic_compare_exchange_weak(&registry->recycled_stack_length, &current_len, current_len + 1))
-		{
-			// success - we own slot at current_len
-			registry->recycled_stack[current_len] = id;
-			break;
-		}
-		// CAS failed, retry
-	}
+	w_id_pool_return(&registry->id_pool, id);
 
 	// clear name if it has one
 	w_entity_clear_name(registry, id);
