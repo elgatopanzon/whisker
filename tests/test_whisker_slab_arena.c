@@ -221,6 +221,137 @@ END_TEST
 
 
 /*****************************
+*  huge allocations          *
+*****************************/
+
+START_TEST(test_huge_malloc_returns_valid_handle)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	ck_assert_int_ne(h, W_ID_POOL_INVALID);
+}
+END_TEST
+
+START_TEST(test_huge_malloc_ptr_nonnull)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	void *ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	ck_assert_ptr_nonnull(ptr);
+}
+END_TEST
+
+START_TEST(test_huge_malloc_data_writable)
+{
+	size_t size = W_SLAB_ARENA_HUGE_THRESHOLD;
+	size_t h = w_slab_arena_malloc(&g_slab, size);
+	char *ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	memset(ptr, 0xAB, size);
+	ck_assert_int_eq((unsigned char)ptr[0], 0xAB);
+	ck_assert_int_eq((unsigned char)ptr[size - 1], 0xAB);
+}
+END_TEST
+
+START_TEST(test_huge_entry_has_uint64max_slab_index)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry((&g_slab), h);
+	ck_assert_uint_eq(entry->slab_index, UINT64_MAX);
+}
+END_TEST
+
+START_TEST(test_huge_free_clears_ptr)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	w_slab_arena_free_handle(&g_slab, h);
+	void *ptr = w_slab_arena_resolve_safe_handle(&g_slab, h);
+	ck_assert_ptr_null(ptr);
+}
+END_TEST
+
+START_TEST(test_huge_free_recycles_handle)
+{
+	size_t h1 = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	w_slab_arena_free_handle(&g_slab, h1);
+	size_t h2 = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	ck_assert_int_eq(h1, h2);
+}
+END_TEST
+
+START_TEST(test_normal_alloc_not_huge)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, 64);
+	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry((&g_slab), h);
+	ck_assert_uint_ne(entry->slab_index, UINT64_MAX);
+}
+END_TEST
+
+START_TEST(test_realloc_small_to_huge)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, 64);
+	char *ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	memset(ptr, 0x42, 64);
+
+	h = w_slab_arena_realloc(&g_slab, h, W_SLAB_ARENA_HUGE_THRESHOLD);
+	char *new_ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	ck_assert_ptr_nonnull(new_ptr);
+
+	// verify data preserved
+	for (int i = 0; i < 64; i++) {
+		ck_assert_int_eq((unsigned char)new_ptr[i], 0x42);
+	}
+
+	// verify entry is now huge
+	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry((&g_slab), h);
+	ck_assert_uint_eq(entry->slab_index, UINT64_MAX);
+}
+END_TEST
+
+START_TEST(test_realloc_huge_to_small)
+{
+	size_t h = w_slab_arena_malloc(&g_slab, W_SLAB_ARENA_HUGE_THRESHOLD);
+	char *ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	memset(ptr, 0x77, 64);
+
+	h = w_slab_arena_realloc(&g_slab, h, 64);
+	char *new_ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	ck_assert_ptr_nonnull(new_ptr);
+
+	// verify data preserved
+	for (int i = 0; i < 64; i++) {
+		ck_assert_int_eq((unsigned char)new_ptr[i], 0x77);
+	}
+
+	// verify entry is now slab-based
+	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry((&g_slab), h);
+	ck_assert_uint_ne(entry->slab_index, UINT64_MAX);
+}
+END_TEST
+
+START_TEST(test_realloc_huge_to_huge_grow)
+{
+	size_t size1 = W_SLAB_ARENA_HUGE_THRESHOLD;
+	size_t size2 = W_SLAB_ARENA_HUGE_THRESHOLD * 2;
+
+	size_t h = w_slab_arena_malloc(&g_slab, size1);
+	char *ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	memset(ptr, 0xBB, size1);
+
+	h = w_slab_arena_realloc(&g_slab, h, size2);
+	char *new_ptr = w_slab_arena_resolve_handle(&g_slab, h);
+	ck_assert_ptr_nonnull(new_ptr);
+
+	// verify data preserved
+	for (int i = 0; i < 64; i++) {
+		ck_assert_int_eq((unsigned char)new_ptr[i], 0xBB);
+	}
+
+	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry((&g_slab), h);
+	ck_assert_uint_eq(entry->slab_index, UINT64_MAX);
+	ck_assert_uint_eq(entry->slab_size, size2);
+}
+END_TEST
+
+
+/*****************************
 *  stress tests              *
 *****************************/
 
@@ -392,6 +523,21 @@ Suite *whisker_slab_arena_suite(void)
 	tcase_add_test(tc_classes, test_many_allocs_same_class);
 	tcase_add_test(tc_classes, test_alloc_free_alloc_different_classes);
 	suite_add_tcase(s, tc_classes);
+
+	TCase *tc_huge = tcase_create("huge_alloc");
+	tcase_add_checked_fixture(tc_huge, slab_setup, slab_teardown);
+	tcase_set_timeout(tc_huge, 10);
+	tcase_add_test(tc_huge, test_huge_malloc_returns_valid_handle);
+	tcase_add_test(tc_huge, test_huge_malloc_ptr_nonnull);
+	tcase_add_test(tc_huge, test_huge_malloc_data_writable);
+	tcase_add_test(tc_huge, test_huge_entry_has_uint64max_slab_index);
+	tcase_add_test(tc_huge, test_huge_free_clears_ptr);
+	tcase_add_test(tc_huge, test_huge_free_recycles_handle);
+	tcase_add_test(tc_huge, test_normal_alloc_not_huge);
+	tcase_add_test(tc_huge, test_realloc_small_to_huge);
+	tcase_add_test(tc_huge, test_realloc_huge_to_small);
+	tcase_add_test(tc_huge, test_realloc_huge_to_huge_grow);
+	suite_add_tcase(s, tc_huge);
 
 	TCase *tc_stress = tcase_create("stress");
 	tcase_add_checked_fixture(tc_stress, slab_setup, slab_teardown);

@@ -14,6 +14,7 @@
 #define W_SLAB_ARENA_MIN_BLOCK_SIZE 4096
 #define W_SLAB_ARENA_MIN_SLOTS_PER_BLOCK 16
 #define W_SLAB_POOL_THRESHOLD (256 * 1024)  // 256KB max slab size until 1 block
+#define W_SLAB_ARENA_HUGE_THRESHOLD (16 * W_SLAB_POOL_THRESHOLD)  // 4MB - bypass slab system entirely
 
 // 1KB   > 16 slots x 1KB = 16KB block
 // 256KB > 16 slots × 256KB = 4MB block

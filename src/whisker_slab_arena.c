@@ -21,6 +21,18 @@ void w_slab_arena_init(struct w_slab_arena *slab_arena)
 
 void w_slab_arena_free(struct w_slab_arena *slab_arena)
 {
+	// free any remaining huge allocations (not managed by slabs)
+	size_t max_handle = atomic_load(&slab_arena->handle_pool.next_id);
+	for (size_t i = 0; i < max_handle; ++i)
+	{
+		if (slab_arena->handle_lookup[i] != NULL &&
+			slab_arena->handle_entries[i].slab_index == UINT64_MAX)
+		{
+			free(slab_arena->handle_lookup[i]);
+			slab_arena->handle_lookup[i] = NULL;
+		}
+	}
+
 	// loop slabs, free valid arenas and id pools
 	for (size_t i = 0; i < slab_arena->slabs_length; ++i)
 	{
@@ -82,7 +94,22 @@ static void w_slab_arena_ensure_slab_handle_valid(struct w_slab_arena *slab_aren
 
 size_t w_slab_arena_malloc(struct w_slab_arena *slab_arena, size_t size)
 {
-	size_t original_size = size;
+	// huge allocation: bypass slab system entirely
+	if (size >= W_SLAB_ARENA_HUGE_THRESHOLD)
+	{
+		void *ptr = w_mem_xmalloc(size);
+
+		size_t handle = w_id_pool_request(&slab_arena->handle_pool);
+		w_slab_arena_ensure_slab_handle_valid(slab_arena, handle);
+
+		slab_arena->handle_lookup[handle] = ptr;
+		slab_arena->handle_entries[handle].slab_size = size;
+		slab_arena->handle_entries[handle].slab_index = UINT64_MAX;
+		slab_arena->handle_entries[handle].actual_size = size;
+
+		return handle;
+	}
+
 	size_t slab_index = w_slab_arena_size_to_class(size);
 	size_t slab_size = w_slab_arena_class_to_size(slab_index);
 
@@ -137,25 +164,49 @@ size_t w_slab_arena_realloc(struct w_slab_arena *slab_arena, size_t handle, size
 
 	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry(slab_arena, handle);
 
-	// nothing to do
-	if (entry->slab_size >= new_size)
+	// huge->huge realloc: use realloc directly
+	if (entry->slab_index == UINT64_MAX && new_size >= W_SLAB_ARENA_HUGE_THRESHOLD)
+	{
+		if (new_size <= entry->slab_size)
+		{
+			entry->actual_size = new_size;
+			return handle;
+		}
+
+		void *ptr = w_mem_xrealloc(slab_arena->handle_lookup[handle], new_size);
+		slab_arena->handle_lookup[handle] = ptr;
+		entry->slab_size = new_size;
+		entry->actual_size = new_size;
+		return handle;
+	}
+
+	// nothing to do if current slab fits
+	if (entry->slab_size >= new_size && !(entry->slab_index == UINT64_MAX && new_size < W_SLAB_ARENA_HUGE_THRESHOLD))
 	{
 		entry->actual_size = new_size;
 		return handle;
 	}
 
-	// allocate a new handle and free the old one
-	if (entry->slab_size < new_size)
+	// crossing threshold or growing: alloc new, copy, free old
+	void *old_ptr = w_slab_arena_resolve_handle(slab_arena, handle);
+	size_t copy_size = entry->actual_size < new_size ? entry->actual_size : new_size;
+	bool old_is_huge = (entry->slab_index == UINT64_MAX);
+
+	if (old_is_huge)
 	{
-		void *old_ptr = w_slab_arena_resolve_handle(slab_arena, handle);
+		// huge->slab: must alloc first, copy, then free (free releases the pointer)
+		size_t new_handle = w_slab_arena_malloc(slab_arena, new_size);
+		void *new_ptr = w_slab_arena_resolve_handle(slab_arena, new_handle);
+		memcpy(new_ptr, old_ptr, copy_size);
 		w_slab_arena_free_handle(slab_arena, handle);
-
-		handle = w_slab_arena_malloc(slab_arena, new_size);
-		void *new_ptr = w_slab_arena_resolve_handle(slab_arena, handle);
-
-		// copy old into new
-		memcpy(new_ptr, old_ptr, entry->actual_size);
+		return new_handle;
 	}
+
+	// slab->slab or slab->huge: old pointer stays valid after free (arena-backed)
+	w_slab_arena_free_handle(slab_arena, handle);
+	handle = w_slab_arena_malloc(slab_arena, new_size);
+	void *new_ptr = w_slab_arena_resolve_handle(slab_arena, handle);
+	memcpy(new_ptr, old_ptr, copy_size);
 
 	return handle;
 }
@@ -165,6 +216,16 @@ void w_slab_arena_free_handle(struct w_slab_arena *slab_arena, size_t handle)
 	w_slab_arena_ensure_slab_handle_valid(slab_arena, handle);
 
 	struct w_slab_arena_entry *entry = w_slab_arena_get_handle_entry(slab_arena, handle);
+
+	// huge allocation: free directly
+	if (entry->slab_index == UINT64_MAX)
+	{
+		free(slab_arena->handle_lookup[handle]);
+		w_id_pool_return(&slab_arena->handle_pool, handle);
+		slab_arena->handle_lookup[handle] = NULL;
+		return;
+	}
+
 	size_t class_index = w_slab_arena_size_to_class(entry->slab_size);
 	struct w_slab_arena_slab *slab = slab_arena->slabs[class_index];
 
