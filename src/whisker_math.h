@@ -47,7 +47,13 @@
 })
 #define w_deg2rad(deg) ((deg) * (float)W_DEG2RAD)
 #define w_rad2deg(rad) ((rad) * (float)W_RAD2DEG)
-
+#define w_next_pow2(x) ({ \
+    __typeof__(x) _v = (x); \
+    _v == 0 ? 1 : \
+    ((__typeof__(x))1 << (sizeof(_v) * 8 - \
+        (sizeof(_v) == 8 ? __builtin_clzll(_v - 1) : __builtin_clz(_v - 1)) \
+    )); \
+})
 
 /************
 *  w_vec2  *
