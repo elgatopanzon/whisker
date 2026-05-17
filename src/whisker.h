@@ -27,6 +27,7 @@
 #include "whisker_string_table.h"
 
 // hashing
+#include "whisker_hash.h"
 #include "whisker_hash_fnv1a.h"
 #include "whisker_hash_xxhash64.h"
 
