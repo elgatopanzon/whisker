@@ -6,6 +6,7 @@
  */
 
 #include "whisker.h"
+#include "modules/managed_alloc/whisker_managed_alloc.h"
 
 #ifndef WHISKER_RENDERING_COMPONENTS_H
 #define WHISKER_RENDERING_COMPONENTS_H
@@ -13,6 +14,16 @@
 /*************************
 *  components and tags  *
 *************************/
+
+// handle to shape verts used by procedural shapes
+w_ecs_define_managed_component(shape_verts_handle);
+
+// hash of shape components used to invalididate verts
+w_ecs_define_component(uint64_t, shape_verts_hash, UINT64_MAX);
+
+// number of verts in the managed vert data
+w_ecs_define_component(int, shape_verts_count, 0);
+
 
 // phase as render layer
 w_ecs_define_component(int, render_layer, 0);

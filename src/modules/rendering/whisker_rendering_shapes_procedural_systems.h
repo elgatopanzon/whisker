@@ -9,6 +9,7 @@
 #include "whisker_rendering.h"
 #include "whisker_rendering_commands.h"
 #include "whisker_rendering_shapes.h"
+#include "whisker_rendering_components.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 
 #ifndef WHISKER_RENDERING_SHAPES_PROCEDURAL_SYSTEMS_H
@@ -27,8 +28,14 @@ w_ecs_system(
 		w_query_r(render_origin_3d),
 		w_query_r(render_layer),
 		w_query_n(hidden),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
+	w_vec2 grid_size = *w_query_get(grid);
+	float thickness_ = *w_query_get(thickness);
+
 	struct w_rendering_cmd_draw_verts cmd = {0};
 
 	cmd.position = *w_query_get(render_position_3d);
@@ -40,51 +47,68 @@ w_ecs_system(
 
 	cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
-	w_vec2 grid_size = *w_query_get(grid);
+	w_vec3 *grid_verts = NULL;
+	int total_verts = 0;
 
-	int cells_x = grid_size.x;
-	int cells_z = grid_size.y;
+	uint64_t hash = w_hash(grid_size.x, grid_size.y, thickness_);
 
-	float thickness_ = *w_query_get(thickness);
-
-	// decide number of lines from thickness
-	int thickness_lines = (thickness_) * 3;
-	thickness_ /= 1000; // convert to smaller width (1.0 = 0.001)
-
-	float line_offset = thickness_ / (thickness_lines - 1);
-	float half_thickness = thickness_ / 2.0f;
-
-	// calculate total verts: 2 per line * thickness_lines sub-lines per grid line
-	int total_grid_lines = (cells_x + 1) + (cells_z + 1);
-	int total_verts = total_grid_lines * thickness_lines * 2;
-
-	// allocate from frame arena
-	w_vec3 *grid_verts = w_ecs_frame_malloc(world, total_verts * sizeof(w_vec3));
-	int v = 0;
-
-	// use w_shape_vert_range for normalization bounds
-	float vert_lo = (float)w_shape_vert_range[0];
-	float vert_hi = (float)w_shape_vert_range[1];
-	float vert_span = vert_hi - vert_lo;
-
-	// vertical lines (span Z) - normalized to vert range
-	for (int i = 0; i <= cells_x; i++) {
-    	float x_base = (float)i / cells_x * vert_span + vert_lo;
-    	for (int t = 0; t < thickness_lines; t++) {
-        	float x = x_base - half_thickness + t * line_offset;
-        	grid_verts[v++] = ((w_vec3){x, 0, vert_lo});
-        	grid_verts[v++] = ((w_vec3){x, 0, vert_hi});
-    	}
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
+	{
+		grid_verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		total_verts = *w_query_get_opt_or_default(shape_verts_count);
 	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen grid for %d", entity);
+		int cells_x = grid_size.x;
+		int cells_z = grid_size.y;
 
-	// horizontal lines (span X) - normalized to vert range
-	for (int i = 0; i <= cells_z; i++) {
-    	float z_base = (float)i / cells_z * vert_span + vert_lo;
-    	for (int t = 0; t < thickness_lines; t++) {
-        	float z = z_base - half_thickness + t * line_offset;
-        	grid_verts[v++] = ((w_vec3){vert_lo, 0, z});
-        	grid_verts[v++] = ((w_vec3){vert_hi, 0, z});
-    	}
+
+		// decide number of lines from thickness
+		int thickness_lines = (thickness_) * 3;
+		thickness_ /= 1000; // convert to smaller width (1.0 = 0.001)
+
+		float line_offset = thickness_ / (thickness_lines - 1);
+		float half_thickness = thickness_ / 2.0f;
+
+		// calculate total verts: 2 per line * thickness_lines sub-lines per grid line
+		int total_grid_lines = (cells_x + 1) + (cells_z + 1);
+		total_verts = total_grid_lines * thickness_lines * 2;
+
+		// allocate from frame arena
+		grid_verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, total_verts * sizeof(w_vec3));
+		int v = 0;
+
+		// use w_shape_vert_range for normalization bounds
+		float vert_lo = (float)w_shape_vert_range[0];
+		float vert_hi = (float)w_shape_vert_range[1];
+		float vert_span = vert_hi - vert_lo;
+
+		// vertical lines (span Z) - normalized to vert range
+		for (int i = 0; i <= cells_x; i++) {
+    		float x_base = (float)i / cells_x * vert_span + vert_lo;
+    		for (int t = 0; t < thickness_lines; t++) {
+        		float x = x_base - half_thickness + t * line_offset;
+        		grid_verts[v++] = ((w_vec3){x, 0, vert_lo});
+        		grid_verts[v++] = ((w_vec3){x, 0, vert_hi});
+    		}
+		}
+
+		// horizontal lines (span X) - normalized to vert range
+		for (int i = 0; i <= cells_z; i++) {
+    		float z_base = (float)i / cells_z * vert_span + vert_lo;
+    		for (int t = 0; t < thickness_lines; t++) {
+        		float z = z_base - half_thickness + t * line_offset;
+        		grid_verts[v++] = ((w_vec3){vert_lo, 0, z});
+        		grid_verts[v++] = ((w_vec3){vert_hi, 0, z});
+    		}
+		}
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, total_verts);
+		w_set_value(entity, shape_verts_hash, hash);
 	}
 
 	cmd.verts = grid_verts;
@@ -122,6 +146,9 @@ w_ecs_system(
 		w_query_o(angle_end),
 		w_query_o(segments),
 		w_query_o(outline_color),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	float diameter = *w_query_get(circle);
@@ -143,24 +170,35 @@ w_ecs_system(
 	w_vec3 *circle_outline_verts = NULL;
 	int circle_outline_verts_count = 0;
 
-	// generate verts array for the shape
-	if (shape_color.a > 0)
-	{
-		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(seg);
-		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
-		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}), true);
-	}
+	bool is_full_circle = (end_rad - start_rad) >= (2.0f * W_PI - 0.001f);
+	uint64_t hash = w_hash(diameter, start_rad, end_rad, seg);
 
-	// generate verts array for just the outline as vec3 lines  
-	if (outline_col.a > 0)
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
 	{
-    	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, false);
-    	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
-    	
-    	// count is set and respects full/not full circle so extra memory doesn't matter
+		circle_verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		circle_verts_count = *w_query_get_opt_or_default(shape_verts_count);
+		circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, is_full_circle);
+		circle_outline_verts = circle_verts + circle_verts_count;
+	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen circle for %d", entity);
+		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(seg);
+		circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, false);
+		int total_verts = circle_verts_count + circle_outline_verts_count;
+
+		circle_verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, total_verts * sizeof(w_vec3));
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}), true);
+
+		circle_outline_verts = circle_verts + circle_verts_count;
 		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, seg, start_rad, end_rad, ((w_vec3){0,0,0}));
-    }
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, circle_verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
+	}
 
 	// prepare draw command
 	struct w_rendering_cmd_draw_verts cmd = {0};
@@ -179,8 +217,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -193,8 +231,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -223,6 +261,9 @@ w_ecs_system(
 		w_query_o(diameter_bottom),
 		w_query_o(segments),
 		w_query_o(outline_color),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	float height = *w_query_get(cylinder);
@@ -235,48 +276,71 @@ w_ecs_system(
 
 	float start_rad = 0 * W_DEG2RAD;
 	float end_rad = 360 * W_DEG2RAD;
-	
-	// calculate and create verts buffer
+
+	w_vec3 *verts = NULL;
 	int verts_count = 0;
-	// add to verts_count calculation
-	verts_count += W_SHAPE_CYLINDER_SIDES_VERTS_COUNT(seg);
-	if (dia_top > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
-	if (dia_bottom > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
-	w_vec3 *verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
-
+	w_vec3 *outline_verts = NULL;
 	int outline_verts_count = 0;
-	if (dia_top > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
-	if (dia_bottom > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
-	w_vec3 *outline_verts = w_ecs_frame_malloc(world, outline_verts_count * sizeof(w_vec3));
 
-	int verts_offset = 0;
-	int outline_verts_offset = 0;
+	uint64_t hash = w_hash(height, seg, dia_top, dia_bottom);
 
-	// generate top and bottom circles if required
-	// top
-	if (dia_top > 0) {
-		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}), true);
-
-		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}));
-
-		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
+	{
+		verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		verts_count = *w_query_get_opt_or_default(shape_verts_count);
+		if (dia_top > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+		if (dia_bottom > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+		outline_verts = verts + verts_count;
 	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen cylinder for %d", entity);
+		// calculate and create verts buffer
+		verts_count += W_SHAPE_CYLINDER_SIDES_VERTS_COUNT(seg);
+		if (dia_top > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
+		if (dia_bottom > 0) verts_count += W_SHAPE_CYLINDER_CAP_VERTS_COUNT(seg);
 
-	// sides
-	// generate sides (after caps)
-	verts_offset += w_rendering_shape_generate_cylinder_sides_verts(verts, verts_offset, seg, dia_top, dia_bottom, height * 0.5f);
+		if (dia_top > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
+		if (dia_bottom > 0) outline_verts_count += W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true);
 
-	// bottom
-	if (dia_bottom > 0) {
-		verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}), false);
+		int total_verts = verts_count + outline_verts_count;
+		verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, total_verts * sizeof(w_vec3));
+		outline_verts = verts + verts_count;
 
-		outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}));
+		int verts_offset = 0;
+		int outline_verts_offset = 0;
 
-		// apply diameter offsets
-		w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
-		w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+		// generate top and bottom circles if required
+		// top
+		if (dia_top > 0) {
+			verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}), true);
+
+			outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, height * 0.5, 0.0f}));
+
+			// apply diameter offsets
+			w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+			w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_top, 1.0f, dia_top}));
+		}
+
+		// sides
+		verts_offset += w_rendering_shape_generate_cylinder_sides_verts(verts, verts_offset, seg, dia_top, dia_bottom, height * 0.5f);
+
+		// bottom
+		if (dia_bottom > 0) {
+			verts_offset += w_rendering_shape_generate_circle_verts(verts, verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}), false);
+
+			outline_verts_offset += w_rendering_shape_generate_circle_outline_verts(outline_verts, outline_verts_offset, seg, start_rad, end_rad, ((w_vec3){0.0f, -(height * 0.5), 0.0f}));
+
+			// apply diameter offsets
+			w_rendering_shape_apply_vert_scale(verts, verts_offset - W_SHAPE_CIRCLE_VERTS_COUNT(seg), verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+			w_rendering_shape_apply_vert_scale(outline_verts, outline_verts_offset - W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(seg, true), outline_verts_offset, ((w_vec3){dia_bottom, 1.0f, dia_bottom}));
+		}
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
 	}
 
 	// prepare draw command
@@ -296,8 +360,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -310,8 +374,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -337,18 +401,19 @@ w_ecs_system(
 
 		// optional shape components
 		w_query_o(outline_color),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	// polygon relies on the circle generator with limited exposed components
 	float diameter = 1.0f;
-	float start_rad = 0;
-	float end_rad = 360 * W_DEG2RAD;
 	int segments = *w_query_get(polygon);
 
 	// ensure flat side is lined up X bottom
 	float rotation_offset = (W_PI / segments) + (90 * W_DEG2RAD);
-	start_rad = rotation_offset;
-	end_rad = rotation_offset + 2 * W_PI;
+	float start_rad = rotation_offset;
+	float end_rad = rotation_offset + 2 * W_PI;
 
 	w_color8 shape_color = *w_query_get(color);
 	w_color8 outline_col = *w_query_get_opt_or_default(outline_color);
@@ -360,24 +425,34 @@ w_ecs_system(
 	w_vec3 *circle_outline_verts = NULL;
 	int circle_outline_verts_count = 0;
 
-	// generate verts array for the shape
-	if (shape_color.a > 0)
-	{
-		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(segments);
-		circle_verts = w_ecs_frame_malloc(world, circle_verts_count * sizeof(w_vec3));
-		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
-	}
+	uint64_t hash = w_hash(segments);
 
-	// generate verts array for just the outline as vec3 lines  
-	if (outline_col.a > 0)
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
 	{
-    	// arc segments + 2 radial lines for partial circles
-    	circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
-    	circle_outline_verts = w_ecs_frame_malloc(world, circle_outline_verts_count * sizeof(w_vec3));
-    	
-    	// count is set and respects full/not full circle so extra memory doesn't matter
+		circle_verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		circle_verts_count = *w_query_get_opt_or_default(shape_verts_count);
+		circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, true);
+		circle_outline_verts = circle_verts + circle_verts_count;
+	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen polygon for %d", entity);
+		circle_verts_count = W_SHAPE_CIRCLE_VERTS_COUNT(segments);
+		circle_outline_verts_count = W_SHAPE_CIRCLE_OUTLINE_VERTS_COUNT(segments, false);
+		int total_verts = circle_verts_count + circle_outline_verts_count;
+
+		circle_verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, total_verts * sizeof(w_vec3));
+		circle_verts_count = w_rendering_shape_generate_circle_verts(circle_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}), true);
+
+		circle_outline_verts = circle_verts + circle_verts_count;
 		circle_outline_verts_count = w_rendering_shape_generate_circle_outline_verts(circle_outline_verts, 0, segments, start_rad, end_rad, ((w_vec3){0,0,0}));
-    }
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, circle_verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
+	}
 
 	// prepare draw command
 	struct w_rendering_cmd_draw_verts cmd = {0};
@@ -396,8 +471,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -410,8 +485,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -440,6 +515,9 @@ w_ecs_system(
 		w_query_o(angle_end),
 		w_query_o(segments),
 		w_query_o(rings),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	float diameter = *w_query_get(sphere);
@@ -450,16 +528,28 @@ w_ecs_system(
 
 	w_color8 shape_color = *w_query_get(color);
 
-	// set default verts arrays and lengths
 	w_vec3 *verts = NULL;
 	int verts_count = 0;
 
-	// generate verts array for the shape
-	if (shape_color.a > 0)
+	uint64_t hash = w_hash(diameter, start_rad, end_rad, seg, ring);
+
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
 	{
+		verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		verts_count = *w_query_get_opt_or_default(shape_verts_count);
+	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen sphere for %d", entity);
 		verts_count = W_SHAPE_SPHERE_VERTS_COUNT(seg, ring);
-		verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
+		verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, verts_count * sizeof(w_vec3));
 		verts_count = w_rendering_shape_generate_sphere_verts(verts, 0, seg, ring, diameter, start_rad, end_rad);
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
 	}
 
 	// prepare draw command
@@ -508,27 +598,40 @@ w_ecs_system(
 		w_query_o(diameter),
 		w_query_o(segments),
 		w_query_o(rings),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	float length = *w_query_get_opt_or_default(capsule);
 	float dia = *w_query_get_opt_or_default(diameter);
-	float start_rad = 0 * W_DEG2RAD;
-	float end_rad = 360 * W_DEG2RAD;
 	int seg = *w_query_get_opt_or_default(segments);
 	int ring = *w_query_get_opt_or_default(rings);
 
 	w_color8 shape_color = *w_query_get(color);
 
-	// set default verts arrays and lengths
 	w_vec3 *verts = NULL;
 	int verts_count = 0;
 
-	// generate verts array for the shape
-	if (shape_color.a > 0)
+	uint64_t hash = w_hash(length, dia, seg, ring);
+
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
 	{
+		verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		verts_count = *w_query_get_opt_or_default(shape_verts_count);
+	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen capsule for %d", entity);
 		verts_count = W_SHAPE_CAPSULE_VERTS_COUNT(seg, ring);
-		verts = w_ecs_frame_malloc(world, verts_count * sizeof(w_vec3));
+		verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, verts_count * sizeof(w_vec3));
 		verts_count = w_rendering_shape_generate_capsule_verts(verts, 0, seg, ring, dia, length * 0.5f);
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
 	}
 
 	// prepare draw command
@@ -575,6 +678,9 @@ w_ecs_system(
 
 		// optional shape components
 		w_query_o(outline_color),
+		w_query_o(shape_verts_handle),
+		w_query_o(shape_verts_hash),
+		w_query_o(shape_verts_count),
 	),
 {
 	w_tricell8 hex = *w_query_get(hexahedron);
@@ -588,20 +694,33 @@ w_ecs_system(
 	w_vec3 *hexahedron_outline_verts = NULL;
 	int hexahedron_outline_verts_count = 0;
 
-	// generate verts for filled hexahedron
-	if (shape_color.a > 0)
-	{
-		hexahedron_verts_count = W_SHAPE_HEXAHEDRON_VERTS_COUNT;
-		hexahedron_verts = w_ecs_frame_malloc(world, hexahedron_verts_count * sizeof(w_vec3));
-		w_rendering_shape_generate_hexahedron_verts(hexahedron_verts, &hex);
-	}
+	uint64_t hash = w_xxhash64(hex);
 
-	// generate verts array for just the outline as vec3 lines  
-	if (outline_col.a > 0)
+	// use cached allocation for verts
+	if (hash == *w_query_get_opt_or_default(shape_verts_hash))
 	{
-		hexahedron_outline_verts_count = W_SHAPE_HEXAHEDRON_OUTLINE_VERTS_COUNT; 
-		hexahedron_outline_verts = w_ecs_frame_malloc(world, hexahedron_outline_verts_count * sizeof(w_vec3));
+		hexahedron_verts = wm_managed_alloc_resolve_handle(world, shape_verts_handle, entity);
+		hexahedron_verts_count = W_SHAPE_HEXAHEDRON_VERTS_COUNT;
+		hexahedron_outline_verts_count = W_SHAPE_HEXAHEDRON_OUTLINE_VERTS_COUNT;
+		hexahedron_outline_verts = hexahedron_verts + hexahedron_verts_count;
+	}
+	// generate if hash changed
+	else
+	{
+		debug_printf("regen hexahedron for %d", entity);
+		hexahedron_verts_count = W_SHAPE_HEXAHEDRON_VERTS_COUNT;
+		hexahedron_outline_verts_count = W_SHAPE_HEXAHEDRON_OUTLINE_VERTS_COUNT;
+		int total_verts = hexahedron_verts_count + hexahedron_outline_verts_count;
+
+		hexahedron_verts = wm_managed_alloc_malloc(world, shape_verts_handle, entity, total_verts * sizeof(w_vec3));
+		w_rendering_shape_generate_hexahedron_verts(hexahedron_verts, &hex);
+
+		hexahedron_outline_verts = hexahedron_verts + hexahedron_verts_count;
 		w_rendering_shape_generate_hexahedron_outline_verts(hexahedron_outline_verts, &hex);
+
+		// set hash and vert count
+		w_set_value(entity, shape_verts_count, hexahedron_verts_count);
+		w_set_value(entity, shape_verts_hash, hash);
 	}
 
 	// prepare draw command
@@ -620,8 +739,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_TRIANGLES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
@@ -634,8 +753,8 @@ w_ecs_system(
 		cmd.draw_mode = W_RENDERING_DRAW_VERT_MODE_LINES;
 
 		w_rendering_dispatch_render_cmd(
-			W_RENDERING_CMD_DRAW_VERTS, 
-			w_ecs_render_layer(*w_query_get(render_layer)), 
+			W_RENDERING_CMD_DRAW_VERTS,
+			w_ecs_render_layer(*w_query_get(render_layer)),
 			&cmd
 		);
 	}
