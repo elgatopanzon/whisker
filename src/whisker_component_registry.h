@@ -70,6 +70,7 @@ enum W_COMPONENT_TYPE {
 
 	W_COMPONENT_TYPE_char_ptr = 12,
 	W_COMPONENT_TYPE_void_ptr = 13,
+	W_COMPONENT_TYPE_w_string_table_id = 14,
 
 	// engine types
 	W_COMPONENT_TYPE_w_vec2 = 20,
@@ -133,6 +134,7 @@ static const char *w_component_type_names[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_char]        = "char",
 	[W_COMPONENT_TYPE_char_ptr]    = "char_ptr",
 	[W_COMPONENT_TYPE_void_ptr]    = "void_ptr",
+	[W_COMPONENT_TYPE_w_string_table_id]    = "w_string_table_id",
 	[W_COMPONENT_TYPE_w_vec2]      = "w_vec2",
 	[W_COMPONENT_TYPE_w_vec2i]     = "w_vec2i",
 	[W_COMPONENT_TYPE_w_vec2u]     = "w_vec2u",
@@ -180,6 +182,7 @@ static const size_t w_component_type_sizes[W_COMPONENT_TYPE_COUNT] = {
 	[W_COMPONENT_TYPE_char]        = sizeof(char),
 	[W_COMPONENT_TYPE_char_ptr]    = sizeof(char_ptr),
 	[W_COMPONENT_TYPE_void_ptr]    = sizeof(void_ptr),
+	[W_COMPONENT_TYPE_w_string_table_id]    = sizeof(w_string_table_id),
 	[W_COMPONENT_TYPE_w_vec2]      = sizeof(w_vec2),
 	[W_COMPONENT_TYPE_w_vec2i]     = sizeof(w_vec2i),
 	[W_COMPONENT_TYPE_w_vec2u]     = sizeof(w_vec2u),
