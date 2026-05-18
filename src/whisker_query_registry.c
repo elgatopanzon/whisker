@@ -302,6 +302,12 @@ struct w_query *w_query_registry_get_query(struct w_query_registry *registry, ch
 
 bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *query)
 {
+	// attempt to parse partial queries for non-existing components
+	if (query->query_parse_state == W_QUERY_PARSE_STATE_TERMS_PARSED)
+	{
+		w_query_registry_parse_query_term_components(query, registry->string_table, registry->component_registry);
+	}
+
 	// instant fail if query isn't fully parsed
 	if (query->query_parse_state != W_QUERY_PARSE_STATE_COMPONENTS_PARSED)
 	{
