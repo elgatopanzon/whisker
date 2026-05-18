@@ -30,15 +30,18 @@
 #define w_request() w_ecs_request_entity(world);
 #define w_request_named(name) w_ecs_request_entity_with_name(world, name);
 #define w_entity(name) w_ecs_get_entity_by_name(world, name)
+#define w_entity_name(id) w_ecs_get_entity_name(world, id)
 
 // component short forms for type-safe components only
 #define w_set(entity, name, ptr) ((void)sizeof(name), name##_set(world, entity, ptr))
 #define w_set_default(entity, name) ((void)sizeof(name), name##_set_default(world, entity))
 #define w_set_value(entity, name, ...) ((void)sizeof(name), name##_set_value(world, entity, ((name){__VA_ARGS__})))
-#define w_set_tag(entity, name, state) ((void)sizeof(name), name##_set_tag_state(world, entity, state))
 #define w_exists(entity, name) ((void)sizeof(name), name##_exists(world, entity))
-#define w_remove(entity, name) ((void)sizeof(name), name##_remove(world, entity))
+#define w_remove(entity, name) ((void)sizeof(name), w_ecs_remove_component_(world, name##_component_id_, entity))
 #define w_get(entity, name) ((void)sizeof(name), name##_get(world, entity))
+
+#define w_set_tag(entity, name, state) ((void)sizeof(name), name##_set_tag_state(world, entity, state))
+#define w_tag_exists(entity, name) ((void)sizeof(name), name##_tag_exists(world, entity))
 
 #define w_set_g(entity, name, gname, ptr) ((void)sizeof(name), name##_set_generic(world, entity, gname, ptr))
 #define w_set_default_g(entity, name, gname) ((void)sizeof(name), name##_set_default_generic(world, entity, gname))
@@ -49,9 +52,9 @@
 #define w_get_g(entity, name, gname) ((void)sizeof(name), name##_get_generic(world, entity, gname))
 
 #define w_set_id(entity, name, id, ptr) ((void)sizeof(name), w_ecs_set_component_(world, name##_type_id_, id, entity, (name*)ptr, sizeof(name)))
-#define w_get_id(entity, name, id) ((void)sizeof(name), w_ecs_get_component_(world, name##_type_id_, id, entity))
-#define w_has_id(entity, name, id) ((void)sizeof(name), w_ecs_has_component_(world, name##_type_id_, id, entity))
-#define w_remove_id(entity, name, id) ((void)sizeof(name), w_ecs_remove_component_(world, name##_type_id_, id, entity))
+#define w_get_id(entity, name, id) ((void)sizeof(name), w_ecs_get_component_(world, name##_component_id_, id, entity))
+#define w_has_id(entity, name, id) ((void)sizeof(name), w_ecs_has_component_(world, name##_component_id_, id, entity))
+#define w_remove_id(entity, name, id) ((void)sizeof(name), w_ecs_remove_component_(world, name##_component_id_, id, entity))
 
 #define w_name(name) ((void)sizeof(name), name##_name_)
 #define w_gname(name, gname) ((void)sizeof(name), #name##_gname)
