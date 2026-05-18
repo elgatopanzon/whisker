@@ -325,12 +325,22 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	{
 		query->terms[i].component_entry = w_component_registry_get_entry(
 			registry->component_registry, query->terms[i].component_id);
+
+		// if its a read or write component and entry is null, we have to force
+		// bail out here to avoid building the bitset cache for invalid components
+		// note: this allows queries to attempt to get valid entries when they appear
+		if ((query->terms[i].access_type == W_QUERY_ACCESS_READ ||
+			query->terms[i].access_type == W_QUERY_ACCESS_WRITE) 
+				&& !query->terms[i].component_entry)
+		{
+			return false;
+		}
 	}
 
 	// init bitset cache if needed
 	if (!query->bitset_cache.bitsets)
 	{
-		debug_printf("init bitset cache for query %d", query->raw_query);
+		debug_log(DEBUG, queries, "init bitset cache for query: %s", w_string_table_lookup(registry->string_table, query->raw_query));
 		w_array_init_t(query->bitset_cache.bitsets, query->terms_length);
 
 		// assign bitset pointers from component registry
@@ -415,7 +425,7 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 	// w_sparse_bitset_intersect_cache_stale returns UINT64_MAX when fresh (not stale)
 	if (w_sparse_bitset_intersect_cache_stale(&query->bitset_cache) != UINT64_MAX)
 	{
-		debug_printf("rebuild archetype for query: %s (gen %lu)", w_string_table_lookup(registry->string_table, query->raw_query), query->bitset_cache.cache_generation);
+		/* debug_log(DEBUG, queries, "rebuild archetype for query: %s (gen %lu)", w_string_table_lookup(registry->string_table, query->raw_query), query->bitset_cache.cache_generation); */
 
 		// rebuild bitset indexes cache
 		w_sparse_bitset_intersect(&query->bitset_cache);
