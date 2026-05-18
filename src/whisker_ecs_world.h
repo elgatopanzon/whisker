@@ -74,6 +74,14 @@
     } while(0)
 
 #define w_entity_format_string_str(entity_str, ...) w_entity_format_string(w_entity(entity_str), __VA_ARGS__);
+#define w_entity_resolve_string_component(entity, component) \
+	({ \
+		(void)sizeof(component); \
+		w_string_table_id *id = w_get(entity, component); \
+		const char *str = ""; \
+		if (id) { str = w_string_from_id(*id); } \
+		str; \
+	})
 
 #define w_for_each(q, work) w_query_for_each(world, q, work)
 #define w_sync(from, to) \
@@ -94,6 +102,37 @@
 	}); \
 	}); \
 	})
+
+// quick debug log macros
+#ifndef NDEBUG
+#define w_log_trace(module, fmt, ...) trace_log(TRACE, whisker - module, fmt, ##__VA_ARGS__)
+#define w_log_debug(module, fmt, ...) debug_log(DEBUG, whisker - module, fmt, ##__VA_ARGS__)
+#define w_log_info(module, fmt, ...) debug_log(INFO, whisker - module, fmt, ##__VA_ARGS__)
+#define w_log_warning(module, fmt, ...) debug_log(WARN, whisker - module, fmt, ##__VA_ARGS__)
+#define w_log_error(module, fmt, ...) debug_log(ERROR, whisker - module, fmt, ##__VA_ARGS__)
+#define w_log_fatal(module, fmt, ...) debug_log(FATAL, whisker - module, fmt, ##__VA_ARGS__)
+
+#define w_log_entity_trace(module, fmt, ...) debug_trace(TRACE, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#define w_log_entity_debug(module, fmt, ...) debug_log(DEBUG, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#define w_log_entity_info(module, fmt, ...) debug_log(INFO, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#define w_log_entity_warning(module, fmt, ...) debug_log(WARNING, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#define w_log_entity_error(module, fmt, ...) debug_log(ERROR, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#define w_log_entity_fatal(module, fmt, ...) debug_log(FATAL, whisker - module, "entity %d (%s) | " fmt, entity, w_ecs_get_entity_name(world, entity), ##__VA_ARGS__)
+#else
+#define w_log_trace(module, fmt, ...)
+#define w_log_debug(module, fmt, ...)
+#define w_log_info(module, fmt, ...)
+#define w_log_warning(module, fmt, ...)
+#define w_log_error(module, fmt, ...)
+#define w_log_fatal(module, fmt, ...)
+
+#define w_log_entity_trace(module, fmt, ...)
+#define w_log_entity_debug(module, fmt, ...)
+#define w_log_entity_info(module, fmt, ...)
+#define w_log_entity_warning(module, fmt, ...)
+#define w_log_entity_error(module, fmt, ...)
+#define w_log_entity_fatal(module, fmt, ...)
+#endif
 
 enum W_COMPONENT_ACTION
 {
