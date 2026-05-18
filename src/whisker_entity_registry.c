@@ -19,6 +19,10 @@ void w_entity_registry_init(struct w_entity_registry *registry, struct w_string_
 		registry->entity_to_name[i] = W_STRING_TABLE_INVALID_ID;
 	}
 
+	// initialize name_to_entity to invalid entity IDs (calloc zeros, but 0 is a valid entity ID)
+	size_t name_to_entity_count = registry->name_to_entity_size / sizeof(*registry->name_to_entity);
+	memset(registry->name_to_entity, 0xFF, name_to_entity_count * sizeof(*registry->name_to_entity));
+
 	registry->entity_to_name_length = 0;
 	registry->name_to_entity_length = 0;
 
@@ -71,7 +75,16 @@ void w_entity_set_name(struct w_entity_registry *registry, w_entity_id id, char 
 	registry->entity_to_name[id] = w_string_table_intern_str(registry->name_table, name);
 
 	w_string_table_id string_id = registry->entity_to_name[id];
+	size_t old_name_size = registry->name_to_entity_size;
 	w_array_ensure_alloc_block_size(registry->name_to_entity, string_id + 1, WHISKER_ENTITY_REGISTRY_REALLOC_BLOCK_SIZE);
+
+	// initialize new entries to invalid entity ID (calloc zeros, but 0 is a valid entity ID)
+	if (registry->name_to_entity_size > old_name_size) {
+		size_t old_count = old_name_size / sizeof(*registry->name_to_entity);
+		size_t new_count = registry->name_to_entity_size / sizeof(*registry->name_to_entity);
+		memset(&registry->name_to_entity[old_count], 0xFF, (new_count - old_count) * sizeof(*registry->name_to_entity));
+	}
+
 	if (string_id + 1 > registry->name_to_entity_length) {
 		registry->name_to_entity_length = string_id + 1;
 	}
