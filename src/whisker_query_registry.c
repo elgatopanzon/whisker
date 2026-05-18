@@ -192,39 +192,44 @@ static inline void w_query_registry_parse_query_term_components(struct w_query *
 
 		// attempt to parse component name ID if both are valid
 		if (term->component_id == W_ENTITY_INVALID && term->component_name != W_STRING_TABLE_INVALID_ID)
-		{
-			char *component_name = w_string_table_lookup(string_table, term->component_name);
+        {
+            char *component_name = w_string_table_lookup(string_table, term->component_name);
+            // OPTIONAL and NOT terms use w_component_get_id which creates
+            // a limbo component ID if not registered (allows query to proceed)
+            // READ/WRITE terms use w_entity_lookup_by_name (must exist)
+            w_entity_id component_id;
+            if (term->access_type == W_QUERY_ACCESS_OPTIONAL ||
+                term->access_type == W_QUERY_ACCESS_NOT)
+            {
+                component_id = w_component_get_id(component_registry, component_name);
+            }
+            else
+            {
+                component_id = w_entity_lookup_by_name(component_registry->entities, component_name);
+            }
+            if (component_id != W_ENTITY_INVALID)
+            {
+                term->component_id = component_id;
+                term->component_entry = w_component_registry_get_entry(component_registry, component_id);
 
-			// OPTIONAL and NOT terms use w_component_get_id which creates
-			// a limbo component ID if not registered (allows query to proceed)
-			// READ/WRITE terms use w_entity_lookup_by_name (must exist)
-			w_entity_id component_id;
-			if (term->access_type == W_QUERY_ACCESS_OPTIONAL ||
-			    term->access_type == W_QUERY_ACCESS_NOT)
-			{
-				component_id = w_component_get_id(component_registry, component_name);
-			}
-			else
-			{
-				component_id = w_entity_lookup_by_name(component_registry->entities, component_name);
-			}
+                // READ/WRITE terms need valid component_entry to be fully parsed
+                // OPTIONAL/NOT terms can proceed without entry (component may have no data yet)
+                if (term->access_type == W_QUERY_ACCESS_OPTIONAL ||
+                    term->access_type == W_QUERY_ACCESS_NOT ||
+                    term->component_entry != NULL)
+                {
+                    parsed_count++;
+                }
+                // set the sparse component ID to local term index
+                w_array_ensure_alloc_block_size(
+                    query->component_id_to_terms,
+                    term->component_id + 1,
+                    W_QUERY_REGISTRY_QUERIES_REALLOC_BLOCK_SIZE
+                );
+                query->component_id_to_terms[term->component_id] = i;
+            }
+        }
 
-			if (component_id != W_ENTITY_INVALID)
-			{
-				term->component_id = component_id;
-				term->component_entry = w_component_registry_get_entry(component_registry, component_id);
-				parsed_count++;
-
-				// set the sparse component ID to local term index
-				w_array_ensure_alloc_block_size(
-					query->component_id_to_terms,
-					term->component_id + 1,
-					W_QUERY_REGISTRY_QUERIES_REALLOC_BLOCK_SIZE
-				);
-
-				query->component_id_to_terms[term->component_id] = i;
-			}
-		}
 	}
 
 	if (parsed_count == (int)query->terms_length)
@@ -314,6 +319,14 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 		return false;
 	}
 
+	// refresh component_entry pointers before any use (entries array may
+	// have been reallocated by w_component_set_ since parse time)
+	for (size_t i = 0; i < query->terms_length; ++i)
+	{
+		query->terms[i].component_entry = w_component_registry_get_entry(
+			registry->component_registry, query->terms[i].component_id);
+	}
+
 	// init bitset cache if needed
 	if (!query->bitset_cache.bitsets)
 	{
@@ -329,7 +342,6 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 		size_t req_idx = 0;
 		for (size_t i = 0; i < query->terms_length; ++i)
 		{
-			// optional/has/not terms may have NULL entry if component has no data
 			struct w_component_entry *entry = query->terms[i].component_entry;
 
 			// required components (read/write) must have valid entry to proceed
@@ -370,32 +382,32 @@ bool w_query_rebuild_cache(struct w_query_registry *registry, struct w_query *qu
 			query->bitset_cache.exclude_bitsets_length = exclude_count;
 		}
 	}
-
-	// refresh bitset pointers (entries array may have been reallocated)
-	// pack only READ/WRITE bitsets at sequential indices matching init logic
-	size_t req_idx = 0;
-	for (size_t i = 0; i < query->terms_length; ++i)
+	else
 	{
-		struct w_component_entry *entry = w_component_registry_get_entry(
-			registry->component_registry, query->terms[i].component_id);
-		query->terms[i].component_entry = entry;
-		if ((query->terms[i].access_type == W_QUERY_ACCESS_READ ||
-		     query->terms[i].access_type == W_QUERY_ACCESS_WRITE) &&
-		    req_idx < query->bitset_cache.bitsets_length)
-		{
-			query->bitset_cache.bitsets[req_idx++] = entry ? &entry->data_bitset : NULL;
-		}
-	}
-
-	// refresh exclude bitset pointers
-	size_t ex_idx = 0;
-	for (size_t i = 0; i < query->terms_length; ++i)
-	{
-		if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
+		// refresh bitset pointers for existing cache
+		// pack only READ/WRITE bitsets at sequential indices matching init logic
+		size_t req_idx = 0;
+		for (size_t i = 0; i < query->terms_length; ++i)
 		{
 			struct w_component_entry *entry = query->terms[i].component_entry;
-			if (ex_idx < query->bitset_cache.exclude_bitsets_length)
-				query->bitset_cache.exclude_bitsets[ex_idx++] = entry ? &entry->data_bitset : NULL;
+			if ((query->terms[i].access_type == W_QUERY_ACCESS_READ ||
+			     query->terms[i].access_type == W_QUERY_ACCESS_WRITE) &&
+			    req_idx < query->bitset_cache.bitsets_length)
+			{
+				query->bitset_cache.bitsets[req_idx++] = entry ? &entry->data_bitset : NULL;
+			}
+		}
+
+		// refresh exclude bitset pointers
+		size_t ex_idx = 0;
+		for (size_t i = 0; i < query->terms_length; ++i)
+		{
+			if (query->terms[i].access_type == W_QUERY_ACCESS_NOT)
+			{
+				struct w_component_entry *entry = query->terms[i].component_entry;
+				if (ex_idx < query->bitset_cache.exclude_bitsets_length)
+					query->bitset_cache.exclude_bitsets[ex_idx++] = entry ? &entry->data_bitset : NULL;
+			}
 		}
 	}
 

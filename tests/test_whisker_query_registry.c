@@ -58,6 +58,13 @@ static w_entity_id register_component(const char *name)
 	return w_component_get_id(&g_components, (char *)name);
 }
 
+// helper: set component on entity to populate bitset
+static void set_component_on_entity(w_entity_id comp_id, w_entity_id entity_id)
+{
+	int dummy = 0;
+	w_component_set(&g_components, int, comp_id, entity_id, &dummy);
+}
+
 
 /*****************************
 *  registry_init             *
@@ -305,7 +312,9 @@ END_TEST
 
 START_TEST(test_stage3_state_components_parsed_when_all_resolved)
 {
-	register_component("resolved_comp");
+	w_entity_id comp_id = register_component("resolved_comp");
+	// READ terms require stored data (entry) to complete parse
+	set_component_on_entity(comp_id, 0);
 
 	struct w_query *q = w_query_registry_get_query(&g_registry, "read resolved_comp");
 	ck_assert_ptr_nonnull(q);
@@ -397,10 +406,14 @@ END_TEST
 START_TEST(test_example_read_write_optional)
 {
 	// from header: "read component_a, read component_b, write component_c, optional component_d"
-	register_component("component_a");
-	register_component("component_b");
-	register_component("component_c");
+	w_entity_id a = register_component("component_a");
+	w_entity_id b = register_component("component_b");
+	w_entity_id c = register_component("component_c");
 	register_component("component_d");
+	// READ/WRITE terms require stored data (entry) to complete parse
+	set_component_on_entity(a, 0);
+	set_component_on_entity(b, 0);
+	set_component_on_entity(c, 0);
 
 	struct w_query *q = w_query_registry_get_query(&g_registry,
 		"read component_a, read component_b, write component_c, optional component_d");
@@ -475,7 +488,9 @@ START_TEST(test_edge_very_long_component_name)
 	memset(name, 'x', 255);
 	name[255] = '\0';
 
-	register_component(name);
+	w_entity_id comp_id = register_component(name);
+	// READ terms require stored data (entry) to complete parse
+	set_component_on_entity(comp_id, 0);
 
 	char query[300];
 	snprintf(query, sizeof(query), "read %s", name);
@@ -522,13 +537,6 @@ END_TEST
 /*****************************
 *  cache rebuild             *
 *****************************/
-
-// helper: set component on entity to populate bitset
-static void set_component_on_entity(w_entity_id comp_id, w_entity_id entity_id)
-{
-	int dummy = 0;
-	w_component_set(&g_components, int, comp_id, entity_id, &dummy);
-}
 
 START_TEST(test_cache_all_dense)
 {
