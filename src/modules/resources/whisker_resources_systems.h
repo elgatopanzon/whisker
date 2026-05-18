@@ -93,6 +93,9 @@ w_ecs_system(
 		// only load valid files
 		w_query_h(resource_file_valid),
 
+		// exclude files that failed to load
+		w_query_n(resource_load_failed),
+
 		// handler for hot requests
 		w_query_h(req_resource_hot),
 
@@ -117,39 +120,37 @@ w_ecs_system(
 	void *ptr = wm_managed_alloc_malloc(world, resource_hot_data_handle, entity, file_size + 1);
 	((uint8_t *)(ptr))[file_size] = '\0';
 
-	bool success = true;
-
 	// open file in binary read mode
 	FILE *f = fopen(file_path, "rb"); 
 	if (!f) {
 		// failed to open file
 		w_log_entity_fatal(resources, "failed to open file: %s: %s", file_path, strerror(errno));
-		success = false;
+		w_set_value(entity, resource_load_failed, errno);
+		continue;
 	}
 	// read file contents into ptr
 	size_t read_bytes = fread(ptr, 1, file_size, f); 
 	if (read_bytes != file_size) {
 		// read error or unexpected file size
 		w_log_entity_fatal(resources, "failed to read entire file: %s: %s", file_path, ferror(f) ? strerror(errno) : "unexpected file size");
-		success = false;
+		w_set_value(entity, resource_load_failed, errno);
 		fclose(f);
+		continue;
 	}
 	// close file
 	if (fclose(f) != 0) {
 		// failed to close file
 		w_log_entity_fatal(resources, "failed to close file: %s: %s", file_path, strerror(errno));
-		success = false;
+		w_set_value(entity, resource_load_failed, errno);
+		continue;
 	}
 
 	// if no errors set handle data size and set hot
-	if (success)
-	{
-		w_log_entity_info(resources, "hot and ready: %s", file_path);
+	w_log_entity_info(resources, "hot and ready: %s", file_path);
 
-		w_set_value(entity, resource_file_size_bytes, file_size);
-		w_set_value(entity, resource_hot_data_size, file_size);
-		w_set_tag(entity, resource_hot, true);
-	}
+	w_set_value(entity, resource_file_size_bytes, file_size);
+	w_set_value(entity, resource_hot_data_size, file_size);
+	w_set_tag(entity, resource_hot, true);
 });
 
 // resource cold request handler
@@ -177,12 +178,25 @@ w_ecs_system(
 	
 	// free the handle
 	wm_managed_alloc_free_handle(world, resource_hot_data_handle, entity);
+	w_set_value(entity, resource_hot_data_size, 0);
 
 	// remove hot tag
 	w_set_tag(entity, resource_hot, false);
 
 	w_log_entity_debug(resources, "unloaded hot resource");
 
+});
+
+// cleanup stale data handles when load fails
+w_ecs_system(
+	wm_resources_lifecycle_handle_stale_data_handles,
+	WM_PHASE_POST,
+	w_query(
+		w_query_r(resource_hot_data_handle),
+		w_query_h(resource_load_failed),
+	),
+{
+	wm_managed_alloc_free_handle(world, resource_hot_data_handle, entity);
 });
 
 #endif /* WHISKER_RESOURCES_SYSTEMS_H */

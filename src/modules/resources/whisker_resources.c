@@ -14,6 +14,7 @@ void wm_resources_init(struct w_ecs_world *world)
 	wm_resources_lifecycle_ensure_resources_valid_register(world);
 	wm_resources_lifecycle_handle_hot_request_register(world);
 	wm_resources_lifecycle_handle_cold_request_register(world);
+	wm_resources_lifecycle_handle_stale_data_handles_register(world);
 }
 
 void wm_resources_free(struct w_ecs_world *world)

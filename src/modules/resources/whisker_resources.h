@@ -47,6 +47,15 @@ w_ecs_define_component(uint64_t, resource_hash, UINT64_MAX);
 // optional group name this resource belongs to as a string table ID
 w_ecs_define_component(w_string_table_id, resource_group_string_id, W_STRING_TABLE_INVALID_ID);
 
+// data alloc handle of this resources loaded data
+w_ecs_define_component(uint64_t, resource_hot_data_handle, UINT64_MAX);
+
+// final data size of loaded data in managed alloc
+w_ecs_define_component(uint64_t, resource_hot_data_size, 0);
+
+// custom error code when loading resource fails
+w_ecs_define_component(int, resource_load_failed, -1);
+
 
 /**************************
 *  lifecycle components  *
@@ -57,13 +66,6 @@ w_ecs_define_event(req_resource_cold);
 
 // once loaded and hot, resources get this tag
 w_ecs_define_tag(resource_hot);
-
-// data alloc handle of this resources loaded data
-w_ecs_define_component(uint64_t, resource_hot_data_handle, UINT64_MAX);
-
-// final data size of loaded data in managed alloc
-w_ecs_define_component(uint64_t, resource_hot_data_size, 0);
-
 
 /************************
 *  functions & macros  *
