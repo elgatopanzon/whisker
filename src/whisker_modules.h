@@ -27,6 +27,7 @@
 #include "modules/resources/whisker_resources.h"
 
 // specialised
+#include "modules/assets/whisker_assets.h"
 #include "modules/rendering/whisker_rendering.h"
 
 // per-module enable flags
@@ -41,6 +42,7 @@ struct w_modules_config {
 	bool relationships;
 	bool serialisation;
 	bool resources;
+	bool assets;
 	bool rendering;
 };
 
@@ -83,6 +85,8 @@ static inline void w_modules_init_all(struct w_ecs_world *world, struct w_module
 		wm_serialisation_init(world);
 	if (cfg->resources)
 		wm_resources_init(world);
+	if (cfg->assets)
+		wm_assets_init(world);
 	if (cfg->rendering)
 		wm_rendering_init(world, payloads->rendering_display_config,
 			payloads->rendering_render_config);
@@ -100,6 +104,8 @@ static inline void w_modules_free_all(struct w_ecs_world *world, struct w_module
 
 	if (cfg->rendering)
 		wm_rendering_free(world);
+	if (cfg->assets)
+		wm_assets_free(world);
 	if (cfg->resources)
 		wm_resources_free(world);
 	if (cfg->serialisation)
