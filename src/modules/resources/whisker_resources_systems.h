@@ -147,6 +147,7 @@ w_ecs_system(
 		w_log_entity_info(resources, "hot and ready: %s", file_path);
 
 		w_set_value(entity, resource_file_size_bytes, file_size);
+		w_set_value(entity, resource_hot_data_size, file_size);
 		w_set_tag(entity, resource_hot, true);
 	}
 });
@@ -166,7 +167,6 @@ w_ecs_system(
 		w_query_r(resource_hot_data_handle),
 	),
 {	
-	printf("cold request system\n");
 	w_set_tag(entity, req_resource_cold, false);
 
 	// skip already cold resources
