@@ -37,7 +37,7 @@
 #define w_set_default(entity, name) ((void)sizeof(name), name##_set_default(world, entity))
 #define w_set_value(entity, name, ...) ((void)sizeof(name), name##_set_value(world, entity, ((name){__VA_ARGS__})))
 #define w_exists(entity, name) ((void)sizeof(name), name##_exists(world, entity))
-#define w_remove(entity, name) ((void)sizeof(name), w_ecs_remove_component_(world, name##_component_id_, entity))
+#define w_remove(entity, name) ((void)sizeof(name), name##_remove(world, entity))
 #define w_get(entity, name) ((void)sizeof(name), name##_get(world, entity))
 
 #define w_set_tag(entity, name, state) ((void)sizeof(name), name##_set_tag_state(world, entity, state))
