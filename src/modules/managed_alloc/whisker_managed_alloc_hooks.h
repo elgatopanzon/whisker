@@ -20,10 +20,10 @@ w_ecs_component_id_pre_remove_hook(wm_managed_alloc_cleanup_stale_handles, -1, {
 	w_entity_id component = payload->type_entity_id;
 
 	// get this component to get the handle
-	size_t *handle = w_ecs_get_component_(world, component, entity);
+	uint64_t *handle = w_ecs_get_component_(world, component, entity);
+	if (handle == NULL || *handle == WM_MANAGED_ALLOC_INVALID_HANDLE) return;
 
-	w_slab_arena_free_handle(&registry->slab_arenas[component], *handle);
+	w_slab_arena_free_handle(&registry->slab_arenas[component], (size_t)*handle);
 });
 
 #endif /* WHISKER_MANAGED_ALLOC_HOOKS_H */
-

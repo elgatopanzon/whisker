@@ -62,7 +62,7 @@ static bool wm_managed_alloc_ensure_slab_arena_valid(struct wm_managed_alloc_reg
 	return false;
 }
 
-size_t wm_managed_alloc_malloc_(struct w_ecs_world *world, struct wm_managed_alloc_registry *registry, w_entity_id component, size_t size)
+uint64_t wm_managed_alloc_malloc_(struct w_ecs_world *world, struct wm_managed_alloc_registry *registry, w_entity_id component, size_t size)
 {
 	// ensure slab arena exists for this component
 	bool is_new_slab_arena = wm_managed_alloc_ensure_slab_arena_valid(registry, component);
@@ -74,5 +74,5 @@ size_t wm_managed_alloc_malloc_(struct w_ecs_world *world, struct wm_managed_all
 	}
 
 	// allocate a handle
-	return w_slab_arena_malloc(&registry->slab_arenas[component], size);
+	return (uint64_t)w_slab_arena_malloc(&registry->slab_arenas[component], size);
 }
