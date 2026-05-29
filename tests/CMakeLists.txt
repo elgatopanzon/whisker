@@ -45,6 +45,14 @@ endforeach()
 
 # module tests: tests/modules/<subdir>/test_*.c -> whisker_module_<subdir>_tests
 file(GLOB module_dirs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/modules ${CMAKE_CURRENT_SOURCE_DIR}/modules/*)
+file(GLOB src_module_dirs RELATIVE ${PROJECT_SOURCE_DIR}/src/modules ${PROJECT_SOURCE_DIR}/src/modules/*)
+
+set(all_module_test_libs "")
+foreach(src_module_dir ${src_module_dirs})
+    if(IS_DIRECTORY "${PROJECT_SOURCE_DIR}/src/modules/${src_module_dir}" AND EXISTS "${PROJECT_SOURCE_DIR}/src/modules/${src_module_dir}/CMakeLists.txt")
+        list(APPEND all_module_test_libs "whisker_module_${src_module_dir}")
+    endif()
+endforeach()
 
 foreach(dir ${module_dirs})
     set(mod_dir "${CMAKE_CURRENT_SOURCE_DIR}/modules/${dir}")
@@ -66,33 +74,10 @@ foreach(dir ${module_dirs})
 
         add_executable(${target_name} "${src}")
 
-        # derive module library name: test_scheduler_defaults -> whisker_module_scheduler_defaults
-        set(mod_lib_name "whisker_module_${bin_name}")
-
-        # module dependency overrides
-        if(bin_name STREQUAL "utilities")
-            set(extra_libs whisker_module_scheduler_defaults)
-        elseif(bin_name STREQUAL "component_events")
-            set(extra_libs whisker_module_scheduler_defaults)
-        elseif(bin_name STREQUAL "events")
-            set(extra_libs whisker_module_scheduler_defaults)
-        elseif(bin_name STREQUAL "buffers")
-            set(extra_libs whisker_module_serialisation)
-        elseif(bin_name STREQUAL "rendering")
-            set(extra_libs whisker_module_scheduler_defaults whisker_module_managed_alloc)
-        elseif(bin_name STREQUAL "streams")
-            set(extra_libs whisker_module_scheduler_defaults whisker_module_managed_alloc)
-        elseif(bin_name STREQUAL "networking")
-            set(extra_libs whisker_module_scheduler_defaults whisker_module_managed_alloc whisker_module_streams whisker_module_utilities)
-        else()
-            set(extra_libs "")
-        endif()
-
         target_link_libraries(${target_name}
             PRIVATE
                 ${PROJECT_NAME}
-                ${mod_lib_name}
-                ${extra_libs}
+                ${all_module_test_libs}
                 check
         )
 
