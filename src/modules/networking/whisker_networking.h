@@ -10,6 +10,8 @@
 
 #include "whisker.h"
 #include "modules/managed_alloc/whisker_managed_alloc.h"
+#include "modules/sockets/whisker_sockets.h"
+#include "modules/streams/whisker_streams.h"
 
 enum WM_NETWORK_PHASE 
 { 
@@ -62,6 +64,9 @@ w_ecs_define_component(int32_t, network_socket_listen_fd, -1);
 // custom ID for any network socket errors
 w_ecs_define_component(int, network_socket_err, -1);
 
+// backing generic socket entity used by this network socket facade
+w_ecs_define_component(w_entity_id, network_socket_listen_entity, W_ENTITY_INVALID);
+
 // indicates the socket is ready to accept connections
 w_ecs_define_tag(network_socket_accept_ready);
 
@@ -104,6 +109,10 @@ w_ecs_define_component(uint16_t, network_connection_remote_port, 0);
 // custom error ID for any network connection errors
 w_ecs_define_component(int, network_connection_err, -1);
 
+// stream entities used for bytes received from/sent to this connection
+w_ecs_define_component(w_entity_id, network_connection_input_stream_entity, W_ENTITY_INVALID);
+w_ecs_define_component(w_entity_id, network_connection_output_stream_entity, W_ENTITY_INVALID);
+
 // indicates this client fd is ready to read from
 w_ecs_define_tag(network_connection_read_ready);
 
@@ -124,6 +133,36 @@ w_ecs_define_tag(req_network_connection_destroyed);
 
 // shortcut to close connection after write is complete
 w_ecs_define_tag(req_network_connection_closed_after_write);
+
+static inline w_entity_id wm_networking_socket_get_listen_entity(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id *socket_entity = network_socket_listen_entity_get(world, entity);
+	return socket_entity ? *socket_entity : W_ENTITY_INVALID;
+}
+
+static inline w_entity_id wm_networking_connection_get_input_stream_entity(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id *stream_entity = network_connection_input_stream_entity_get(world, entity);
+	return stream_entity ? *stream_entity : W_ENTITY_INVALID;
+}
+
+static inline w_entity_id wm_networking_connection_get_output_stream_entity(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id *stream_entity = network_connection_output_stream_entity_get(world, entity);
+	return stream_entity ? *stream_entity : W_ENTITY_INVALID;
+}
+
+static inline void *wm_networking_connection_get_input_buffer(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id stream_entity = wm_networking_connection_get_input_stream_entity(world, entity);
+	return stream_entity == W_ENTITY_INVALID ? NULL : wm_streams_get_buffer(world, stream_entity);
+}
+
+static inline void *wm_networking_connection_get_output_buffer(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id stream_entity = wm_networking_connection_get_output_stream_entity(world, entity);
+	return stream_entity == W_ENTITY_INVALID ? NULL : wm_streams_get_buffer(world, stream_entity);
+}
 
 
 // initialize the networking module

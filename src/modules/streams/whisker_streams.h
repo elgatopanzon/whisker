@@ -15,28 +15,14 @@
 /*******************
 *  custom phases  *
 *******************/
-// the stream phases position input operations in the LOAD phases, and output
-// operations in the POST phases
-
-// PRE_CONSUME: producers append bytes to the stream before readers/drainers
-// ON_CONSUME: consumers read/drain bytes and advance the stream offset
-// POST_CONSUME: cleanup after consumers advance the stream offset
 enum WM_STREAM_PHASE 
 { 
-	// runs after pre_load
-	WM_STREAM_PHASE_INPUT_PRE_CONSUME = 200,
-	// runs after post
-	WM_STREAM_PHASE_OUTPUT_PRE_CONSUME = 201,
+	// runs after PRE_LOAD so streams created by load/accept systems can be
+	// allocated before the rest of the frame uses them.
+	WM_STREAM_PHASE_PREPARE = 200,
 
-	// runs after on_load
-	WM_STREAM_PHASE_INPUT_ON_CONSUME = 202,
-	// runs after post
-	WM_STREAM_PHASE_OUTPUT_ON_CONSUME = 203,
-
-	// runs after post_load
-	WM_STREAM_PHASE_INPUT_POST_CONSUME = 204,
-	// runs after post
-	WM_STREAM_PHASE_OUTPUT_POST_CONSUME = 205,
+	// runs at the end of the frame, after users have advanced offsets.
+	WM_STREAM_PHASE_POST = 201,
 };
 
 
@@ -44,48 +30,36 @@ enum WM_STREAM_PHASE
 *  components  *
 ****************/
 
-#ifndef WM_STREAMS_INPUT_BUFFER_SIZE
-#define WM_STREAMS_INPUT_BUFFER_SIZE 65534
-#endif
-#ifndef WM_STREAMS_OUTPUT_BUFFER_SIZE
-#define WM_STREAMS_OUTPUT_BUFFER_SIZE 65534
+#ifndef WM_STREAMS_BUFFER_SIZE
+#define WM_STREAMS_BUFFER_SIZE 65534
 #endif
 
-// streams offers input and output buffers managed by the module
-w_ecs_define_component(uint64_t, stream_input_buffer_size, WM_STREAMS_INPUT_BUFFER_SIZE);
-w_ecs_define_component(uint64_t, stream_output_buffer_size, WM_STREAMS_OUTPUT_BUFFER_SIZE);
+w_ecs_define_component(uint64_t, stream_buffer_size, WM_STREAMS_BUFFER_SIZE);
+w_ecs_define_component(uint64_t, stream_buffer_handle, WM_MANAGED_ALLOC_INVALID_HANDLE);
 
-w_ecs_define_component(uint64_t, stream_input_buffer_handle, WM_MANAGED_ALLOC_INVALID_HANDLE);
-w_ecs_define_component(uint64_t, stream_output_buffer_handle, WM_MANAGED_ALLOC_INVALID_HANDLE);
+// offset defines the current position in the stream buffer to consume/drain
+// from.
+w_ecs_define_component(uint64_t, stream_buffer_offset, 0);
 
-// offset defines the current position in the input/output buffer to
-// consume/drain from
-w_ecs_define_component(uint64_t, stream_input_buffer_offset, 0);
-w_ecs_define_component(uint64_t, stream_output_buffer_offset, 0);
+// length defines how much of the bytes are valid for consume/drain.
+w_ecs_define_component(uint64_t, stream_buffer_length, 0);
 
-// length defines how much of the bytes are valid for consume/drain
-w_ecs_define_component(uint64_t, stream_input_buffer_length, 0);
-w_ecs_define_component(uint64_t, stream_output_buffer_length, 0);
+// this tag is set when bytes are available.
+w_ecs_define_tag(stream_available);
 
-// these tags are set when input/output bytes are available
-w_ecs_define_tag(stream_input_available);
-w_ecs_define_tag(stream_output_available);
+// opt into automatic end-of-frame buffer compaction.
+w_ecs_define_tag(stream_auto_compact);
 
-// lifecycle tags allow allocating/freeing the input/output buffers
-w_ecs_define_tag(req_stream_input_buffer_hot);
-w_ecs_define_tag(req_stream_input_buffer_cold);
-w_ecs_define_tag(req_stream_output_buffer_hot);
-w_ecs_define_tag(req_stream_output_buffer_cold);
+// lifecycle tags allow allocating/freeing the stream buffer.
+w_ecs_define_tag(req_stream_buffer_hot);
+w_ecs_define_tag(req_stream_buffer_cold);
 
 
 /************
 *  macros  *
 ************/
-#define wm_streams_get_input_buffer(world, entity) \
-        wm_managed_alloc_resolve_handle((world),stream_input_buffer_handle, (entity))
-
-#define wm_streams_get_output_buffer(world, entity) \
-        wm_managed_alloc_resolve_handle((world),stream_output_buffer_handle, (entity))
+#define wm_streams_get_buffer(world, stream_entity) \
+        wm_managed_alloc_resolve_handle((world), stream_buffer_handle, (stream_entity))
 
 
 // initialize the streams module

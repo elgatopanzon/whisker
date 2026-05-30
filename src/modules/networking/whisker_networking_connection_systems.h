@@ -55,9 +55,22 @@ w_ecs_system(
 	w_set_tag(entity, network_connection_read_ready, false);
 	w_set_tag(entity, network_connection_write_ready, false);
 
-	// request buffers to be freed
-	w_set_tag(entity, req_stream_input_buffer_cold, true);
-	w_set_tag(entity, req_stream_output_buffer_cold, true);
+	// request stream buffers to be freed
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(world, entity);
+	if (input_stream != W_ENTITY_INVALID)
+	{
+		w_set_tag(input_stream, req_stream_buffer_cold, true);
+		w_entity_destroy_end_of_frame(world, input_stream);
+		w_remove(entity, network_connection_input_stream_entity);
+	}
+
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(world, entity);
+	if (output_stream != W_ENTITY_INVALID)
+	{
+		w_set_tag(output_stream, req_stream_buffer_cold, true);
+		w_entity_destroy_end_of_frame(world, output_stream);
+		w_remove(entity, network_connection_output_stream_entity);
+	}
 
 	int32_t fd = *w_query_get(network_connection_fd);
 
@@ -126,18 +139,20 @@ w_ecs_system(
 		w_query_r(network_connection_fd),
 		w_query_h(network_connection_read_ready),
 
-		w_query_r(stream_input_buffer_handle),
-		w_query_r(stream_input_buffer_size),
-		w_query_r(stream_input_buffer_length),
-
 		w_query_n(network_connection_err),
 	),
 {
 	int32_t fd = *w_query_get(network_connection_fd);
-	uint64_t size = *w_query_get(stream_input_buffer_size);
-	uint64_t *length = w_query_get(stream_input_buffer_length);
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(world, entity);
+	if (input_stream == W_ENTITY_INVALID || !stream_buffer_handle_exists(world, input_stream))
+	{
+		continue;
+	}
 
-	uint8_t *buffer = wm_managed_alloc_resolve_handle(world, stream_input_buffer_handle, entity);
+	uint64_t size = *stream_buffer_size_get(world, input_stream);
+	uint64_t *length = stream_buffer_length_get(world, input_stream);
+
+	uint8_t *buffer = wm_streams_get_buffer(world, input_stream);
 
 	// recv from the socket into the buffer up to max size
 	while (*length < size) 
@@ -150,7 +165,7 @@ w_ecs_system(
 		if (n > 0)
 		{
 			*length += (uint64_t) n;
-			w_set_tag(entity, stream_input_available, true);
+			stream_available_set_tag_state(world, input_stream, true);
 			continue;
 		}
 
@@ -190,10 +205,15 @@ w_ecs_system(
 	WM_NETWORK_PHASE_PRE_WRITE,
 	w_query(
 		w_query_r(network_connection_fd),
-		w_query_h(stream_output_available),
 		w_query_n(network_connection_err),
 	),
 {
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(world, entity);
+	if (output_stream == W_ENTITY_INVALID || !stream_available_tag_exists(world, output_stream))
+	{
+		continue;
+	}
+
 	int32_t fd = *w_query_get(network_connection_fd);
 
 	struct pollfd pfd = {0};
@@ -232,18 +252,21 @@ w_ecs_system(
 		w_query_r(network_connection_fd),
 		w_query_h(network_connection_write_ready),
 
-		w_query_r(stream_output_buffer_handle),
-		w_query_r(stream_output_buffer_offset),
-		w_query_r(stream_output_buffer_length),
-
 		w_query_n(network_connection_err),
 	),
 {
 	int32_t fd = *w_query_get(network_connection_fd);
-	uint64_t *offset = w_query_get(stream_output_buffer_offset);
-	uint64_t *length = w_query_get(stream_output_buffer_length);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(world, entity);
+	if (output_stream == W_ENTITY_INVALID || !stream_buffer_handle_exists(world, output_stream))
+	{
+		w_set_tag(entity, network_connection_write_ready, false);
+		continue;
+	}
 
-	uint8_t *buffer = wm_streams_get_output_buffer(world, entity);
+	uint64_t *offset = stream_buffer_offset_get(world, output_stream);
+	uint64_t *length = stream_buffer_length_get(world, output_stream);
+
+	uint8_t *buffer = wm_streams_get_buffer(world, output_stream);
 
 	while (*offset < *length)
 	{
@@ -289,16 +312,31 @@ w_ecs_system(
 	WM_NETWORK_PHASE_POST_WRITE,
 	w_query(
 		w_query_h(req_network_connection_closed_after_write),
-		w_query_o(stream_input_buffer_offset),
-		w_query_o(stream_input_buffer_length),
-		w_query_o(stream_output_buffer_offset),
-		w_query_o(stream_output_buffer_length),
 	),
 {
-	uint64_t input_offset = *w_query_get_opt_or_default(stream_input_buffer_offset);
-	uint64_t input_length = *w_query_get_opt_or_default(stream_input_buffer_length);
-	uint64_t output_offset = *w_query_get_opt_or_default(stream_output_buffer_offset);
-	uint64_t output_length = *w_query_get_opt_or_default(stream_output_buffer_length);
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(world, entity);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(world, entity);
+
+	uint64_t input_offset = 0;
+	uint64_t input_length = 0;
+	uint64_t output_offset = 0;
+	uint64_t output_length = 0;
+
+	if (input_stream != W_ENTITY_INVALID)
+	{
+		uint64_t *offset = stream_buffer_offset_get(world, input_stream);
+		uint64_t *length = stream_buffer_length_get(world, input_stream);
+		input_offset = offset ? *offset : 0;
+		input_length = length ? *length : 0;
+	}
+
+	if (output_stream != W_ENTITY_INVALID)
+	{
+		uint64_t *offset = stream_buffer_offset_get(world, output_stream);
+		uint64_t *length = stream_buffer_length_get(world, output_stream);
+		output_offset = offset ? *offset : 0;
+		output_length = length ? *length : 0;
+	}
 
 	bool input_pending = input_offset < input_length;
 	bool output_pending = output_offset < output_length;

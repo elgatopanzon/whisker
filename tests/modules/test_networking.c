@@ -9,6 +9,7 @@
 #include "whisker_ecs_world.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 #include "modules/managed_alloc/whisker_managed_alloc.h"
+#include "modules/sockets/whisker_sockets.h"
 #include "modules/streams/whisker_streams.h"
 #include "modules/utilities/whisker_utilities.h"
 #include "modules/utilities/whisker_utilities_entity_lifecycle.h"
@@ -43,6 +44,7 @@ static void networking_setup(void)
 
 	wm_scheduler_defaults_init(&g_world, 60.0);
 	wm_managed_alloc_init(&g_world);
+	wm_sockets_init(&g_world);
 	wm_streams_init(&g_world);
 	wm_utils_init(&g_world);
 	wm_networking_init(&g_world);
@@ -53,6 +55,7 @@ static void networking_teardown(void)
 	wm_networking_free(&g_world);
 	wm_utils_free(&g_world);
 	wm_streams_free(&g_world);
+	wm_sockets_free(&g_world);
 	wm_managed_alloc_free(&g_world);
 	wm_scheduler_defaults_free(&g_world);
 	w_ecs_world_free(&g_world);
@@ -80,13 +83,17 @@ static w_entity_id create_listener_entity(const char *host, uint16_t port)
 static void request_socket_hot(w_entity_id e)
 {
 	req_network_socket_hot_set_tag_state(&g_world, e, true);
-	run_phase(WM_NETWORK_PHASE_INIT);
+	run_phase(WM_NETWORK_PHASE_PRE_INIT);
+	run_phase(WM_SOCKET_PHASE_INIT);
+	run_phase(WM_NETWORK_PHASE_POST_INIT);
 }
 
 static void request_socket_cold(w_entity_id e)
 {
 	req_network_socket_cold_set_tag_state(&g_world, e, true);
-	run_phase(WM_NETWORK_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_PRE_CLOSE);
+	run_phase(WM_SOCKET_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_POST_CLOSE);
 }
 
 static int32_t listen_fd(w_entity_id e)
@@ -162,6 +169,7 @@ static w_entity_id accept_one_connection(w_entity_id socket, int *client_fd)
 {
 	*client_fd = connect_to_listener(listen_fd(socket));
 
+	run_phase(WM_SOCKET_PHASE_PRE_ACCEPT);
 	run_phase(WM_NETWORK_PHASE_PRE_ACCEPT);
 	ck_assert(network_socket_accept_ready_tag_exists(&g_world, socket));
 
@@ -173,11 +181,16 @@ static w_entity_id accept_one_connection(w_entity_id socket, int *client_fd)
 
 static void prepare_connection_stream_buffers(w_entity_id connection)
 {
-	run_phase(WM_STREAM_PHASE_INPUT_PRE_CONSUME);
-	run_phase(WM_STREAM_PHASE_OUTPUT_PRE_CONSUME);
+	run_phase(WM_STREAM_PHASE_PREPARE);
+	run_phase(WM_STREAM_PHASE_PREPARE);
 
-	ck_assert(stream_input_buffer_handle_exists(&g_world, connection));
-	ck_assert(stream_output_buffer_handle_exists(&g_world, connection));
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(&g_world, connection);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(&g_world, connection);
+
+	ck_assert_uint_ne(input_stream, W_ENTITY_INVALID);
+	ck_assert_uint_ne(output_stream, W_ENTITY_INVALID);
+	ck_assert(stream_buffer_handle_exists(&g_world, input_stream));
+	ck_assert(stream_buffer_handle_exists(&g_world, output_stream));
 }
 
 static void send_client_bytes(int client_fd, const char *bytes, size_t length)
@@ -196,13 +209,16 @@ static void receive_pending_connection_bytes(w_entity_id connection)
 
 static void write_connection_output(w_entity_id connection, const char *bytes, size_t length, uint64_t offset)
 {
-	uint8_t *buffer = wm_streams_get_output_buffer(&g_world, connection);
+	uint8_t *buffer = wm_networking_connection_get_output_buffer(&g_world, connection);
 	ck_assert_ptr_nonnull(buffer);
 
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(&g_world, connection);
+	ck_assert_uint_ne(output_stream, W_ENTITY_INVALID);
+
 	memcpy(buffer, bytes, length);
-	stream_output_buffer_offset_set_value(&g_world, connection, offset);
-	stream_output_buffer_length_set_value(&g_world, connection, length);
-	stream_output_available_set_tag_state(&g_world, connection, true);
+	stream_buffer_offset_set_value(&g_world, output_stream, offset);
+	stream_buffer_length_set_value(&g_world, output_stream, length);
+	stream_available_set_tag_state(&g_world, output_stream, true);
 }
 
 static void recv_client_bytes(int client_fd, char *buffer, size_t length)
@@ -367,7 +383,9 @@ START_TEST(test_socket_cold_is_idempotent_without_fd)
 
 	req_network_socket_cold_set_tag_state(&g_world, e, true);
 	network_socket_accept_ready_set_tag_state(&g_world, e, true);
-	run_phase(WM_NETWORK_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_PRE_CLOSE);
+	run_phase(WM_SOCKET_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_POST_CLOSE);
 
 	ck_assert(!network_socket_listen_fd_exists(&g_world, e));
 	ck_assert(!network_socket_accept_ready_tag_exists(&g_world, e));
@@ -395,7 +413,9 @@ START_TEST(test_socket_destroyed_closes_then_destroys_end_of_frame)
 	ck_assert(req_destroy_tag_exists(&g_world, e));
 	ck_assert(req_destroy_end_of_frame_tag_exists(&g_world, e));
 
-	run_phase(WM_NETWORK_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_PRE_CLOSE);
+	run_phase(WM_SOCKET_PHASE_CLOSE);
+	run_phase(WM_NETWORK_PHASE_POST_CLOSE);
 	run_phase(WM_NETWORK_PHASE_DISPOSE);
 
 	ck_assert(w_ecs_has_tag_str(&g_world, "networking_destroy_marker", e));
@@ -419,6 +439,7 @@ START_TEST(test_socket_accept_poll_clears_ready_when_no_connection_pending)
 
 	network_socket_accept_ready_set_tag_state(&g_world, e, true);
 
+	run_phase(WM_SOCKET_PHASE_PRE_ACCEPT);
 	run_phase(WM_NETWORK_PHASE_PRE_ACCEPT);
 
 	ck_assert(!network_socket_accept_ready_tag_exists(&g_world, e));
@@ -433,6 +454,7 @@ START_TEST(test_socket_accept_poll_sets_ready_when_connection_pending)
 
 	int client_fd = connect_to_listener(listen_fd(e));
 
+	run_phase(WM_SOCKET_PHASE_PRE_ACCEPT);
 	run_phase(WM_NETWORK_PHASE_PRE_ACCEPT);
 
 	ck_assert(network_socket_accept_ready_tag_exists(&g_world, e));
@@ -617,11 +639,12 @@ START_TEST(test_connection_receive_appends_bytes_to_stream_input)
 
 	receive_pending_connection_bytes(connection);
 
-	uint8_t *buffer = wm_streams_get_input_buffer(&g_world, connection);
+	uint8_t *buffer = wm_networking_connection_get_input_buffer(&g_world, connection);
 	ck_assert_ptr_nonnull(buffer);
-	ck_assert_uint_eq(*stream_input_buffer_length_get(&g_world, connection), sizeof(bytes) - 1);
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(&g_world, connection);
+	ck_assert_uint_eq(*stream_buffer_length_get(&g_world, input_stream), sizeof(bytes) - 1);
 	ck_assert_int_eq(memcmp(buffer, bytes, sizeof(bytes) - 1), 0);
-	ck_assert(stream_input_available_tag_exists(&g_world, connection));
+	ck_assert(stream_available_tag_exists(&g_world, input_stream));
 
 	close(client_fd);
 	request_connection_closed(connection);
@@ -646,11 +669,12 @@ START_TEST(test_connection_receive_preserves_partial_data_across_receives)
 	receive_pending_connection_bytes(connection);
 
 	char expected[] = "hello world";
-	uint8_t *buffer = wm_streams_get_input_buffer(&g_world, connection);
+	uint8_t *buffer = wm_networking_connection_get_input_buffer(&g_world, connection);
 	ck_assert_ptr_nonnull(buffer);
-	ck_assert_uint_eq(*stream_input_buffer_length_get(&g_world, connection), sizeof(expected) - 1);
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(&g_world, connection);
+	ck_assert_uint_eq(*stream_buffer_length_get(&g_world, input_stream), sizeof(expected) - 1);
 	ck_assert_int_eq(memcmp(buffer, expected, sizeof(expected) - 1), 0);
-	ck_assert(stream_input_available_tag_exists(&g_world, connection));
+	ck_assert(stream_available_tag_exists(&g_world, input_stream));
 
 	close(client_fd);
 	request_connection_closed(connection);
@@ -673,8 +697,9 @@ START_TEST(test_connection_receive_eof_requests_connection_closed)
 
 	ck_assert(req_network_connection_closed_tag_exists(&g_world, connection));
 	ck_assert(!network_connection_err_exists(&g_world, connection));
-	ck_assert_uint_eq(*stream_input_buffer_length_get(&g_world, connection), 0);
-	ck_assert(!stream_input_available_tag_exists(&g_world, connection));
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(&g_world, connection);
+	ck_assert_uint_eq(*stream_buffer_length_get(&g_world, input_stream), 0);
+	ck_assert(!stream_available_tag_exists(&g_world, input_stream));
 
 	request_connection_closed(connection);
 }
@@ -730,8 +755,9 @@ START_TEST(test_connection_send_writes_output_bytes_and_advances_offset)
 	recv_client_bytes(client_fd, received, sizeof(received));
 
 	ck_assert_int_eq(memcmp(received, bytes, sizeof(received)), 0);
-	ck_assert_uint_eq(*stream_output_buffer_offset_get(&g_world, connection), sizeof(bytes) - 1);
-	ck_assert_uint_eq(*stream_output_buffer_length_get(&g_world, connection), sizeof(bytes) - 1);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(&g_world, connection);
+	ck_assert_uint_eq(*stream_buffer_offset_get(&g_world, output_stream), sizeof(bytes) - 1);
+	ck_assert_uint_eq(*stream_buffer_length_get(&g_world, output_stream), sizeof(bytes) - 1);
 
 	close(client_fd);
 	request_connection_closed(connection);
@@ -757,8 +783,9 @@ START_TEST(test_connection_send_preserves_unsent_bytes_after_partial_send)
 	recv_client_bytes(client_fd, received, sizeof(received));
 
 	ck_assert_int_eq(memcmp(received, expected, sizeof(received)), 0);
-	ck_assert_uint_eq(*stream_output_buffer_offset_get(&g_world, connection), sizeof(bytes) - 1);
-	ck_assert_uint_eq(*stream_output_buffer_length_get(&g_world, connection), sizeof(bytes) - 1);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(&g_world, connection);
+	ck_assert_uint_eq(*stream_buffer_offset_get(&g_world, output_stream), sizeof(bytes) - 1);
+	ck_assert_uint_eq(*stream_buffer_length_get(&g_world, output_stream), sizeof(bytes) - 1);
 
 	close(client_fd);
 	request_connection_closed(connection);
@@ -802,10 +829,12 @@ START_TEST(test_connection_closed_after_write_requests_close_when_no_pending_io)
 	w_entity_id connection = accept_one_connection(socket, &client_fd);
 	prepare_connection_stream_buffers(connection);
 
-	stream_input_buffer_offset_set_value(&g_world, connection, 0);
-	stream_input_buffer_length_set_value(&g_world, connection, 0);
-	stream_output_buffer_offset_set_value(&g_world, connection, 5);
-	stream_output_buffer_length_set_value(&g_world, connection, 5);
+	w_entity_id input_stream = wm_networking_connection_get_input_stream_entity(&g_world, connection);
+	w_entity_id output_stream = wm_networking_connection_get_output_stream_entity(&g_world, connection);
+	stream_buffer_offset_set_value(&g_world, input_stream, 0);
+	stream_buffer_length_set_value(&g_world, input_stream, 0);
+	stream_buffer_offset_set_value(&g_world, output_stream, 5);
+	stream_buffer_length_set_value(&g_world, output_stream, 5);
 	req_network_connection_closed_after_write_set_tag_state(&g_world, connection, true);
 
 	run_phase(WM_NETWORK_PHASE_POST_WRITE);

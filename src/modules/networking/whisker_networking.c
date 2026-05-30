@@ -61,8 +61,10 @@ void wm_networking_init(struct w_ecs_world *world)
 	w_ecs_set_phase_chain(world,
 		WM_PHASE_PRE_LOAD,
 		WM_NETWORK_PHASE_PRE_INIT,
+		WM_SOCKET_PHASE_INIT,
 		WM_NETWORK_PHASE_INIT,
 		WM_NETWORK_PHASE_POST_INIT,
+		WM_SOCKET_PHASE_PRE_ACCEPT,
 		WM_NETWORK_PHASE_PRE_ACCEPT,
 		WM_NETWORK_PHASE_ACCEPT,
 		WM_NETWORK_PHASE_POST_ACCEPT,
@@ -92,6 +94,7 @@ void wm_networking_init(struct w_ecs_world *world)
 	w_ecs_set_phase_chain(world,
 		WM_PHASE_FINAL,
 		WM_NETWORK_PHASE_PRE_CLOSE,
+		WM_SOCKET_PHASE_CLOSE,
 		WM_NETWORK_PHASE_CLOSE,
 		WM_NETWORK_PHASE_POST_CLOSE,
 		WM_NETWORK_PHASE_PRE_DISPOSE,
@@ -100,10 +103,12 @@ void wm_networking_init(struct w_ecs_world *world)
 	);
 
 	// register systems
+	wm_networking_socket_project_to_socket_register(world);
+	wm_networking_socket_project_close_request_register(world);
 	wm_networking_socket_handle_request_destroyed_register(world);
-	wm_networking_socket_handle_request_hot_register(world);
-	wm_networking_socket_handle_request_cold_register(world);
-	wm_networking_socket_accept_poll_register(world);
+	wm_networking_socket_sync_after_init_register(world);
+	wm_networking_socket_sync_after_accept_poll_register(world);
+	wm_networking_socket_sync_after_close_register(world);
 	wm_networking_socket_accept_and_create_connections_register(world);
 
 	wm_networking_connection_handle_destroyed_request_register(world);

@@ -2,17 +2,15 @@
  * @author      : ElGatoPanzon (contact@elgatopanzon.io)
  * @file        : whisker_networking_socket_systems
  * @created     : Thursday May 28, 2026 11:40:16 CST
- * @description : systems related to listening sockets
+ * @description : network socket facade and connection spawning systems
  */
 
 #include "whisker_networking.h"
 #include "modules/scheduler_defaults/whisker_scheduler_defaults.h"
 #include "modules/utilities/whisker_utilities_entity_lifecycle.h"
-#include "modules/streams/whisker_streams.h"
 
 #include <errno.h>
 #include <fcntl.h>
-#include <netdb.h>
 #include <poll.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -22,14 +20,88 @@
 #ifndef WHISKER_NETWORKING_SOCKET_SYSTEMS_H
 #define WHISKER_NETWORKING_SOCKET_SYSTEMS_H
 
-#define wm_networking_handle_addrinfo_listen_error_and_continue(module, fmt) \
-	do { \
-		err = errno; \
-		w_log_entity_warning(module, fmt, strerror(err)); \
-		if (fd >= 0) close(fd); \
-		fd = -1; \
-		continue; \
-	} while(0)
+static inline w_entity_id wm_networking_socket_ensure_listen_entity(struct w_ecs_world *world, w_entity_id entity)
+{
+	w_entity_id socket_entity = wm_networking_socket_get_listen_entity(world, entity);
+	if (socket_entity == W_ENTITY_INVALID)
+	{
+		socket_entity = w_ecs_request_entity(world);
+		network_socket_listen_entity_set_value(world, entity, socket_entity);
+	}
+
+	return socket_entity;
+}
+
+static inline void wm_networking_socket_sync_state(struct w_ecs_world *world, w_entity_id entity, w_entity_id socket_entity)
+{
+	if (socket_entity == W_ENTITY_INVALID)
+	{
+		network_socket_accept_ready_set_tag_state(world, entity, false);
+		network_socket_listen_fd_remove(world, entity);
+		return;
+	}
+
+	if (socket_listen_fd_exists(world, socket_entity))
+	{
+		network_socket_listen_fd_set_value(world, entity, *socket_listen_fd_get(world, socket_entity));
+	}
+	else
+	{
+		network_socket_listen_fd_remove(world, entity);
+	}
+
+	network_socket_accept_ready_set_tag_state(world, entity, socket_accept_ready_tag_exists(world, socket_entity));
+
+	if (socket_err_exists(world, socket_entity))
+	{
+		network_socket_err_set_value(world, entity, *socket_err_get(world, socket_entity));
+	}
+}
+
+// project network socket configuration and lifecycle requests to the backing
+// generic socket entity before socket lifecycle systems run.
+w_ecs_system(
+	wm_networking_socket_project_to_socket,
+	WM_NETWORK_PHASE_PRE_INIT,
+	w_query(
+		w_query_r(network_socket_listen_host_string_id),
+		w_query_r(network_socket_listen_port),
+		w_query_o(network_socket_listen_backlog),
+	),
+{
+	w_entity_id socket_entity = wm_networking_socket_ensure_listen_entity(world, entity);
+
+	socket_listen_host_string_id_set_value(world, socket_entity, *w_query_get(network_socket_listen_host_string_id));
+	socket_listen_port_set_value(world, socket_entity, *w_query_get(network_socket_listen_port));
+	socket_listen_backlog_set_value(world, socket_entity, *w_query_get_opt_or_default(network_socket_listen_backlog));
+
+	if (req_network_socket_hot_tag_exists(world, entity))
+	{
+		req_network_socket_hot_set_tag_state(world, entity, false);
+		req_socket_hot_set_tag_state(world, socket_entity, true);
+	}
+});
+
+// project close requests late in the frame so backing sockets are closed by the
+// generic socket close phase.
+w_ecs_system(
+	wm_networking_socket_project_close_request,
+	WM_NETWORK_PHASE_PRE_CLOSE,
+	w_query(
+		w_query_h(req_network_socket_cold),
+		w_query_o(network_socket_listen_entity),
+	),
+{
+	w_entity_id socket_entity = *w_query_get_opt_or_default(network_socket_listen_entity);
+	req_network_socket_cold_set_tag_state(world, entity, false);
+	network_socket_accept_ready_set_tag_state(world, entity, false);
+	network_socket_listen_fd_remove(world, entity);
+
+	if (socket_entity != W_ENTITY_INVALID)
+	{
+		req_socket_cold_set_tag_state(world, socket_entity, true);
+	}
+});
 
 // handle request socket destroyed
 w_ecs_system(
@@ -41,277 +113,130 @@ w_ecs_system(
 {
 	w_set_tag(entity, req_network_socket_destroyed, false);
 	w_set_tag(entity, req_network_socket_cold, true);
+
+	w_entity_id socket_entity = wm_networking_socket_get_listen_entity(world, entity);
+	if (socket_entity != W_ENTITY_INVALID)
+	{
+		req_socket_cold_set_tag_state(world, socket_entity, true);
+		w_entity_destroy_end_of_frame(world, socket_entity);
+	}
+
 	w_entity_destroy_end_of_frame(world, entity);
 });
 
-// handle requesting socket hot
-// note: system is transactional, errors are set for any failure
+// sync backing socket fd/error state after the generic socket init phase.
 w_ecs_system(
-	wm_networking_socket_handle_request_hot,
-	WM_NETWORK_PHASE_INIT,
+	wm_networking_socket_sync_after_init,
+	WM_NETWORK_PHASE_POST_INIT,
 	w_query(
-		w_query_h(req_network_socket_hot),
-
-		// socket components
-		w_query_r(network_socket_listen_host_string_id),
-		w_query_r(network_socket_listen_port),
-		// optional default backlog
-		w_query_o(network_socket_listen_backlog),
-
-		// avoid already errored sockets
-		w_query_n(network_socket_err),
+		w_query_r(network_socket_listen_entity),
 	),
 {
-	// clear hot request
-	w_set_tag(entity, req_network_socket_hot, false);
-
-	// already hot, request satisfied
-	if (network_socket_listen_fd_exists(world, entity))
-	{
-		continue;
-	}
-
-	char *listen_host = w_string_from_id(*w_query_get(network_socket_listen_host_string_id));
-	int listen_port_int = *w_query_get(network_socket_listen_port);
-	int listen_backlog = *w_query_get_opt_or_default(network_socket_listen_backlog);
-	int err = -1;
-
-	// port to string
-	char listen_port[6]; // max "65535" + '\0'
-  	snprintf(listen_port, sizeof(listen_port), "%u", (unsigned)listen_port_int);
-
-	// parse host into addrinfo struct
-	struct addrinfo hints = {0};
-    struct addrinfo *result = NULL;
-
-	hints.ai_family = AF_UNSPEC; // v4 or v6
-	hints.ai_socktype = SOCK_STREAM; // TCP
-	hints.ai_flags = AI_PASSIVE;
-
-	err = getaddrinfo(listen_host, listen_port, &hints, &result);
-
-	// bail if failed to parse listen host and port
-	if (err != 0)
-    {
-		w_log_entity_error(networking, "getaddrinfo: %s", gai_strerror(err));
-		w_set_value(entity, network_socket_err, err);
-        continue;
-    }
-
-	// attempt to open socket with addrinfo results
-	int fd = -1;
-	for (struct addrinfo *addrinfo = result; addrinfo != NULL; addrinfo = addrinfo->ai_next)
-	{
-		// attempt to request, bind and listen on socket
-		fd = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-
-		if (fd < 0)
-		{
-			wm_networking_handle_addrinfo_listen_error_and_continue(networking, "socket request failed: %s");
-		}
-		int yes = 1;
-
-		// allow reuse of existing address/port
-		if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) != 0)
-		{
-			wm_networking_handle_addrinfo_listen_error_and_continue(networking, "socket reuse opt failed: %s");
-		}
-
-		// set socket as non-blocking
-		int flags = fcntl(fd, F_GETFL, 0);
-		if (flags == -1 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-		{
-			// failed to set non-blocking flags
-			wm_networking_handle_addrinfo_listen_error_and_continue(networking, "socket non-blocking flag failed: %s");
-		}
-
-		// try to bind
-		err = bind(fd, addrinfo->ai_addr, addrinfo->ai_addrlen);
-		if (err != 0)
-		{
-			wm_networking_handle_addrinfo_listen_error_and_continue(networking, "socket bind failed: %s");
-		}
-
-		// try to listen
-		err = listen(fd, listen_backlog);
-		if (err != 0)
-		{
-			wm_networking_handle_addrinfo_listen_error_and_continue(networking, "socket listen failed: %s");
-		}
-
-		// if we got this far its listening!
-		break;
-	}
-
-	// cleanup addrinfo
-	freeaddrinfo(result);
-
-	// if socket listen failed set error component and continue
-	if (fd == -1)
-	{
-		w_log_entity_error(networking, "failed to listen on socket: %s", strerror(err));
-		w_set_value(entity, network_socket_err, err);
-        continue;
-	}
-
-	// set socket fd as the valid listening socket
-	w_set_value(entity, network_socket_listen_fd, fd);
+	wm_networking_socket_sync_state(world, entity, *w_query_get(network_socket_listen_entity));
 });
 
-
-// handle request socket cold
+// sync backing socket readiness after the generic socket accept poll phase.
 w_ecs_system(
-	wm_networking_socket_handle_request_cold,
-	WM_NETWORK_PHASE_CLOSE,
-	w_query(
-		w_query_h(req_network_socket_cold),
-		w_query_o(network_socket_listen_fd),
-	),
-{
-	w_set_tag(entity, req_network_socket_cold, false);
-	w_set_tag(entity, network_socket_accept_ready, false);
-
-	// if fd is valid, close it
-	int32_t fd = *w_query_get_opt_or_default(network_socket_listen_fd);
-	if (fd >= 0)
-	{
-		if (close(fd) != 0)
-		{
-			int err = errno;
-			w_log_entity_error(networking, "failed to close socket: %s", strerror(err));
-			w_set_value(entity, network_socket_err, err);
-		}
-	}
-
-	// remove socket fd
-	w_remove(entity, network_socket_listen_fd);
-});
-
-
-// socket accept poll, polls and sets/removes the tag indicating that this socket is ready to accept connections
-w_ecs_system(
-	wm_networking_socket_accept_poll,
+	wm_networking_socket_sync_after_accept_poll,
 	WM_NETWORK_PHASE_PRE_ACCEPT,
 	w_query(
-		// pick up valid non-error sockets
-		w_query_r(network_socket_listen_fd),
-		// skip errored sockets
-		w_query_n(network_socket_err),
+		w_query_r(network_socket_listen_entity),
 	),
 {
-	int32_t fd = *w_query_get(network_socket_listen_fd);
-
-	// poll socket to check for data to be read
-	struct pollfd pfd = {0};
-	pfd.fd = fd;
-	pfd.events = POLLIN;
-	pfd.revents = 0;
-
-	int result = poll(&pfd, 1, 0);
-
-	// handle poll error and set err
-	if (result == -1)
-	{
-		int err = errno;
-		w_log_entity_error(networking, "failed to poll socket for readiness: %s", strerror(err));
-		w_set_value(entity, network_socket_err, err);
-		w_set_tag(entity, network_socket_accept_ready, false);
-		continue;
-	}
-
-	// poll may report socket error events without poll itself failing
-	if (result > 0 && (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)))
-	{
-		w_log_entity_error(networking, "socket poll returned error event: %d", pfd.revents);
-		w_set_value(entity, network_socket_err, pfd.revents);
-		w_set_tag(entity, network_socket_accept_ready, false);
-		continue;
-	}
-
-	// if the return event includes POLLIN and we get a positive return
-	// value, we have a connection ready to accept on this listen socket
-	w_set_tag(entity, network_socket_accept_ready, result > 0 && (pfd.revents & POLLIN));
+	wm_networking_socket_sync_state(world, entity, *w_query_get(network_socket_listen_entity));
 });
 
+// sync backing socket state after the generic socket close phase.
+w_ecs_system(
+	wm_networking_socket_sync_after_close,
+	WM_NETWORK_PHASE_POST_CLOSE,
+	w_query(
+		w_query_r(network_socket_listen_entity),
+	),
+{
+	wm_networking_socket_sync_state(world, entity, *w_query_get(network_socket_listen_entity));
+});
 
 /********************************
 *  network connection systems  *
 ********************************/
 // these systems use listen sockets to create network connection entities
 
-// accept new connections from listening sockets
+// accept new connections from backing listening sockets
 w_ecs_system(
 	wm_networking_socket_accept_and_create_connections,
 	WM_NETWORK_PHASE_ACCEPT,
 	w_query(
-		// pick up sockets with accept readiness
-		w_query_r(network_socket_listen_fd),
+		w_query_r(network_socket_listen_entity),
 		w_query_h(network_socket_accept_ready),
-		// skip errored sockets
 		w_query_n(network_socket_err),
 	),
 {
-	int32_t listen_fd = *w_query_get(network_socket_listen_fd);
+	w_entity_id socket_entity = *w_query_get(network_socket_listen_entity);
+	if (socket_entity == W_ENTITY_INVALID || !socket_listen_fd_exists(world, socket_entity))
+	{
+		continue;
+	}
+
+	int32_t listen_fd = *socket_listen_fd_get(world, socket_entity);
 
 	// accept all pending connections to this socket and create a network
 	// connection entity for each one
 	// note: in future, look into how we'd safely thread this
 	while (true)
 	{
-		// accept connection and get client fd
 		struct sockaddr_storage remote_addr;
 		socklen_t remote_addr_len = sizeof(remote_addr);
 
 		int32_t connection_fd = accept(listen_fd, (struct sockaddr *)&remote_addr, &remote_addr_len);
 
-		// check for accept errors
 		if (connection_fd < 0)
 		{
 			int err = errno;
 
-			// break out of the loop, there's nothing to get
 			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				break;
 			}
 
-			// the accept listened due to being interupted
-			// we can try again
 			if (err == EINTR)
 			{
 				continue;
 			}
 
-
-			// log the error with this socket
 			w_log_entity_error(networking, "socket failed to accept connection: %s", strerror(err));
 			w_set_value(entity, network_socket_err, err);
+			socket_err_set_value(world, socket_entity, err);
 			break;
 		}
 
-		// with the connection fd lets try and set it non-blocking
 		int flags = fcntl(connection_fd, F_GETFL, 0);
 		if (flags == -1 || fcntl(connection_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		{
 			int err = errno;
 			w_log_entity_error(networking, "failed to set accepted connection non-blocking: %s", strerror(err));
 			w_set_value(entity, network_socket_err, err);
+			socket_err_set_value(world, socket_entity, err);
 			close(connection_fd);
 			break;
 		}
 
-		// if we made it this far, we have a new valid connection entity!
 		w_entity_id conn = w_request();
 		w_set_value(conn, network_connection_fd, connection_fd);
 		w_set_value(conn, network_connection_listen_socket_entity, entity);
 
-		// prepare input and output stream buffers for this connection
-		w_set_default(conn, stream_input_buffer_size);
-		w_set_default(conn, stream_output_buffer_size);
-		w_set_tag(conn, req_stream_input_buffer_hot, true);
-		w_set_tag(conn, req_stream_output_buffer_hot, true);
+		w_entity_id input_stream = w_request();
+		w_set_default(input_stream, stream_buffer_size);
+		w_set_tag(input_stream, stream_auto_compact, true);
+		w_set_tag(input_stream, req_stream_buffer_hot, true);
+		w_set_value(conn, network_connection_input_stream_entity, input_stream);
+
+		w_entity_id output_stream = w_request();
+		w_set_default(output_stream, stream_buffer_size);
+		w_set_tag(output_stream, stream_auto_compact, true);
+		w_set_tag(output_stream, req_stream_buffer_hot, true);
+		w_set_value(conn, network_connection_output_stream_entity, output_stream);
 	}
 });
-
 
 #endif /* WHISKER_NETWORKING_SOCKET_SYSTEMS_H */

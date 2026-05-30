@@ -15,6 +15,8 @@
 #include "modules/buffers/whisker_buffers.h"
 #include "modules/utilities/whisker_utilities.h"
 #include "modules/managed_alloc/whisker_managed_alloc.h"
+#include "modules/sockets/whisker_sockets.h"
+#include "modules/streams/whisker_streams.h"
 
 // events and reactivity
 #include "modules/events/whisker_events.h"
@@ -36,6 +38,8 @@ struct w_modules_config {
 	bool buffers;
 	bool utilities;
 	bool managed_alloc;
+	bool sockets;
+	bool streams;
 	bool events;
 	bool component_events;
 	bool system_groups;
@@ -73,6 +77,10 @@ static inline void w_modules_init_all(struct w_ecs_world *world, struct w_module
 		wm_utils_init(world);
 	if (cfg->managed_alloc)
 		wm_managed_alloc_init(world);
+	if (cfg->sockets)
+		wm_sockets_init(world);
+	if (cfg->streams)
+		wm_streams_init(world);
 	if (cfg->events)
 		wm_events_init(world);
 	if (cfg->component_events)
@@ -118,6 +126,10 @@ static inline void w_modules_free_all(struct w_ecs_world *world, struct w_module
 		wm_component_events_free(world);
 	if (cfg->events)
 		wm_events_free(world);
+	if (cfg->streams)
+		wm_streams_free(world);
+	if (cfg->sockets)
+		wm_sockets_free(world);
 	if (cfg->managed_alloc)
 		wm_managed_alloc_free(world);
 	if (cfg->utilities)
@@ -129,4 +141,3 @@ static inline void w_modules_free_all(struct w_ecs_world *world, struct w_module
 }
 
 #endif /* WHISKER_MODULES_H */
-
