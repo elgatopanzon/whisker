@@ -170,6 +170,9 @@ w_entity_id *w_serialisation_get_persistent_entity_list(struct w_ecs_world *worl
 // helper: allocate buffer of component IDs for serialisation
 w_entity_id *w_serialisation_get_components_list(struct w_ecs_world *world, _Atomic size_t *components_length, _Atomic size_t *components_size);
 
+// helper: component names suffixed with '_' are private/temporary and skipped
+bool w_serialisation_component_name_is_private_(const char *component_name);
+
 // helpers: push lines to serialistion ctx buffer
 void w_serialisation_push_ctx_command_(struct wm_serialisation_ctx *ctx, const char *line);
 void w_serialisation_push_ctx_command_f_(struct wm_serialisation_ctx *ctx, const char *fmt, ...);

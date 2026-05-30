@@ -254,6 +254,34 @@ START_TEST(test_components_list_returns_unique_ids)
 }
 END_TEST
 
+START_TEST(test_components_list_excludes_private_component_names)
+{
+	w_entity_id entity = w_ecs_request_entity(&g_world);
+	w_entity_id private_comp = w_ecs_get_component_by_name(&g_world, "private_comp_");
+	w_entity_id public_comp = w_ecs_get_component_by_name(&g_world, "public_comp");
+
+	int val = 10;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, private_comp, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, public_comp, entity, &val, sizeof(val));
+
+	_Atomic size_t len = 0;
+	_Atomic size_t size = 0;
+	w_entity_id *list = w_serialisation_get_components_list(&g_world, &len, &size);
+
+	bool found_private = false;
+	bool found_public = false;
+	for (size_t i = 0; i < len; ++i) {
+		if (list[i] == private_comp) found_private = true;
+		if (list[i] == public_comp) found_public = true;
+	}
+
+	ck_assert(!found_private);
+	ck_assert(found_public);
+
+	free(list);
+}
+END_TEST
+
 
 /*****************************
 *  dump_to_buffer tests      *
@@ -376,6 +404,29 @@ START_TEST(test_dump_to_buffer_entities_saved_matches_count)
 	w_serialisation_dump_to_buffer(&g_world, &ctx);
 
 	ck_assert_uint_eq(ctx.entities_saved, 3);
+
+	free(ctx.buffer);
+	free(ctx.entities);
+	free(ctx.components);
+}
+END_TEST
+
+START_TEST(test_dump_to_buffer_excludes_private_component_names)
+{
+	w_entity_id entity = w_ecs_request_entity_with_name(&g_world, "owner");
+	w_entity_id private_comp = w_ecs_get_component_by_name(&g_world, "private_comp_");
+	w_entity_id public_comp = w_ecs_get_component_by_name(&g_world, "public_comp");
+
+	int32_t val = 42;
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, private_comp, entity, &val, sizeof(val));
+	w_ecs_set_component_(&g_world, W_COMPONENT_TYPE_int32_t, public_comp, entity, &val, sizeof(val));
+
+	struct wm_serialisation_ctx ctx = {0};
+	w_serialisation_dump_to_buffer(&g_world, &ctx);
+
+	ck_assert_ptr_null(strstr(ctx.buffer, "\"private_comp_\""));
+	ck_assert_ptr_nonnull(strstr(ctx.buffer, "\"public_comp\""));
+	ck_assert_uint_eq(ctx.components_saved, 1);
 
 	free(ctx.buffer);
 	free(ctx.entities);
@@ -2462,6 +2513,7 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_components, test_components_list_single_component);
 	tcase_add_test(tc_components, test_components_list_multiple_components);
 	tcase_add_test(tc_components, test_components_list_returns_unique_ids);
+	tcase_add_test(tc_components, test_components_list_excludes_private_component_names);
 	suite_add_tcase(s, tc_components);
 
 	TCase *tc_dump = tcase_create("dump_to_buffer");
@@ -2475,6 +2527,7 @@ Suite *serialisation_suite(void)
 	tcase_add_test(tc_dump, test_dump_to_buffer_components_count_matches);
 	tcase_add_test(tc_dump, test_dump_to_buffer_entity_commands_written);
 	tcase_add_test(tc_dump, test_dump_to_buffer_entities_saved_matches_count);
+	tcase_add_test(tc_dump, test_dump_to_buffer_excludes_private_component_names);
 	suite_add_tcase(s, tc_dump);
 
 	TCase *tc_comp_set = tcase_create("component_set_commands");

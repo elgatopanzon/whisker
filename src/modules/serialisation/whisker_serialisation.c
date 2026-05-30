@@ -7,6 +7,14 @@
 
 #include "whisker_serialisation.h"
 
+static bool w_serialisation_entity_is_private_component_(struct w_ecs_world *world, w_entity_id entity)
+{
+	if (!w_component_registry_has_entry(&world->components, entity))
+		return false;
+
+	return w_serialisation_component_name_is_private_(w_ecs_get_component_name(world, entity));
+}
+
 void wm_serialisation_init(struct w_ecs_world *world)
 {
 	struct wm_serialisation_registry *registry = w_mem_xmalloc_t(*registry);
@@ -114,8 +122,10 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 
 	// serialisation rules:
 	// 1. only serialise entities with names
-	// 2. exclude named entities with WM_SERIALISATION_NO_SERIALISE_TAG_NAME tag component
-	// 3. all components with type w_entity_id serialise as name not ID
+	// 2. exclude named entities with wm_serialisation_exclude tag component
+	// 3. exclude component types tagged with wm_serialisation_exclude
+	// 4. exclude component types with names ending with '_'
+	// 5. all components with type w_entity_id serialise as name not ID
 
 	// prepare list of persistent entities
 	ctx->entities_length = 0;
@@ -154,6 +164,8 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 		for (size_t j = 0; j < excl_length; ++j) {
 			if (ctx->entities[i] == excl[j]) { skip = true; break; }
 		}
+		if (!skip)
+			skip = w_serialisation_entity_is_private_component_(world, ctx->entities[i]);
 		if (!skip) actual_entities++;
 	}
 
@@ -199,6 +211,8 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 		for (size_t j = 0; j < excl_length; ++j) {
 			if (ctx->entities[i] == excl[j]) { skip = true; break; }
 		}
+		if (!skip)
+			skip = w_serialisation_entity_is_private_component_(world, ctx->entities[i]);
 		if (skip) continue;
 
 		w_serialisation_push_ctx_command_f_(ctx, "entity \"%s\"", w_ecs_get_entity_name(world, ctx->entities[i]));
@@ -243,6 +257,8 @@ bool w_serialisation_dump_to_buffer(struct w_ecs_world *world, struct wm_seriali
 			for (size_t j = 0; j < excl_length; ++j) {
 				if (i == excl[j]) { skip = true; break; }
 			}
+			if (!skip)
+				skip = w_serialisation_entity_is_private_component_(world, i);
 			if (skip) continue;
 
 			comp_ctx.entity = i;
@@ -325,6 +341,10 @@ w_entity_id *w_serialisation_get_components_list(struct w_ecs_world *world, _Ato
 	w_array_init_t(c, block_size);
 
 	w_sparse_bitset_for_each(&world->components.entries_bitset) {
+		char *component_name = w_ecs_get_component_name(world, i);
+		if (w_serialisation_component_name_is_private_(component_name))
+			continue;
+
 		w_array_ensure_alloc_block_size(c, c_length + 1, block_size);
 		c[c_length++] = i;
 	};
@@ -333,6 +353,14 @@ w_entity_id *w_serialisation_get_components_list(struct w_ecs_world *world, _Ato
 	*components_size = c_size;
 
 	return c;
+}
+
+bool w_serialisation_component_name_is_private_(const char *component_name)
+{
+	if (!component_name) return false;
+
+	size_t len = strlen(component_name);
+	return len > 0 && component_name[len - 1] == '_';
 }
 
 void w_serialisation_push_ctx_command_(struct wm_serialisation_ctx *ctx, const char *line)
