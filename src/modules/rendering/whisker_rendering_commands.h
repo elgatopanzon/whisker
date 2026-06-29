@@ -95,6 +95,10 @@ enum W_RENDERING_CMD
 	// draw verts to the screen
 	// payload: struct w_rendering_cmd_draw_verts
 	W_RENDERING_CMD_DRAW_VERTS = 111,
+
+	// draw textured verts to the screen
+	// payload: struct w_rendering_cmd_draw_textured_verts
+	W_RENDERING_CMD_DRAW_TEXTURED_VERTS = 112,
 };
 
 // dummy payload, for when theres none
@@ -185,6 +189,20 @@ struct w_rendering_cmd_draw_verts {
     w_quat rotation;
     w_vec3 scale;
     w_color8 color;
+};
+
+struct w_rendering_cmd_draw_textured_verts
+{
+	const w_vec3 *verts;
+	const w_vec2 *uvs;
+	size_t verts_length; // doubles as uvs length
+	enum W_RENDERING_DRAW_VERT_MODE draw_mode;
+	uint64_t backend_texture_handle; // GPU side opaque ID
+	w_vec3 position;
+    w_vec3 origin;
+    w_quat rotation;
+    w_vec3 scale;
+    w_color8 tint;
 };
 
 #endif /* WHISKER_RENDERING_COMMANDS_H */
