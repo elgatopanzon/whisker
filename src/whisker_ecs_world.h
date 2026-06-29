@@ -85,6 +85,8 @@
 		if (id) { str = w_string_from_id(*id); } \
 		str; \
 	})
+#define w_entity_set_string(entity, comp, str) \
+	w_set_value(entity, comp, w_string_to_id(str))
 
 #define w_for_each(q, work) w_query_for_each(world, q, work)
 #define w_sync(from, to) \
