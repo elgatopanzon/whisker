@@ -20,5 +20,12 @@ target_include_directories(${PROJECT_NAME}
         ${PROJECT_SOURCE_DIR}/src
 )
 
+if(NOT MSVC)
+    target_link_libraries(${PROJECT_NAME}
+        PUBLIC
+            m
+    )
+endif()
+
 # set C standard to C11
 target_compile_options(${PROJECT_NAME} PRIVATE --std=c11)
