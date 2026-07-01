@@ -6,6 +6,7 @@
 
 #include "whisker_std.h"
 
+#include "whisker_debug.h"
 #include "whisker_sparse_bitset.h"
 
 #if defined(__AVX2__) && !defined(__EMSCRIPTEN__)
@@ -14,6 +15,7 @@
 
 void w_sparse_bitset_init(struct w_sparse_bitset *bitset, struct w_arena *arena, uint8_t page_shift)
 {
+	w_assert_uint_lt(page_shift, 64);
 	bitset->page_shift_ = page_shift;
 	bitset->page_mask_ = (1ULL << page_shift) - 1;
 	bitset->arena = arena;

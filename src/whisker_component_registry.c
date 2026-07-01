@@ -18,7 +18,7 @@ void w_component_registry_init(struct w_component_registry *registry, struct w_a
 	registry->entries_length = 0;
 
 	// init entries bitset
-	w_sparse_bitset_init(&registry->entries_bitset, arena, W_COMPONENT_REGISTRY_ENTRY_BITSET_PAGE_SIZE);
+	w_sparse_bitset_init(&registry->entries_bitset, arena, W_COMPONENT_REGISTRY_ENTRY_BITSET_PAGE_SHIFT);
 }
 
 void w_component_registry_free(struct w_component_registry *registry)
@@ -79,7 +79,7 @@ void *w_component_set_(struct w_component_registry *registry, uint type_id, w_en
 		entry->type_size = data_size;
 		entry->flags = 0;
 
-		w_sparse_bitset_init(&entry->data_bitset, registry->arena, W_COMPONENT_REGISTRY_DATA_BITSET_PAGE_SIZE);
+		w_sparse_bitset_init(&entry->data_bitset, registry->arena, W_COMPONENT_REGISTRY_DATA_BITSET_PAGE_SHIFT);
 
 		w_array_init_t(entry->data, W_COMPONENT_REGISTRY_DATA_REALLOC_BLOCK_SIZE_BASE * data_size);
 		entry->data_length = 0;
