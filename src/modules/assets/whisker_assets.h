@@ -43,7 +43,7 @@ w_ecs_define_tag(req_asset_warm);
 w_ecs_define_tag(req_asset_cold);
 
 // custom ID indicating an asset failed a parse stage
-w_ecs_define_component(int, asset_load_failed);
+w_ecs_define_component(int, asset_load_failed, WM_ASSETS_LOAD_FAILED_UNKNOWN);
 
 /************************
 *  functions & macros  *

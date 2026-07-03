@@ -26,13 +26,13 @@ w_ecs_define_event(test_event);
 w_ecs_define_event(test_event2);
 
 // test data components
-w_ecs_define_component(int32_t, i32_payload);
-w_ecs_define_component(float, f32_payload);
-w_ecs_define_component(int32_t, i32_data1);
-w_ecs_define_component(int32_t, i32_data2);
+w_ecs_define_component(int32_t, i32_payload, 0);
+w_ecs_define_component(float, f32_payload, 0.0f);
+w_ecs_define_component(int32_t, i32_data1, 0);
+w_ecs_define_component(int32_t, i32_data2, 0);
 
 // persistent component for entity-survives tests
-w_ecs_define_component(int32_t, health);
+w_ecs_define_component(int32_t, health, 0);
 
 
 /*****************************

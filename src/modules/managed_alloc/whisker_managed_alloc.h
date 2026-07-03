@@ -17,7 +17,7 @@
 
 #define WM_MANAGED_ALLOC_SLAB_ARENA_REALLOC_BLOCK_SIZE 16
 
-#define w_ecs_define_managed_component(name) w_ecs_define_component(uint64_t, name);
+#define w_ecs_define_managed_component(name) w_ecs_define_component(uint64_t, name, WM_MANAGED_ALLOC_INVALID_HANDLE);
 
 #define WM_MANAGED_ALLOC_INVALID_HANDLE UINT64_MAX
 
