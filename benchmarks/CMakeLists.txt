@@ -7,7 +7,7 @@
 FetchContent_Declare(
     ubench
     GIT_REPOSITORY https://github.com/sheredom/ubench.h.git
-    GIT_TAG        master
+    GIT_TAG        main
 )
 FetchContent_MakeAvailable(ubench)
 
