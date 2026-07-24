@@ -203,7 +203,7 @@ struct w_rendering_cmd_draw_textured_verts
     w_quat rotation;
     w_vec3 scale;
     w_color8 tint;
+	bool transparent; // blend and leave the depth buffer unchanged
 };
 
 #endif /* WHISKER_RENDERING_COMMANDS_H */
-
