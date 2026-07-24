@@ -32,6 +32,10 @@ w_ecs_define_tag(asset_warm);
 // note: this is something implementing modules have to add
 w_ecs_define_tag(asset_hot);
 
+// defers missing-loader detection until an asset implementation can consume a
+// newly warmed resource
+w_ecs_define_tag(asset_hot_pending_);
+
 // request resource backing the asset to be warm, then loaded
 // (implementation specific)
 w_ecs_define_tag(req_asset_hot);

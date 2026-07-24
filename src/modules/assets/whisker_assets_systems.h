@@ -21,6 +21,7 @@ w_ecs_system(
 	),
 {
 	w_set_tag(entity, asset_warm, true);
+	w_set_tag(entity, asset_hot_pending_, true);
 });
 
 // sync cold resource tags to remove asset warm tags
@@ -104,6 +105,12 @@ w_ecs_system(
 		w_query_n(asset_load_failed),
 	),
 {
+	if (w_tag_exists(entity, asset_hot_pending_))
+	{
+		w_set_tag(entity, asset_hot_pending_, false);
+		continue;
+	}
+
 	w_set_value(entity, asset_load_failed, WM_ASSETS_LOAD_FAILED_MISSING_LOADER);
 	w_set_tag(entity, req_asset_hot, false);
 });
@@ -120,4 +127,3 @@ w_ecs_system(
 });
 
 #endif /* WHISKER_ASSETS_SYSTEMS_H */
-
